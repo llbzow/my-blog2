@@ -1763,6 +1763,11 @@ input::placeholder {
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
+  -webkit-transform: scale(1.1);
+  -moz-transform: scale(1.1);
+  -o-transform: scale(1.1);
+  -ms-transform: scale(1.1);
+  transform: scale(1.1);
 }
 h1,
 h2,
@@ -4137,7 +4142,7 @@ figure.highlight pre .javascript .function {
 }
 #footer {
   position: relative;
-  background-color: #49b1f5;
+  background-color: transparent;
   background-attachment: scroll;
   background-position: bottom;
   background-size: cover;
