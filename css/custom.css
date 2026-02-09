@@ -110,3 +110,75 @@
     transform: scale(1.02); /* 放大 2% */
     transform-origin: center;
 }
+
+/* ==================================
+   6. 分页栏 (Pagination) 优化
+   ================================== */
+#pagination {
+    width: 100%;
+    margin: 20px auto;
+}
+
+#pagination .pagination {
+    text-align: center;
+}
+
+/* 移除原有的分页容器背景，改为独立按钮风格 (可选) */
+/* 如果您喜欢保留长条背景，可以注释掉下面这一段 */
+.layout > .recent-posts .pagination {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+/* 独立卡片按钮样式 */
+#pagination .page-number, 
+#pagination .extend {
+    display: inline-block;
+    margin: 0 6px;
+    padding: 0;
+    width: 42px; /* 固定宽高，使其成为正方形或圆形 */
+    height: 42px;
+    line-height: 42px;
+    background: rgba(255, 255, 255, 0.9) !important;
+    border-radius: 12px; /* 圆角矩形 */
+    color: #333;
+    font-weight: bold;
+    font-size: 1.1em;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* 柔和阴影 */
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    border: none;
+    text-align: center;
+}
+
+/* 选中状态 - 突出显示 */
+#pagination .page-number.current {
+    background: #49b1f5 !important; /* 主题蓝 */
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(73, 177, 245, 0.5); /* 蓝色光晕 */
+    transform: scale(1.15); /* 稍微放大 */
+}
+
+/* 悬停效果 */
+#pagination .page-number:not(.current):hover, 
+#pagination .extend:hover {
+    background: #ff7242 !important; /* 悬停橙 */
+    color: #fff !important;
+    transform: translateY(-4px); /* 上浮效果 */
+    box-shadow: 0 8px 15px rgba(255, 114, 66, 0.4); /* 橙色光晕 */
+}
+
+/* 深色模式适配 */
+[data-theme='dark'] #pagination .page-number, 
+[data-theme='dark'] #pagination .extend {
+    background: rgba(40, 40, 40, 0.9) !important;
+    color: #eee;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+[data-theme='dark'] #pagination .page-number.current {
+    background: #49b1f5 !important;
+    box-shadow: 0 4px 12px rgba(73, 177, 245, 0.4);
+}

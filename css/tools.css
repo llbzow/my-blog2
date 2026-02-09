@@ -1,0 +1,94 @@
+/* Shared Tools CSS */
+.tool-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.tool-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    /* Fix layout jitter */
+    min-height: 100px;
+    transition: height 0.3s ease;
+}
+[data-theme='dark'] .tool-section {
+    background: #2c2c2c;
+    color: #eee;
+}
+.tool-title {
+    font-size: 1.3em;
+    margin-bottom: 20px;
+    border-left: 5px solid #49b1f5;
+    padding-left: 10px;
+    font-weight: bold;
+}
+input[type="text"], input[type="number"], select, textarea {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+    background: #fff;
+    color: #333;
+}
+[data-theme='dark'] input, [data-theme='dark'] select, [data-theme='dark'] textarea {
+    background: #444;
+    border: 1px solid #555;
+    color: #eee;
+}
+.btn {
+    padding: 8px 20px;
+    background: #49b1f5;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+}
+.btn:hover {
+    background: #ff7242;
+    color: white;
+    transform: translateY(-2px);
+}
+.btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+.upload-box {
+    border: 2px dashed #ddd;
+    padding: 30px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #f9f9f9;
+    transition: all 0.3s;
+}
+.upload-box:hover {
+    border-color: #49b1f5;
+    background: #eef4fe;
+}
+[data-theme='dark'] .upload-box {
+    background: #333;
+    border-color: #555;
+}
+
+/* Fix: Disable animations on inputs to prevent theme "power mode" shake */
+.tool-container input, 
+.tool-container textarea, 
+.tool-container select {
+    animation: none !important;
+    /* Allow native focus ring and transitions */
+}
+
+/* Fix: Stop theme clicking effects visual interference if possible via CSS */
+/* Note: JS stopPropagation is the main fix, this is fallback */
+.tool-container {
+    position: relative;
+    z-index: 10; /* Ensure above background canvas effects */
+}
