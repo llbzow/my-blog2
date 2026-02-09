@@ -291,147 +291,266 @@
         color: #333333 !important;
         border: 1px solid rgba(0,0,0,0.1) !important;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-        font-family: inherit !important;
+        font-family: "Microsoft YaHei", sans-serif !important;
         z-index: 9999 !important;
-        min-height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 10px;
+        min-height: 40px;
+        height: auto !important; /* Force auto height */
+        max-height: 50vh !important;
+        overflow-y: auto !important;
+        width: auto !important;
+        max-width: 350px !important;
+        word-wrap: break-word !important;
+        white-space: pre-wrap !important;
+        display: block !important;
+        padding: 12px 15px;
+        font-size: 14px;
+        line-height: 1.6;
+        border-radius: 8px;
+        scrollbar-width: thin;
+        text-align: left;
     }
 
     /* Helper: Hide Legacy / Duplicate Widgets from other plugins */
-    #live2d-widget, 
-    .waifu-tips, .waifu, #waifu {
-        display: none !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        visibility: hidden !important;
-    }
+    /* Only specific legacy IDs */
+    #live2d-widget, .waifu { display: none !important; }
 
     /* ==========================================================================
        2. NEW UI COMPONENTS (Chat)
        ========================================================================== */
-    #oml2d-chat-container {
+    #oml2d-chat-widget {
         position: fixed;
-        left: 60px; /* Shifted right to not overlap menu */
-        bottom: 40px; 
-        width: 250px;
+        left: 10px; /* Align with menu */
+        bottom: 10px; /* Tightly stuck to bottom-left */
         z-index: 10000;
-        display: none; /* Hidden by default */
-        flex-direction: column;
+        display: flex;
+        align-items: center; /* Center vertically */
         gap: 8px;
-        transition: all 0.3s ease;
-        opacity: 0;
-        transform: translateY(10px);
+        flex-direction: row; /* Button left, Input right */
     }
 
-    #oml2d-chat-container.active {
+    /* Toggle Button (Floating Chat Icon) */
+    #oml2d-toggle-btn {
+        width: 42px;
+        height: 42px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         display: flex;
-        opacity: 1;
-        transform: translateY(0);
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 22px;
+        transition: transform 0.2s, background 0.2s;
+        border: 1px solid #ddd;
+        user-select: none;
+        color: #555;
+        flex-shrink: 0; /* Don't shrink */
     }
-    
-    .oml2d-input-group {
-        display: flex;
-        gap: 5px;
-        background: rgba(255, 255, 255, 0.95);
-        padding: 8px;
+
+    #oml2d-toggle-btn:hover {
+        transform: scale(1.1);
+        background: #f8f8f8;
+        color: #000;
+    }
+
+    /* Input Area */
+    #oml2d-input-area {
+        width: 260px;
+        background: rgba(255, 255, 255, 0.15); /* Very transparent */
+        padding: 10px;
         border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        backdrop-filter: blur(5px);
-        border: 1px solid rgba(0,0,0,0.05);
+        border-bottom-left-radius: 4px; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        backdrop-filter: blur(3px); /* Low blur to see model */
+        display: flex;
+        gap: 8px;
+        transform-origin: left center; /* Expand from left */
+        transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        opacity: 1;
+        transform: scale(1);
+        margin-left: 2px;
+    }
+
+    #oml2d-input-area.hidden {
+        opacity: 0;
+        transform: scale(0.8) translateX(-20px);
+        pointer-events: none;
     }
 
     #oml2d-chat-input {
         flex: 1;
-        border: none;
-        background: transparent;
-        padding: 5px 10px;
+        border: 1px solid #eee;
+        background: #fafafa;
+        padding: 6px 12px;
+        border-radius: 20px;
         outline: none;
         font-size: 14px;
         color: #333;
+        transition: border-color 0.2s;
     }
 
-    #oml2d-send-btn {
+    #oml2d-chat-input:focus {
+        border-color: #4A90E2;
+        background: white;
+    }
+
+    #oml2d-send-btn-inner {
         border: none;
         background: #4A90E2;
         border-radius: 50%;
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: background 0.2s;
         color: #fff;
+        flex-shrink: 0;
     }
 
-    #oml2d-send-btn:hover {
+    #oml2d-send-btn-inner:hover {
         background: #357ABD;
     }
 
+    #oml2d-reply-area {
+        position: absolute;
+        bottom: 60px;
+        left: 50px; /* Align with input */
+        width: 300px;
+        max-height: 60vh;
+        background: rgba(255, 255, 255, 0.15); /* Very transparent */
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 12px;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        padding: 15px;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #000;
+        text-shadow: 0 0 4px #fff, 0 0 8px #fff; /* Stronger glow for readability */
+        overflow-y: auto;
+        backdrop-filter: blur(3px); /* Low blur */
+        transform-origin: bottom left;
+        transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+        pointer-events: none;
+        z-index: 10001;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: "Microsoft YaHei", sans-serif;
+        scrollbar-width: thin;
+    }
+    
+    #oml2d-reply-area.visible {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        pointer-events: auto;
+    }
   </style>
 
-  <div id="oml2d-chat-container">
-      <div class="oml2d-input-group">
+  <div id="oml2d-chat-widget">
+      <div id="oml2d-toggle-btn" title="AI对话">💬</div>
+      
+      <!-- Custom Reply Area -->
+      <div id="oml2d-reply-area"></div>
+      
+      <div id="oml2d-input-area" class="hidden">
           <input type="text" id="oml2d-chat-input" placeholder="和宁宁聊聊天..." autocomplete="off">
-          <button id="oml2d-send-btn">➤</button>
+          <button id="oml2d-send-btn-inner">➤</button>
       </div>
   </div>
 
   <script type="module">
     import { loadOml2d } from 'https://unpkg.com/oh-my-live2d@latest?module';
 
-    // API Key
     const API_KEY = "sk-9a9f51b5638c4df79e53debf3aa12182";
+    const API_URL = "https://api.deepseek.com/chat/completions";
 
-    // 1. CLEANUP LEGACY
-    const cleanupLegacy = () => {
-        const legacySelectors = [
-            '#live2d-widget', 
-            '.waifu', '#waifu'
-        ];
-        legacySelectors.forEach(selector => {
-            const els = document.querySelectorAll(selector);
-            els.forEach(el => {
-                if (el.id !== 'oml2d-stage' && !el.classList.contains('oml2d-stage')) {
-                    el.remove();
-                }
-            });
-        });
-    };
-    setTimeout(cleanupLegacy, 1000);
-
-    // 2. CONFIG
+    // CONFIG
     const CONFIG = {
+      // Global Stage Style
+      stageStyle: { width: 350, height: 500 },
       models: [
-        { 
-          path: '/live2d_models/ningning/model.json', 
-          scale: 0.18, 
-          position: [-50, -30], 
-          stageStyle: { width: 350, height: 500 } 
-        }
+        { path: '/live2d_models/ningning/model.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_1.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_2.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_3.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_4.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_5.json', scale: 0.18, position: [-50, -30] }
       ],
       dockedPosition: "left",
       mobileDisplay: true,
       menus: { 
           disable: false, 
-          style: { left: '10px', bottom: '20px' },
-          // We will inject our custom button manually
+          style: { left: '10px', bottom: '70px' } 
       },
       tips: {
          disable: false,
-         style: { width: 230, height: 120, offsetY: -70, offsetX: 10 },
+         style: { offsetY: -70, offsetX: 10 },
          idleTips: { interval: 15000, message: [] },
-         welcomeTips: { message: { "default": "你好呀！我是宁宁，你的博客小助手~" } }
+         welcomeTips: { message: { "default": "前辈，你来啦！(｡•̀ᴗ-)✧" } }
       }
     };
 
     let oml2dInstance = null;
     let blogIndex = null;
+    let chatHistory = [];
+    let autoHideTimer = null;
+    try {
+        const stored = localStorage.getItem('oml2d_history');
+        if (stored) chatHistory = JSON.parse(stored);
+    } catch(e) { console.error("History Load Error", e); }
 
-    // 3. TOOLS
+    let idleTimer = null;
+    const stopIdleLoop = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = null;
+    };
+    const startIdleLoop = () => {
+        stopIdleLoop();
+        const delay = Math.floor(Math.random() * 10000) + 5000; // 5-15s
+        idleTimer = setTimeout(triggerIdleTsukkomi, delay);
+    };
+    const triggerIdleTsukkomi = async () => {
+        if (!oml2dInstance) { startIdleLoop(); return; }
+        
+        const time = new Date().toLocaleTimeString();
+        let context = "无";
+        if (chatHistory.length > 0) {
+             for (let i = chatHistory.length - 1; i >= 0; i--) {
+                 if (chatHistory[i].role === 'user') {
+                     context = chatHistory[i].content.substring(0, 20);
+                     break;
+                 }
+             }
+        }
+        
+        try {
+             const res = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + API_KEY },
+                body: JSON.stringify({
+                    model: "deepseek-chat",
+                    messages: [
+                        { role: "system", content: "你是绫地宁宁。现在是发呆时间。请根据当前时间(" + time + ")和刚才聊的话题(" + context + ")，自言自语一句简短的吐槽或卖萌（10字以内）。不要重复。" },
+                    ],
+                    stream: false
+                })
+            });
+            const data = await res.json();
+            if (data.choices && data.choices[0]) {
+                let content = data.choices[0].message.content;
+                content = content.replace(/{{|}}/g, '');
+                oml2dInstance.tips.notification(content, 4000);
+            }
+        } catch(e) { }
+        
+        startIdleLoop();
+    };
+
+    // --- TOOLS (Client-Side Logic) ---
     const Tools = {
         async searchBlog(query) {
             console.log("Searching blog for:", query);
@@ -444,7 +563,6 @@
                     return "搜索服务暂时不可用。";
                 }
             }
-            
             if (!blogIndex || blogIndex.length === 0) return "博客好像是空的...";
 
             const keywords = query.toLowerCase().split(' ');
@@ -458,141 +576,479 @@
             return JSON.stringify(results.map(r => ({
                 title: r.title,
                 url: r.url,
-                preview: r.content.substring(0, 100).replace(/<[^>]*>?/gm, '') + '...'
+                preview: r.content.substring(0, 100).replace(new RegExp("<[^>]*>?", "gm"), '') + '...'
             })));
+        },
+
+        triggerMotion(motionName) {
+            console.log("Tool Trigger Motion:", motionName);
+            if (!oml2dInstance || !oml2dInstance.models || !oml2dInstance.models[0]) return "Live2D模型未就绪";
+            
+            const model = oml2dInstance.models[0];
+            let success = false;
+
+            // Strategy 1: High Level
+            if (typeof oml2dInstance.setMotion === 'function') {
+                oml2dInstance.setMotion(motionName);
+                success = true;
+            } 
+            // Strategy 2: Model Level
+            else if (typeof model.motion === 'function') {
+                model.motion(motionName);
+                success = true;
+            }
+            // Strategy 3: Internal Model (Pixi/Cubism) - Aggressive Probe
+            else if (model.internalModel && model.internalModel.motionManager) {
+                try {
+                    console.log("Strategy 3 (Internal): Starting random motion for group", motionName);
+                    
+                    // LOCK FOCUS to prevent mouse tracking from overriding motion
+                    if (typeof model.focus === 'function') {
+                        model._lockFocus = true;
+                        // Unlock after 4 seconds (approx motion duration)
+                        setTimeout(() => { model._lockFocus = false; }, 4000);
+                    }
+
+                    // Priority 3 = FORCE. Use startRandomMotion to avoid index errors.
+                    const result = model.internalModel.motionManager.startRandomMotion(motionName, 3);
+                    success = !!result;
+                } catch (e) {
+                    console.warn("Strategy 3 failed:", e);
+                }
+            }
+
+            return success ? "动作已执行: " + motionName : "动作触发失败，请检查模型组名";
+        },
+
+        navigate(path) {
+            window.location.href = path;
+            return "正在跳转...";
+        },
+
+        readCurrentPage() {
+            // Butterfly theme uses #article-container usually
+            const article = document.getElementById('article-container') || 
+                            document.querySelector('.post-content') || 
+                            document.querySelector('article') ||
+                            document.body;
+            
+            if (!article) return "无法读取当前页面内容。";
+            
+            // Clean up text (remove scripts, styles)
+            const clone = article.cloneNode(true);
+            const scripts = clone.querySelectorAll('script, style, noscript');
+            scripts.forEach(n => n.remove());
+            
+            let text = clone.innerText || "";
+            // Truncate if too long (e.g. > 5000 chars) to save tokens, or trust V3
+            return text.substring(0, 5000) + (text.length > 5000 ? "...(内容太长，已截断)" : "");
+        },
+
+        async compressHistory() {
+            if (chatHistory.length <= 32) return;
+            console.log("Compressing history...");
+            
+            const toSummarize = chatHistory.slice(0, chatHistory.length - 10);
+            const keep = chatHistory.slice(-10);
+            
+            try {
+                 const summaryRes = await fetch("https://api.deepseek.com/chat/completions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + API_KEY },
+                    body: JSON.stringify({
+                        model: "deepseek-chat",
+                        messages: [
+                            { role: "system", content: "Summarize the following conversation briefly in Chinese." },
+                            ...toSummarize
+                        ],
+                        stream: false
+                    })
+                });
+                const data = await summaryRes.json();
+                const summary = data.choices[0].message.content;
+                
+                chatHistory = [
+                    { role: "system", content: "Previous Summary: " + summary },
+                    ...keep
+                ];
+                localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                console.log("History compressed.");
+            } catch(e) { console.error("Compression failed", e); }
         }
     };
 
-    // 4. LLM SERVICE
+    // --- LLM SERVICE ---
     const LLM = {
         async chat(userMessage, callbacks) {
+            stopIdleLoop();
             callbacks.onLoading(true);
 
             try {
-                const systemContent = "你叫宁宁，是 llbzow 博客的看板娘。" +
-                        "性格：活泼、可爱、傲娇，喜欢用颜文字 (｡•̀ᴗ-)✧。" +
-                        "当前时间：" + new Date().toLocaleString() + "。" +
-                        "能力：你可以调用工具搜索博客内容。" +
-                        "如果用户询问技术问题，优先搜索博客。" +
-                        "回答要简短（50字以内），不要长篇大论，因为显示区域很小。" +
-                        "必须使用中文回复。";
+                // System Prompt (Nene Persona)
+                // Use space concatenation to avoid syntax errors
+                const systemContent = "你叫宁宁（Nene），全名绫地宁宁，是《魔女的夜宴》中的角色，现在兼职 llbzow 博客的看板娘。 " +
+                        "你的主人 llbzow 既是开发者也是工地施工员（打灰人）。 " +
+                        "【性格设定】 " +
+                        "1. 性格温柔体贴，有些纯真和天然呆，非常容易害羞（动不动就脸红）。 " +
+                        "2. 做事非常认真，但偶尔会因为太紧张而出错。 " +
+                        "3. 称呼用户为“前辈”或者“主人”。 " +
+                        "4. 说话语气要软萌、有礼貌。 " +
+                        "5. 面对奇怪的问题会变得慌乱，不知所措。 " +
+                        "【能力】 " +
+                        "请使用工具（function calling）来搜索博客、触发动作或读取当前页面内容。 " +
+                        "当用户问“这篇文章讲了什么”时，调用 read_current_page。 " +
+                        "【双通道回复】" +
+                        "请务必在回答开头加入一句犀利或可爱的吐槽（10字以内），必须用 {{ 和 }} 包裹。这部分内容会显示在Live2D气泡中。" +
+                        "吐槽内容要结合：当前时间、对话上下文、用户的问题（如是否重复、是否愚蠢）。例如：{{大半夜的问这个...}} {{这已经是第三次问了哦...}} {{笨蛋前辈...}}" +
+                        "动作对应：Tap身体=开心/普通，Tap头顶=害羞/抱歉，Tap裙子=生气/拒绝，Tap呆毛=卖萌/唱歌，Tap左胸=亲近。 " +
+                        "当前时间：" + new Date().toLocaleString() + "。";
 
                 const messages = [
                     { role: "system", content: systemContent },
+                    ...chatHistory, // Use full history (managed by compression)
                     { role: "user", content: userMessage }
                 ];
 
-                const response = await fetch("https://api.deepseek.com/chat/completions", {
+                // Tool Definitions
+                const tools = [
+                    {
+                        type: "function",
+                        function: {
+                            name: "search_blog",
+                            description: "Search blog posts when user asks about technical topics or blog content.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    query: { type: "string", description: "Keywords to search" }
+                                },
+                                required: ["query"]
+                            }
+                        }
+                    },
+                    {
+                        type: "function",
+                        function: {
+                            name: "react_motion",
+                            description: "Trigger a Live2D motion based on emotion.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    motion: { 
+                                        type: "string", 
+                                        description: "Motion group name", 
+                                        enum: ["Tap身体", "Tap头顶", "Tap脸", "Tap裙子", "Tap左胸", "Tap呆毛"] 
+                                    }
+                                },
+                                required: ["motion"]
+                            }
+                        }
+                    },
+                    {
+                        type: "function",
+                        function: {
+                            name: "navigate",
+                            description: "Navigate to a specific path/URL.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    path: { type: "string", description: "URL or path (e.g. /about/)" }
+                                },
+                                required: ["path"]
+                            }
+                        }
+                    },
+                    {
+                        type: "function",
+                        function: {
+                            name: "read_current_page",
+                            description: "Read the text content of the current page. Use this when user asks about 'this article' or 'current page'.",
+                            parameters: {
+                                type: "object",
+                                properties: {},
+                                required: []
+                            }
+                        }
+                    }
+                ];
+
+                const API_URL = "https://api.deepseek.com/chat/completions";
+
+                // First Call
+                const response = await fetch(API_URL, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": "Bearer " + API_KEY
                     },
                     body: JSON.stringify({
-                        model: "deepseek-reasoner",
+                        model: "deepseek-chat", // Use V3 for speed & tools
                         messages: messages,
+                        tools: tools,
                         stream: false
                     })
                 });
 
                 const data = await response.json();
-                
                 if (data.error) throw new Error(data.error.message);
 
                 const choice = data.choices[0];
-                let content = choice.message.content || "";
-                let reasoning = choice.message.reasoning_content || "";
-                
-                const thinkMatch = content.match(/<think>([\s\S]*?)<\/think>/);
-                if (thinkMatch) {
-                    reasoning = thinkMatch[1];
-                    content = content.replace(/<think>[\s\S]*?<\/think>/, '').trim();
-                }
+                const message = choice.message;
 
-                if (!content && reasoning) {
-                   content = "(思考中...) " + reasoning.substring(0, 20) + "...";
-                }
+                // Handle Tool Calls
+                if (message.tool_calls) {
+                    messages.push(message); // Add assistant's thought/tool_call
 
-                callbacks.onMessage(content, reasoning);
+                    for (const toolCall of message.tool_calls) {
+                        const fnName = toolCall.function.name;
+                        const args = JSON.parse(toolCall.function.arguments);
+                        
+                        let toolResult = "";
+                        if (fnName === 'search_blog') {
+                            toolResult = await Tools.searchBlog(args.query);
+                        } else if (fnName === 'react_motion') {
+                            toolResult = Tools.triggerMotion(args.motion);
+                        } else if (fnName === 'navigate') {
+                            toolResult = Tools.navigate(args.path);
+                        } else if (fnName === 'read_current_page') {
+                            toolResult = Tools.readCurrentPage();
+                        }
+
+                        messages.push({
+                            role: "tool",
+                            tool_call_id: toolCall.id,
+                            content: toolResult
+                        });
+                    }
+
+                    // Second Call (Streamed)
+                    const secondResponse = await fetch(API_URL, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": "Bearer " + API_KEY
+                        },
+                        body: JSON.stringify({
+                            model: "deepseek-chat",
+                            messages: messages,
+                            tools: tools,
+                            stream: true
+                        })
+                    });
+                    
+                    const reader = secondResponse.body.getReader();
+                    const decoder = new TextDecoder("utf-8");
+                    let finalMsg = "";
+                    let buffer = "";
+                    let streamBuffer = "";
+                    let pendingReaction = true;
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop();
+
+                        for (const line of lines) {
+                            if (line.trim().startsWith('data: ')) {
+                                const dataStr = line.trim().substring(6);
+                                if (dataStr === '[DONE]') continue;
+                                try {
+                                    const json = JSON.parse(dataStr);
+                                    const content = json.choices[0].delta.content;
+                                    if (content) {
+                                        if (pendingReaction) {
+                                            streamBuffer += content;
+                                            if (streamBuffer.trimStart().startsWith('{{')) {
+                                                const closeIdx = streamBuffer.indexOf('}}');
+                                                if (closeIdx !== -1) {
+                                                    const reaction = streamBuffer.substring(streamBuffer.indexOf('{{') + 2, closeIdx);
+                                                    const duration = 3000 + reaction.length * 30;
+                                                    if (oml2dInstance) oml2dInstance.tips.notification(reaction, duration);
+                                                    
+                                                    const rest = streamBuffer.substring(closeIdx + 2);
+                                                    finalMsg += rest;
+                                                    callbacks.onMessage(finalMsg);
+                                                    
+                                                    pendingReaction = false;
+                                                    streamBuffer = "";
+                                                }
+                                            } else if (streamBuffer.length > 10) {
+                                                finalMsg += streamBuffer;
+                                                callbacks.onMessage(finalMsg);
+                                                pendingReaction = false;
+                                                streamBuffer = "";
+                                            }
+                                        } else {
+                                            finalMsg += content;
+                                            callbacks.onMessage(finalMsg);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error("Stream parse error", e);
+                                }
+                            }
+                        }
+                    }
+                    if (pendingReaction && streamBuffer) {
+                         finalMsg += streamBuffer;
+                         callbacks.onMessage(finalMsg);
+                    }
+
+                    // Save History & Compress
+                    chatHistory.push({ role: "user", content: userMessage });
+                    chatHistory.push({ role: "assistant", content: finalMsg });
+                    localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                    
+                    const replyArea = document.getElementById('oml2d-reply-area');
+                    if (replyArea && finalMsg) {
+                        const autoHideDuration = 3000 + finalMsg.length * 30;
+                        autoHideTimer = setTimeout(() => replyArea.classList.remove('visible'), autoHideDuration);
+                    }
+                    Tools.compressHistory();
+
+                } else {
+                    let content = message.content;
+                    // Dual Channel Check for non-stream response
+                    if (content.trim().startsWith('{{')) {
+                         const closeIdx = content.indexOf('}}');
+                         if (closeIdx !== -1) {
+                             const reaction = content.substring(content.indexOf('{{') + 2, closeIdx);
+                             const duration = 3000 + reaction.length * 30;
+                             if (oml2dInstance) oml2dInstance.tips.notification(reaction, duration);
+                             content = content.substring(closeIdx + 2);
+                         }
+                    }
+                    callbacks.onMessage(content);
+
+                    // Save History & Compress
+                    chatHistory.push({ role: "user", content: userMessage });
+                    chatHistory.push({ role: "assistant", content: content });
+                    localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                    
+                    const replyArea = document.getElementById('oml2d-reply-area');
+                    if (replyArea && content) {
+                        const autoHideDuration = 3000 + content.length * 30;
+                        autoHideTimer = setTimeout(() => replyArea.classList.remove('visible'), autoHideDuration);
+                    }
+                    Tools.compressHistory();
+                }
 
             } catch (error) {
                 console.error("LLM Error:", error);
-                callbacks.onMessage("大脑连接失败了... 😵 (请检查网络)");
+                callbacks.onMessage("宁宁有点晕... 😵 (网络错误)");
             } finally {
                 callbacks.onLoading(false);
+                startIdleLoop();
             }
         }
     };
 
-    // 5. MAIN LOGIC
+    // 5. UI & INIT
     try {
-        if (window.innerWidth >= 768) {
-            loadOml2d(CONFIG).then(inst => {
-                oml2dInstance = inst;
-                console.log('OML2D: Loaded with DeepSeek Reasoner');
+        const toggleBtn = document.getElementById('oml2d-toggle-btn');
+        const inputArea = document.getElementById('oml2d-input-area');
+        const chatInput = document.getElementById('oml2d-chat-input');
+        const sendBtn = document.getElementById('oml2d-send-btn-inner');
+        const replyArea = document.getElementById('oml2d-reply-area');
 
-                // UI Elements
-                const chatContainer = document.getElementById('oml2d-chat-container');
-                const chatInput = document.getElementById('oml2d-chat-input');
-                const sendBtn = document.getElementById('oml2d-send-btn');
-
-                // --- INJECT MENU BUTTON ---
-                // Wait a bit for the menu to be rendered by OML2D
-                setTimeout(() => {
-                    const menuContainer = document.querySelector('.oml2d-menus');
-                    if (menuContainer) {
-                        const chatBtn = document.createElement('div');
-                        chatBtn.className = 'oml2d-menu-item';
-                        chatBtn.title = 'AI对话';
-                        chatBtn.style.cursor = 'pointer';
-                        // SVG Icon for Chat Bubble
-                        chatBtn.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
-                        
-                        chatBtn.addEventListener('click', () => {
-                            chatContainer.classList.toggle('active');
-                            if (chatContainer.classList.contains('active')) {
-                                setTimeout(() => chatInput.focus(), 100);
-                                inst.tips.notification("想聊点什么呢？(｡･ω･｡)", 3000);
-                            }
-                        });
-                        
-                        // Insert as first item
-                        menuContainer.insertBefore(chatBtn, menuContainer.firstChild);
-                    }
-                }, 1000);
-
-                // Event Handlers
-                const sendMessage = () => {
-                    const text = chatInput.value.trim();
-                    if (!text) return;
-                    
-                    chatInput.value = '';
-                    
-                    LLM.chat(text, {
-                        onLoading: (isLoading) => {
-                             if(isLoading) inst.tips.notification("深度思考中... 🧠", 99999);
-                        },
-                        onMessage: (msg, reasoning) => {
-                            inst.tips.notification(msg, 10000);
-                            if (reasoning) {
-                                console.log("[DeepSeek Reasoner]:", reasoning);
-                            }
-                            if (msg.includes('开心') || msg.includes('哈哈')) inst.setMotion('Tap身体');
-                            if (msg.includes('抱歉') || msg.includes('对不起')) inst.setMotion('Tap头顶');
-                        }
-                    });
-                };
-
-                sendBtn.addEventListener('click', sendMessage);
-                chatInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') sendMessage();
-                });
-            }).catch(e => {
-                console.error('OML2D Load Promise Failed:', e);
+        if (replyArea) {
+            replyArea.addEventListener('click', () => {
+                replyArea.classList.remove('visible');
             });
         }
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isHidden = inputArea.classList.contains('hidden');
+                if (isHidden) {
+                    inputArea.classList.remove('hidden');
+                    setTimeout(() => chatInput.focus(), 100);
+                    toggleBtn.innerHTML = '×';
+                } else {
+                    inputArea.classList.add('hidden');
+                    replyArea.classList.remove('visible'); // Hide reply too
+                    toggleBtn.innerHTML = '💬';
+                }
+            });
+        }
+
+        const sendMessage = () => {
+            const text = chatInput.value.trim();
+            if (!text) return;
+            
+            chatInput.value = '';
+            if (autoHideTimer) clearTimeout(autoHideTimer);
+            
+            // Show loading in reply area
+            if (replyArea) {
+                replyArea.innerText = "思考中... 🧠";
+                replyArea.classList.add('visible');
+            }
+
+            LLM.chat(text, {
+                onLoading: (isLoading) => {
+                     // Handled locally above for instant feedback
+                },
+                onMessage: (msg) => {
+                    if (replyArea && msg) {
+                        replyArea.innerText = msg;
+                        replyArea.classList.add('visible');
+                        // Auto scroll to bottom
+                        replyArea.scrollTop = replyArea.scrollHeight;
+                    } 
+                    // Fallback to alert if something is wrong (shouldn't happen)
+                    else if (msg) {
+                        alert("宁宁: " + msg);
+                    }
+                }
+            });
+        };
+
+        if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+        if (chatInput) chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        if (window.innerWidth >= 768) {
+            // Safe Load Logic
+            try {
+                const res = loadOml2d(CONFIG);
+                const setupModel = (inst) => {
+                    oml2dInstance = inst;
+                    // Monkey Patch Focus to allow motion override
+                    if (inst.models && inst.models[0]) {
+                        const model = inst.models[0];
+                        if (typeof model.focus === 'function') {
+                            const originalFocus = model.focus;
+                            model.focus = function(x, y) {
+                                if (this._lockFocus) return;
+                                originalFocus.apply(this, arguments);
+                            };
+                            console.log("OML2D: Focus controller patched");
+                        }
+                    }
+                };
+
+                if (res && typeof res.then === 'function') {
+                    res.then(inst => {
+                        setupModel(inst);
+                        console.log('OML2D: Async Loaded');
+                        startIdleLoop();
+                    }).catch(e => console.error('OML2D Async Error:', e));
+                } else {
+                    setupModel(res);
+                    console.log('OML2D: Sync Loaded');
+                    startIdleLoop();
+                }
+            } catch(e) {
+                console.error('OML2D Load Error:', e);
+            }
+        }
     } catch (e) {
-        console.error('OML2D Init Failed:', e);
+        console.error('UI Init Failed:', e);
     }
   </script>
 
