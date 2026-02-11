@@ -1,13 +1,13 @@
-<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>水印生成与检测 | llbzow的个人博客</title><meta name="author" content="llbzow"><meta name="copyright" content="llbzow"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content=".controls {     display: grid;     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));     gap: 15px;     margin: 20px 0; } .control-group {     display: flex;     flex-direction: column;">
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>水印生成与检测 | llbzow的个人博客</title><meta name="author" content="llbzow"><meta name="copyright" content="llbzow"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="&#x2F;&#x2F; Set worker src     if (typeof pdfjsLib !&#x3D;&#x3D; &#39;undefined&#39;) {         pdfjsLib.GlobalWorkerOptions.workerSrc &#x3D; &#39;https:&#x2F;&#x2F;cdnjs.cloudflare.com&#x2F;ajax&#x2F;libs&#x2F;pdf.js&#x2F;3.11.174&#x2F;pdf.worker.min.js&#39;;     }">
 <meta property="og:type" content="website">
 <meta property="og:title" content="水印生成与检测">
 <meta property="og:url" content="https://yourblog.com/tools/watermark.html">
 <meta property="og:site_name" content="llbzow的个人博客">
-<meta property="og:description" content=".controls {     display: grid;     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));     gap: 15px;     margin: 20px 0; } .control-group {     display: flex;     flex-direction: column;">
+<meta property="og:description" content="&#x2F;&#x2F; Set worker src     if (typeof pdfjsLib !&#x3D;&#x3D; &#39;undefined&#39;) {         pdfjsLib.GlobalWorkerOptions.workerSrc &#x3D; &#39;https:&#x2F;&#x2F;cdnjs.cloudflare.com&#x2F;ajax&#x2F;libs&#x2F;pdf.js&#x2F;3.11.174&#x2F;pdf.worker.min.js&#39;;     }">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://yourblog.com/img/078.png">
 <meta property="article:published_time" content="2026-02-09T04:00:00.000Z">
-<meta property="article:modified_time" content="2026-02-09T03:29:00.526Z">
+<meta property="article:modified_time" content="2026-02-11T01:57:43.560Z">
 <meta property="article:author" content="llbzow">
 <meta property="article:tag" content="技术, 生活, 博客, 分享">
 <meta name="twitter:card" content="summary">
@@ -175,6 +175,15 @@
     btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
   }
 })()</script><div id="web_bg" style="background-image: url(/img/site_bg_v2.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/078.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">15</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="page type-tools" id="body-wrap"><header class="not-home-page" id="page-header" style="background-image: url(/img/029.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">llbzow的个人博客</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="page-site-info"><h1 id="site-title">水印生成与检测</h1></div></header><main class="layout hide-aside" id="content-inner"><div id="page"><div class="container" id="article-container"><link rel="stylesheet" href="/css/tools.css">
+<!-- PDF Lib & PDF.js -->
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+    // Set worker src
+    if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+</script>
 
 <style>
 .controls {
@@ -211,9 +220,28 @@
     border: 1px solid #eee;
     padding: 10px;
     max-height: 600px;
+    position: relative;
 }
 canvas {
     max-width: 100%;
+}
+#pdf-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+.pdf-page-wrapper {
+    position: relative;
+    border: 1px solid #999;
+    margin-bottom: 10px;
+    display: inline-block;
+}
+.remove-mask {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px dashed red;
+    cursor: move;
 }
 </style>
 
@@ -222,6 +250,7 @@ canvas {
     <div class="tabs">
         <div class="tab active" onclick="switchTab('visible')">👁️ 显性水印</div>
         <div class="tab" onclick="switchTab('invisible')">🕵️ 隐形水印 (LSB)</div>
+        <div class="tab" onclick="switchTab('remove')">🧼 去水印 (图片/PDF)</div>
     </div>
 
     <!-- Visible Watermark -->
@@ -308,6 +337,46 @@ canvas {
         <div id="invis-result" style="margin: 10px 0; font-weight: bold; color: #e6a23c;"></div>
         <div class="canvas-container"><canvas id="invis-canvas"></canvas></div>
         <button class="btn" style="width: 100%; margin-top: 10px;" onclick="downloadCanvas('invis-canvas', 'hidden_watermark.png')">下载加密图片</button>
+    </div>
+
+    <!-- Remove Watermark Tab (New) -->
+    <div id="tab-remove" class="tool-section-content" style="display: none; background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <div class="upload-box" onclick="document.getElementById('remove-file').click()">
+            <p>1. 上传图片或 PDF 文件</p>
+            <input type="file" id="remove-file" accept="image/*,application/pdf" style="display: none;">
+        </div>
+
+        <!-- Image Removal UI -->
+        <div id="remove-image-ui" style="display: none; margin-top: 20px;">
+            <div class="tool-title">2. 图片去水印 (涂抹修复)</div>
+            <div class="controls">
+                <div class="control-group">
+                    <label>画笔大小: <span id="brush-size-val">20</span>px</label>
+                    <input type="range" id="brush-size" min="5" max="50" value="20" oninput="document.getElementById('brush-size-val').innerText = this.value">
+                </div>
+                <div class="control-group" style="flex-direction: row; align-items: flex-end;">
+                     <button class="btn" onclick="undoRemove()" style="background: #909399; margin-right: 10px;">↩️ 撤销</button>
+                     <button class="btn" onclick="downloadCanvas('remove-canvas', 'cleaned.png')">📥 下载结果</button>
+                </div>
+            </div>
+            <p style="font-size: 12px; color: #666;">💡 在水印处涂抹，算法将自动尝试修复背景（适用于简单背景）</p>
+            <div class="canvas-container" style="cursor: crosshair;">
+                <canvas id="remove-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- PDF Removal UI -->
+        <div id="remove-pdf-ui" style="display: none; margin-top: 20px;">
+            <div class="tool-title">2. PDF 去水印 (遮罩覆盖)</div>
+            <p>在下方页面中拖拽画出白色遮罩框，覆盖水印区域。所有遮罩将应用到导出的 PDF 中。</p>
+            <div class="controls">
+                <button class="btn" id="btn-add-mask-mode" onclick="toggleMaskMode()">🔳 进入框选模式</button>
+                <button class="btn" onclick="saveCleanPDF()">💾 保存并下载 PDF</button>
+            </div>
+            <div id="pdf-container" class="canvas-container" style="background: #f0f0f0; padding: 20px;">
+                <!-- PDF Pages will be rendered here -->
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1170,6 +1239,7 @@ canvas {
         <a href="/tools/watermark" class="tool-item">💧 水印生成与检测</a>
         <a href="/tools/gif" class="tool-item">🎬 GIF 生成</a>
         <a href="/tools/mirage-tank" class="tool-item">👻 幻影坦克制作</a>
+        <a href="/tools/converter" class="tool-item">🔄 文件全能转换</a>
     </div>
 </div>
 
@@ -1183,6 +1253,7 @@ canvas {
         display: flex;
         align-items: flex-start;
         transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
     }
 
     /* Hover area to keep it open */
@@ -1207,7 +1278,7 @@ canvas {
     }
 
     #tool-list {
-        width: 180px; /* Increased width for longer text */
+        width: 180px; /* Width for text */
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
@@ -1252,47 +1323,6 @@ canvas {
     .tool-item:hover {
         background: #49b1f5;
         color: white !important;
-        padding-left: 20px; /* Slide effect */
-    }
-
-    /* Dark Mode */
-    [data-theme='dark'] #tool-list {
-        background: rgba(30, 30, 30, 0.95);
-        border-left: 1px solid #444;
-    }
-    [data-theme='dark'] .tool-header {
-        background: #222;
-        color: #49b1f5;
-        border-bottom: 1px solid #444;
-    }
-    [data-theme='dark'] .tool-item {
-        color: #eee;
-        border-bottom: 1px solid #444;
-    }
-    [data-theme='dark'] .tool-item:hover {
-        background: #49b1f5;
     }
 </style>
-
-<script>
-    // Optional: Add simple toggle click behavior for mobile
-    document.getElementById('tool-toggle').addEventListener('click', function() {
-        const sidebar = document.getElementById('tool-sidebar');
-        if (sidebar.style.right === '0px') {
-            sidebar.style.right = '-180px';
-        } else {
-            sidebar.style.right = '0px';
-        }
-    });
-
-    // GLOBAL FIX: Stop theme effects (fireworks, shake, power mode) inside tools
-    // Use Bubbling phase (false) so events reach the target first, but stop before reaching theme listeners on body/doc
-    ['click', 'input', 'keydown', 'keyup', 'mousedown', 'mouseup'].forEach(evtType => {
-        document.addEventListener(evtType, function(e) {
-            if (e.target.closest('.tool-container')) {
-                e.stopPropagation();
-            }
-        }, false); // Bubbling phase - allow interaction, block bubbling
-    });
-</script>
 <!-- hexo injector body_end end --></body></html>

@@ -1069,6 +1069,7 @@
         <a href="/tools/watermark" class="tool-item">💧 水印生成与检测</a>
         <a href="/tools/gif" class="tool-item">🎬 GIF 生成</a>
         <a href="/tools/mirage-tank" class="tool-item">👻 幻影坦克制作</a>
+        <a href="/tools/converter" class="tool-item">🔄 文件全能转换</a>
     </div>
 </div>
 
@@ -1082,6 +1083,7 @@
         display: flex;
         align-items: flex-start;
         transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
     }
 
     /* Hover area to keep it open */
@@ -1106,7 +1108,7 @@
     }
 
     #tool-list {
-        width: 180px; /* Increased width for longer text */
+        width: 180px; /* Width for text */
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
@@ -1151,47 +1153,6 @@
     .tool-item:hover {
         background: #49b1f5;
         color: white !important;
-        padding-left: 20px; /* Slide effect */
-    }
-
-    /* Dark Mode */
-    [data-theme='dark'] #tool-list {
-        background: rgba(30, 30, 30, 0.95);
-        border-left: 1px solid #444;
-    }
-    [data-theme='dark'] .tool-header {
-        background: #222;
-        color: #49b1f5;
-        border-bottom: 1px solid #444;
-    }
-    [data-theme='dark'] .tool-item {
-        color: #eee;
-        border-bottom: 1px solid #444;
-    }
-    [data-theme='dark'] .tool-item:hover {
-        background: #49b1f5;
     }
 </style>
-
-<script>
-    // Optional: Add simple toggle click behavior for mobile
-    document.getElementById('tool-toggle').addEventListener('click', function() {
-        const sidebar = document.getElementById('tool-sidebar');
-        if (sidebar.style.right === '0px') {
-            sidebar.style.right = '-180px';
-        } else {
-            sidebar.style.right = '0px';
-        }
-    });
-
-    // GLOBAL FIX: Stop theme effects (fireworks, shake, power mode) inside tools
-    // Use Bubbling phase (false) so events reach the target first, but stop before reaching theme listeners on body/doc
-    ['click', 'input', 'keydown', 'keyup', 'mousedown', 'mouseup'].forEach(evtType => {
-        document.addEventListener(evtType, function(e) {
-            if (e.target.closest('.tool-container')) {
-                e.stopPropagation();
-            }
-        }, false); // Bubbling phase - allow interaction, block bubbling
-    });
-</script>
 <!-- hexo injector body_end end --></body></html>
