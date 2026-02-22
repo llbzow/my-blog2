@@ -438,6 +438,105 @@ canvas {
     }
   })
 })()</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><!-- hexo injector body_end start -->
+<div id="tool-sidebar">
+    <div id="tool-toggle">🛠️</div>
+    <div id="tool-list">
+        <div class="tool-header">博客工具</div>
+        <a href="/tools/time" class="tool-item">📅 时间戳与地理时间</a>
+        <a href="/tools/base64-img" class="tool-item">🖼️ 图片↔Base64</a>
+        <a href="/tools/hash" class="tool-item">🔐 MD5/SHA256 计算</a>
+        <a href="/tools/geojson" class="tool-item">🌍 GeoJSON 查询</a>
+        <a href="/tools/remove-bg" class="tool-item">✂️ 快速抠图</a>
+        <a href="/tools/watermark" class="tool-item">💧 水印生成与检测</a>
+        <a href="/tools/gif" class="tool-item">🎬 GIF 生成</a>
+        <a href="/tools/mirage-tank" class="tool-item">👻 幻影坦克制作</a>
+        <a href="/tools/converter" class="tool-item">🔄 文件全能转换</a>
+    </div>
+</div>
+
+<style>
+    #tool-sidebar {
+        position: fixed;
+        right: -180px; /* Width of the list */
+        top: 40%;
+        transform: translateY(-50%);
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    /* Hover area to keep it open */
+    #tool-sidebar:hover {
+        right: 0;
+    }
+
+    #tool-toggle {
+        width: 40px;
+        height: 40px;
+        background: #49b1f5;
+        color: white;
+        text-align: center;
+        line-height: 40px;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+        font-size: 20px;
+        position: absolute;
+        left: -40px; /* Hangs off the left of the sidebar container */
+        top: 0;
+    }
+
+    #tool-list {
+        width: 180px; /* Width for text */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 0 8px; /* Bottom left rounded */
+        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    #tool-list {
+        border-radius: 0 0 0 8px; 
+    }
+
+    .tool-header {
+        padding: 10px;
+        background: #f7f9fe;
+        color: #49b1f5;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .tool-item {
+        display: block;
+        padding: 12px 15px;
+        color: #4c4948;
+        text-decoration: none !important;
+        font-size: 13px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .tool-item:last-child {
+        border-bottom: none;
+    }
+
+    .tool-item:hover {
+        background: #49b1f5;
+        color: white !important;
+    }
+</style>
+
   <style id="oml2d-force-styles">
     /* ==========================================================================
        1. STYLES
@@ -1226,103 +1325,4 @@ canvas {
         console.error('UI Init Failed:', e);
     }
   </script>
-
-<div id="tool-sidebar">
-    <div id="tool-toggle">🛠️</div>
-    <div id="tool-list">
-        <div class="tool-header">博客工具</div>
-        <a href="/tools/time" class="tool-item">📅 时间戳与地理时间</a>
-        <a href="/tools/base64-img" class="tool-item">🖼️ 图片↔Base64</a>
-        <a href="/tools/hash" class="tool-item">🔐 MD5/SHA256 计算</a>
-        <a href="/tools/geojson" class="tool-item">🌍 GeoJSON 查询</a>
-        <a href="/tools/remove-bg" class="tool-item">✂️ 快速抠图</a>
-        <a href="/tools/watermark" class="tool-item">💧 水印生成与检测</a>
-        <a href="/tools/gif" class="tool-item">🎬 GIF 生成</a>
-        <a href="/tools/mirage-tank" class="tool-item">👻 幻影坦克制作</a>
-        <a href="/tools/converter" class="tool-item">🔄 文件全能转换</a>
-    </div>
-</div>
-
-<style>
-    #tool-sidebar {
-        position: fixed;
-        right: -180px; /* Width of the list */
-        top: 40%;
-        transform: translateY(-50%);
-        z-index: 9999;
-        display: flex;
-        align-items: flex-start;
-        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-    }
-
-    /* Hover area to keep it open */
-    #tool-sidebar:hover {
-        right: 0;
-    }
-
-    #tool-toggle {
-        width: 40px;
-        height: 40px;
-        background: #49b1f5;
-        color: white;
-        text-align: center;
-        line-height: 40px;
-        border-radius: 8px 0 0 8px;
-        cursor: pointer;
-        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
-        font-size: 20px;
-        position: absolute;
-        left: -40px; /* Hangs off the left of the sidebar container */
-        top: 0;
-    }
-
-    #tool-list {
-        width: 180px; /* Width for text */
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border-radius: 0 0 0 8px; /* Bottom left rounded */
-        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-    
-    #tool-list {
-        border-radius: 0 0 0 8px; 
-    }
-
-    .tool-header {
-        padding: 10px;
-        background: #f7f9fe;
-        color: #49b1f5;
-        font-weight: bold;
-        font-size: 14px;
-        text-align: center;
-        border-bottom: 1px solid #eee;
-    }
-
-    .tool-item {
-        display: block;
-        padding: 12px 15px;
-        color: #4c4948;
-        text-decoration: none !important;
-        font-size: 13px;
-        transition: all 0.2s;
-        border-bottom: 1px solid #f0f0f0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .tool-item:last-child {
-        border-bottom: none;
-    }
-
-    .tool-item:hover {
-        background: #49b1f5;
-        color: white !important;
-    }
-</style>
 <!-- hexo injector body_end end --></body></html>
