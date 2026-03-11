@@ -1,34 +1,17 @@
-<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Arch Linux 日常：从“折腾”到“生产力”的进化之旅 | llbzow的摸鱼日记 (づ￣ 3￣)づ</title><meta name="author" content="llbzow"><meta name="copyright" content="llbzow"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="直到今天（3月9号），整整一周的高强度使用和不断调教，我终于敢说：Arch 不仅能活下去，而且比想象中更适合我的双重身份——开发者与工地施工员。 这周我都折腾了什么？ 环境与字体配置：解决了最初中文字体发虚和缺失的问题，现在我的终端和浏览器里，等距字体和各类 Nerd Fonts 混杂得极为和谐，阅读代码简直是享受。孩子们，不会QT和没用过环境变量的不要用这玩意。 包管理 (pacman &amp;amp">
-<meta property="og:type" content="article">
-<meta property="og:title" content="Arch Linux 日常：从“折腾”到“生产力”的进化之旅">
-<meta property="og:url" content="https://yourblog.com/2026/03/09/arch-linux-part3/index.html">
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>WebGPU 万有引力粒子 | llbzow的摸鱼日记 (づ￣ 3￣)づ</title><meta name="author" content="llbzow"><meta name="copyright" content="llbzow"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="/* 限制 Canvas 大小，匹配博客正常宽度并在中间渲染 */ .webgpu-demo-wrapper {     position: relative;     width: 100%;     margin-top: 10px;     border-radius: 12px;     overflow: hidden;     box-shadow: 0 4px 15px rgba(">
+<meta property="og:type" content="website">
+<meta property="og:title" content="WebGPU 万有引力粒子">
+<meta property="og:url" content="https://yourblog.com/tools/webgpu-gravity/index.html">
 <meta property="og:site_name" content="llbzow的摸鱼日记 (づ￣ 3￣)づ">
-<meta property="og:description" content="直到今天（3月9号），整整一周的高强度使用和不断调教，我终于敢说：Arch 不仅能活下去，而且比想象中更适合我的双重身份——开发者与工地施工员。 这周我都折腾了什么？ 环境与字体配置：解决了最初中文字体发虚和缺失的问题，现在我的终端和浏览器里，等距字体和各类 Nerd Fonts 混杂得极为和谐，阅读代码简直是享受。孩子们，不会QT和没用过环境变量的不要用这玩意。 包管理 (pacman &amp;amp">
+<meta property="og:description" content="/* 限制 Canvas 大小，匹配博客正常宽度并在中间渲染 */ .webgpu-demo-wrapper {     position: relative;     width: 100%;     margin-top: 10px;     border-radius: 12px;     overflow: hidden;     box-shadow: 0 4px 15px rgba(">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&amp;fit=crop&amp;q=80&amp;w=1000">
-<meta property="article:published_time" content="2026-03-09T08:30:00.000Z">
-<meta property="article:modified_time" content="2026-03-09T08:52:26.267Z">
+<meta property="og:image" content="https://yourblog.com/img/cute_cat.svg">
+<meta property="article:published_time" content="2026-03-10T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-03-11T07:16:08.398Z">
 <meta property="article:author" content="llbzow">
-<meta property="article:tag" content="Linux">
-<meta property="article:tag" content="折腾">
-<meta property="article:tag" content="Arch">
+<meta property="article:tag" content="技术, 生活, 博客, 分享">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&amp;fit=crop&amp;q=80&amp;w=1000"><script type="application/ld+json">{
-  "@context": "https://schema.org",
-  "@type": "BlogPosting",
-  "headline": "Arch Linux 日常：从“折腾”到“生产力”的进化之旅",
-  "url": "https://yourblog.com/2026/03/09/arch-linux-part3/",
-  "image": "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&fit=crop&q=80&w=1000",
-  "datePublished": "2026-03-09T08:30:00.000Z",
-  "dateModified": "2026-03-09T08:52:26.267Z",
-  "author": [
-    {
-      "@type": "Person",
-      "name": "llbzow",
-      "url": "https://yourblog.com"
-    }
-  ]
-}</script><link rel="shortcut icon" href="/img/cute_cat.svg"><link rel="canonical" href="https://yourblog.com/2026/03/09/arch-linux-part3/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="preconnect" href="//busuanzi.ibruce.info"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+<meta name="twitter:image" content="https://yourblog.com/img/cute_cat.svg"><script type="application/ld+json"></script><link rel="shortcut icon" href="/img/cute_cat.svg"><link rel="canonical" href="https://yourblog.com/tools/webgpu-gravity/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="preconnect" href="//busuanzi.ibruce.info"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
     (() => {
       
     const saveToLocal = {
@@ -157,10 +140,10 @@
   },
   autoDarkmode: false
 }</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
-  title: 'Arch Linux 日常：从“折腾”到“生产力”的进化之旅',
+  title: 'WebGPU 万有引力粒子',
   isHighlightShrink: false,
-  isToc: true,
-  pageType: 'post'
+  isToc: false,
+  pageType: 'page'
 }</script><link rel="stylesheet" href="/css/custom.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
   const $loadingBox = document.getElementById('loading-box')
   const $body = document.body
@@ -191,24 +174,399 @@
     btf.addGlobalFn('pjaxSend', preloader.initLoading, 'preloader_init')
     btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
   }
-})()</script><div id="web_bg" style="background-image: url(/img/bg_main.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="data:image/webp;base64,UklGRhoBAABXRUJQVlA4WAoAAAAQAAAAJwAAJwAAQUxQSLgAAAAFuTJE9D80UiRJkiTpxvPo4fPha2lWw0WWMtgkeIot7wfsAyImYAI+vnvEjz++fJs9sbA+tfcM/HtDiBgr3c8SJP/Dk1FWC2LCxjhcwxkH4oQuQtNwSOdgixw5o+0TyIUCQoMJti7B3ALGhZLGNuJiAYfblG7kb/RON5GjZNeEtA+QtC6omDsY2aoIwv2KDLiAzPYvzhmyNVWWzAtzzGHxSBnzCwFja3Igk3sSwSooc7gTFtmKJoIQVlA4IDwAAABQAwCdASooACgAPzmcxF0vKqcko4gB4CcJZwDNSAn82OhFYAD+7iKcpmiMeBjtx3LPQK2rXKK9ARvvVAA=" data-lazy-src="/img/cute_cat.svg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">18</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-gamepad"></i><span> 小游戏</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/%E4%BA%94%E5%AD%90%E6%A3%8B"><i class="fa-fw /tools/gomoku/"></i><span> 0</span></a></li><li><a class="site-page child" href="/%E6%89%AB%E9%9B%B7"><i class="fa-fw /tools/minesweeper/"></i><span> 1</span></a></li><li><a class="site-page child" href="/%E5%90%83%E8%B1%86%E4%BA%BA"><i class="fa-fw /tools/pacman/"></i><span> 2</span></a></li><li><a class="site-page child" href="/%E8%B4%AA%E5%90%83%E8%9B%87"><i class="fa-fw /tools/snake/"></i><span> 3</span></a></li><li><a class="site-page child" href="/2048"><i class="fa-fw /tools/2048/"></i><span> 4</span></a></li><li><a class="site-page child" href="/%E4%BF%84%E7%BD%97%E6%96%AF%E6%96%B9%E5%9D%97"><i class="fa-fw /tools/tetris/"></i><span> 5</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&amp;fit=crop&amp;q=80&amp;w=1000);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">llbzow的摸鱼日记 (づ￣ 3￣)づ</span></a><a class="nav-page-title" href="/"><span class="site-name">Arch Linux 日常：从“折腾”到“生产力”的进化之旅</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-gamepad"></i><span> 小游戏</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/%E4%BA%94%E5%AD%90%E6%A3%8B"><i class="fa-fw /tools/gomoku/"></i><span> 0</span></a></li><li><a class="site-page child" href="/%E6%89%AB%E9%9B%B7"><i class="fa-fw /tools/minesweeper/"></i><span> 1</span></a></li><li><a class="site-page child" href="/%E5%90%83%E8%B1%86%E4%BA%BA"><i class="fa-fw /tools/pacman/"></i><span> 2</span></a></li><li><a class="site-page child" href="/%E8%B4%AA%E5%90%83%E8%9B%87"><i class="fa-fw /tools/snake/"></i><span> 3</span></a></li><li><a class="site-page child" href="/2048"><i class="fa-fw /tools/2048/"></i><span> 4</span></a></li><li><a class="site-page child" href="/%E4%BF%84%E7%BD%97%E6%96%AF%E6%96%B9%E5%9D%97"><i class="fa-fw /tools/tetris/"></i><span> 5</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Arch Linux 日常：从“折腾”到“生产力”的进化之旅</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-03-09T08:30:00.000Z" title="发表于 2026-03-09 16:30:00">2026-03-09</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-03-09T08:52:26.267Z" title="更新于 2026-03-09 16:52:26">2026-03-09</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%8A%80%E6%9C%AF%E9%9A%8F%E7%AC%94/">技术随笔</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>直到今天（3月9号），整整一周的高强度使用和不断调教，我终于敢说：Arch 不仅能活下去，而且比想象中更适合我的双重身份——开发者与工地施工员。</p>
-<h2 id="这周我都折腾了什么？"><a href="#这周我都折腾了什么？" class="headerlink" title="这周我都折腾了什么？"></a>这周我都折腾了什么？</h2><ol>
-<li><strong>环境与字体配置</strong>：<br>解决了最初中文字体发虚和缺失的问题，现在我的终端和浏览器里，等距字体和各类 Nerd Fonts 混杂得极为和谐，阅读代码简直是享受。<br>孩子们，不会QT和没用过环境变量的不要用这玩意。</li>
-<li><strong>包管理 (<code>pacman</code> &amp; <code>yay</code>) 的终极快感</strong>：<br>受够了去各种官网下载 <code>.exe</code>，然后提防捆绑安装的日子。在 Arch 里，一句 <code>yay -S 软件名</code>，几秒钟后软件就安静地待在启动器里了。无论是微信、Node.js 还是复杂的开发库，全都在掌控之中。</li>
-<li><strong>工作流重建</strong>：<br>在工地需要处理的基础办公任务也找到了替代品。WPS 的 Linux 版出奇的好用；而绘图、修图等需求，也能在开源社区找到轻量又无广告的替代软件。</li>
-<li><strong>系统维护：滚动的恐惧与刺激</strong>：<br>大家都说 Arch 是“滚挂”代名词。这周我确实遇到了一次因为特定包依赖冲突导致的无法启动 XWayland 的小问题。但是看报错日志、去论坛查疑、最终通过降级包修复成功的过程，让我学到了比用几年 Windows 还多的底层知识。<br>实际上，现在arch已经很难滚挂了。</li>
-</ol>
-<h2 id="给想跳坑朋友们的建议"><a href="#给想跳坑朋友们的建议" class="headerlink" title="给想跳坑朋友们的建议"></a>给想跳坑朋友们的建议</h2><p>如果只是一时兴起，或者每天离不开大型网游、专业级 Adobe 全家桶，那请留在 Windows。<br>但如果你有以下症状：</p>
-<ul>
-<li><strong>重度代码强迫症</strong>：见不得后台跑着莫名其妙的进程。</li>
-<li><strong>极简主义</strong>：希望系统里除了你需要的，什么都没有。</li>
-<li><strong>热爱折腾</strong>：喜欢亲手把一块砖一块砖砌成摩天大楼的感觉（就像我在工地打灰）。</li>
-<li>懂环境配置：没有玩过linux最好别碰这玩意，不然容易找不着北。你要有ssh命令行运维能力。</li>
-</ul>
-<p>那 Arch 绝对是你最终的归宿。</p>
-<p>试毒完成。目前看来，除了偶尔遇到点小麻烦需要自己阅读文档外，它已经完美地成为了我新的生产力平台。后续我还会在这里记录一些配置文件和踩坑记录，方便大家（或者以后的我）参考。</p>
-<p><strong>生命不息，折腾不止！</strong></p>
-</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://yourblog.com">llbzow</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://yourblog.com/2026/03/09/arch-linux-part3/">https://yourblog.com/2026/03/09/arch-linux-part3/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://yourblog.com" target="_blank">llbzow的摸鱼日记 (づ￣ 3￣)づ</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Linux/">Linux</a><a class="post-meta__tags" href="/tags/%E6%8A%98%E8%85%BE/">折腾</a><a class="post-meta__tags" href="/tags/Arch/">Arch</a></div><div class="post-share"><div class="social-share" data-image="https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&amp;fit=crop&amp;q=80&amp;w=1000" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer=""></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/03/02/arch-linux-part2/" title="孩子们，我不做 Windows 人啦！"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://images.unsplash.com/photo-1542831371-29b0f74f9713?auto=format&amp;fit=crop&amp;q=80&amp;w=1000" onerror="onerror=null;src='/img/049.png'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">孩子们，我不做 Windows 人啦！</div></div><div class="info-2"><div class="info-item-1"> “Are you sure you want to format /dev/nvme0n1p3?”“Yes.”  就在 3 月 2 号的这个夜晚，我正式把装满了各种恶心管家、弹窗广告和强推组件的 Windows 分区，干！掉！了！ 才怪，孩子们，grub双引导和windows原生的dx12还是不错的，但是在此之前，我得把环境和生态全部搬过来。 孩子们，我不做 Windows 人啦！(Jojo 脸.jpg) 桌面与美化：从简陋黑框到酷炫极客Arch 的安装这回轻车熟路了（感谢 archinstall 脚本的辅助，终于不用一行行敲命令了）。装完系统才是真正折腾的开始。  **窗口管理器 (WM)**：没有选择臃肿的 KDE 或者 GNOME，我头铁地选了 Hyprland。基于 Wayland 的平铺式窗口管理器。刚进去的时候一片漆黑，但配置好动画和快捷键后，那种丝滑和高效，真的是用了就回不去。 **终端 (Terminal)**：换上了 Alacritty + Tmux。 状态栏：自己从头配了 Waybar。  目前的极简桌面大概长这样：  现在的屏幕：一块透...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/02/25/arch-linux-part1/" title="Arch Linux 试毒：初探邪教的诱惑"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://images.unsplash.com/photo-1629654297299-c8506221ca97?auto=format&amp;fit=crop&amp;q=80&amp;w=1000" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-02-25</div><div class="info-item-2">Arch Linux 试毒：初探邪教的诱惑</div></div><div class="info-2"><div class="info-item-1">“Arch Linux 是邪教，千万别碰！” 这句在技术圈流传甚广的忠告，今天终于被我抛到了脑后。看着 Windows 11 日益臃肿的身躯、层出不穷的弹窗警告，还有在工地画图时突然给我来个蓝屏重启的绝望，我决定：是时候找点刺激了。 今天（2月25日），我正式开始了 Arch Linux 的“试毒”之旅。 为什么是 Arch？其实我也考虑过 Ubuntu 或者 Manjaro，但骨子里那种“要想懂，就得从零开始手搓”的工程师强迫症犯了。Arch 的哲学——KISS (Keep It Simple, Stupid) 简直太吸引人了。你需要什么，就装什么；系统里没有一行代码是多余的。 这不就像我们在工地上打灰一样吗？一切基础都要亲自夯实。 第一次安装：被黑框框支配的恐惧没有图形化安装界面？纯命令行？讲真，看着屏幕上闪烁的光标，我有一瞬间怀疑自己是不是自虐。 跟着 Arch Wiki 一步步：  联网 (iwctl) - 这一步就卡了我半小时，因为宿舍网卡的驱动有点奇葩，最后我直接换数据了。 分区与格式化 (fdisk, mkfs) - 小心翼翼，生怕把用来吃饭的 Windows 数据...</div></div></div></a><a class="pagination-related" href="/2026/03/02/arch-linux-part2/" title="孩子们，我不做 Windows 人啦！"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://images.unsplash.com/photo-1542831371-29b0f74f9713?auto=format&amp;fit=crop&amp;q=80&amp;w=1000" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-03-02</div><div class="info-item-2">孩子们，我不做 Windows 人啦！</div></div><div class="info-2"><div class="info-item-1"> “Are you sure you want to format /dev/nvme0n1p3?”“Yes.”  就在 3 月 2 号的这个夜晚，我正式把装满了各种恶心管家、弹窗广告和强推组件的 Windows 分区，干！掉！了！ 才怪，孩子们，grub双引导和windows原生的dx12还是不错的，但是在此之前，我得把环境和生态全部搬过来。 孩子们，我不做 Windows 人啦！(Jojo 脸.jpg) 桌面与美化：从简陋黑框到酷炫极客Arch 的安装这回轻车熟路了（感谢 archinstall 脚本的辅助，终于不用一行行敲命令了）。装完系统才是真正折腾的开始。  **窗口管理器 (WM)**：没有选择臃肿的 KDE 或者 GNOME，我头铁地选了 Hyprland。基于 Wayland 的平铺式窗口管理器。刚进去的时候一片漆黑，但配置好动画和快捷键后，那种丝滑和高效，真的是用了就回不去。 **终端 (Terminal)**：换上了 Alacritty + Tmux。 状态栏：自己从头配了 Waybar。  目前的极简桌面大概长这样：  现在的屏幕：一块透...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="data:image/webp;base64,UklGRhoBAABXRUJQVlA4WAoAAAAQAAAAJwAAJwAAQUxQSLgAAAAFuTJE9D80UiRJkiTpxvPo4fPha2lWw0WWMtgkeIot7wfsAyImYAI+vnvEjz++fJs9sbA+tfcM/HtDiBgr3c8SJP/Dk1FWC2LCxjhcwxkH4oQuQtNwSOdgixw5o+0TyIUCQoMJti7B3ALGhZLGNuJiAYfblG7kb/RON5GjZNeEtA+QtC6omDsY2aoIwv2KDLiAzPYvzhmyNVWWzAtzzGHxSBnzCwFja3Igk3sSwSooc7gTFtmKJoIQVlA4IDwAAABQAwCdASooACgAPzmcxF0vKqcko4gB4CcJZwDNSAn82OhFYAD+7iKcpmiMeBjtx3LPQK2rXKK9ARvvVAA=" data-lazy-src="/img/cute_cat.svg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"></div><div class="author-info-name">llbzow</div><div class="author-info-description">一个热爱技术、喜欢分享的开发者</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">18</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/llbzow"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/llbzow" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mail@luozili.work" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a><a class="social-icon" href="/vpn/" target="_blank" title="VPN 订阅"><i class="fas fa-lock" style="color: #FFA500;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到llbzow的博客，这里分享技术、生活和思考，还有我的工地生活</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BF%99%E5%91%A8%E6%88%91%E9%83%BD%E6%8A%98%E8%85%BE%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="toc-number">1.</span> <span class="toc-text">这周我都折腾了什么？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%99%E6%83%B3%E8%B7%B3%E5%9D%91%E6%9C%8B%E5%8F%8B%E4%BB%AC%E7%9A%84%E5%BB%BA%E8%AE%AE"><span class="toc-number">2.</span> <span class="toc-text">给想跳坑朋友们的建议</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/03/09/arch-linux-part3/" title="Arch Linux 日常：从“折腾”到“生产力”的进化之旅"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&amp;fit=crop&amp;q=80&amp;w=1000" onerror="this.onerror=null;this.src='/img/049.png'" alt="Arch Linux 日常：从“折腾”到“生产力”的进化之旅"></a><div class="content"><a class="title" href="/2026/03/09/arch-linux-part3/" title="Arch Linux 日常：从“折腾”到“生产力”的进化之旅">Arch Linux 日常：从“折腾”到“生产力”的进化之旅</a><time datetime="2026-03-09T08:30:00.000Z" title="发表于 2026-03-09 16:30:00">2026-03-09</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/03/02/arch-linux-part2/" title="孩子们，我不做 Windows 人啦！"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://images.unsplash.com/photo-1542831371-29b0f74f9713?auto=format&amp;fit=crop&amp;q=80&amp;w=1000" onerror="this.onerror=null;this.src='/img/049.png'" alt="孩子们，我不做 Windows 人啦！"></a><div class="content"><a class="title" href="/2026/03/02/arch-linux-part2/" title="孩子们，我不做 Windows 人啦！">孩子们，我不做 Windows 人啦！</a><time datetime="2026-03-02T13:15:00.000Z" title="发表于 2026-03-02 21:15:00">2026-03-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/02/25/arch-linux-part1/" title="Arch Linux 试毒：初探邪教的诱惑"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://images.unsplash.com/photo-1629654297299-c8506221ca97?auto=format&amp;fit=crop&amp;q=80&amp;w=1000" onerror="this.onerror=null;this.src='/img/049.png'" alt="Arch Linux 试毒：初探邪教的诱惑"></a><div class="content"><a class="title" href="/2026/02/25/arch-linux-part1/" title="Arch Linux 试毒：初探邪教的诱惑">Arch Linux 试毒：初探邪教的诱惑</a><time datetime="2026-02-25T12:30:00.000Z" title="发表于 2026-02-25 20:30:00">2026-02-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/01/24/vue-learning-15/" title="彻底放弃：拥抱 Vibe Code，AI 才是亲爹"><img src="data:image/webp;base64,UklGRn4AAABXRUJQVlA4IHIAAABwBQCdASooABcAPzmKvVW/qSajMBqoA/AnCUAWo3CgkgShz1sDi7zNYIuZqzHvnjvry90AAP7it2SLgYgpB68fpGF8LA212vBP9aVJtRSRphnPvbv0tl3ARlG9CBwFhIyGIyXf4kAiaMAYMzJhC87JAAA=" data-lazy-src="/img/site_bg_v2.jpg" onerror="this.onerror=null;this.src='/img/049.png'" alt="彻底放弃：拥抱 Vibe Code，AI 才是亲爹"></a><div class="content"><a class="title" href="/2026/01/24/vue-learning-15/" title="彻底放弃：拥抱 Vibe Code，AI 才是亲爹">彻底放弃：拥抱 Vibe Code，AI 才是亲爹</a><time datetime="2026-01-23T16:00:00.000Z" title="发表于 2026-01-24 00:00:00">2026-01-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/01/23/vue-learning-14/" title="我累了：试图理解源码，结果被源码理解了"><img src="data:image/webp;base64,UklGRmwAAABXRUJQVlA4IGAAAACQBACdASooABcAPy2CsFOzKKQitVgMAmAliUAY/IKA6LN3dHuRlGfAPc4H2QAA2rp5oGI824y5gTQFICHKEw9BjURv8zS+cUwXzCeOdyFsiP5ruOO3saceR6NhITLQAAA=" data-lazy-src="/img/040.jpg" onerror="this.onerror=null;this.src='/img/049.png'" alt="我累了：试图理解源码，结果被源码理解了"></a><div class="content"><a class="title" href="/2026/01/23/vue-learning-14/" title="我累了：试图理解源码，结果被源码理解了">我累了：试图理解源码，结果被源码理解了</a><time datetime="2026-01-22T16:00:00.000Z" title="发表于 2026-01-23 00:00:00">2026-01-23</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url(/img/040.jpg);"><div class="footer-other"><div class="footer-copyright"><span class="copyright">©&nbsp;2025 - 2026 By llbzow</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"></div><script>var OriginTitle = document.title; var titleTime; document.addEventListener('visibilitychange', function () { if (document.hidden) { document.title = '╭(°A°`)╮ 页面崩溃啦 ~'; clearTimeout(titleTime); } else { document.title = '(ฅ>ω<*ฅ) 噫又好啦 ~ ' + OriginTitle; titleTime = setTimeout(function () { document.title = OriginTitle; }, 2000); } });</script><script defer="defer" id="fluttering_ribbon" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="255,255,255" opacity="0.6" zindex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-nest.min.js"></script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>(() => {
+})()</script><div id="web_bg" style="background-image: url(/img/bg_main.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="data:image/webp;base64,UklGRhoBAABXRUJQVlA4WAoAAAAQAAAAJwAAJwAAQUxQSLgAAAAFuTJE9D80UiRJkiTpxvPo4fPha2lWw0WWMtgkeIot7wfsAyImYAI+vnvEjz++fJs9sbA+tfcM/HtDiBgr3c8SJP/Dk1FWC2LCxjhcwxkH4oQuQtNwSOdgixw5o+0TyIUCQoMJti7B3ALGhZLGNuJiAYfblG7kb/RON5GjZNeEtA+QtC6omDsY2aoIwv2KDLiAzPYvzhmyNVWWzAtzzGHxSBnzCwFja3Igk3sSwSooc7gTFtmKJoIQVlA4IDwAAABQAwCdASooACgAPzmcxF0vKqcko4gB4CcJZwDNSAn82OhFYAD+7iKcpmiMeBjtx3LPQK2rXKK9ARvvVAA=" data-lazy-src="/img/cute_cat.svg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">18</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-gamepad"></i><span> 小游戏</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/%E4%BA%94%E5%AD%90%E6%A3%8B"><i class="fa-fw /tools/gomoku/"></i><span> 0</span></a></li><li><a class="site-page child" href="/%E6%89%AB%E9%9B%B7"><i class="fa-fw /tools/minesweeper/"></i><span> 1</span></a></li><li><a class="site-page child" href="/%E5%90%83%E8%B1%86%E4%BA%BA"><i class="fa-fw /tools/pacman/"></i><span> 2</span></a></li><li><a class="site-page child" href="/%E8%B4%AA%E5%90%83%E8%9B%87"><i class="fa-fw /tools/snake/"></i><span> 3</span></a></li><li><a class="site-page child" href="/2048"><i class="fa-fw /tools/2048/"></i><span> 4</span></a></li><li><a class="site-page child" href="/%E4%BF%84%E7%BD%97%E6%96%AF%E6%96%B9%E5%9D%97"><i class="fa-fw /tools/tetris/"></i><span> 5</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="page" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">llbzow的摸鱼日记 (づ￣ 3￣)づ</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-gamepad"></i><span> 小游戏</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/%E4%BA%94%E5%AD%90%E6%A3%8B"><i class="fa-fw /tools/gomoku/"></i><span> 0</span></a></li><li><a class="site-page child" href="/%E6%89%AB%E9%9B%B7"><i class="fa-fw /tools/minesweeper/"></i><span> 1</span></a></li><li><a class="site-page child" href="/%E5%90%83%E8%B1%86%E4%BA%BA"><i class="fa-fw /tools/pacman/"></i><span> 2</span></a></li><li><a class="site-page child" href="/%E8%B4%AA%E5%90%83%E8%9B%87"><i class="fa-fw /tools/snake/"></i><span> 3</span></a></li><li><a class="site-page child" href="/2048"><i class="fa-fw /tools/2048/"></i><span> 4</span></a></li><li><a class="site-page child" href="/%E4%BF%84%E7%BD%97%E6%96%AF%E6%96%B9%E5%9D%97"><i class="fa-fw /tools/tetris/"></i><span> 5</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><h1 class="title-seo">WebGPU 万有引力粒子</h1></header><main class="layout hide-aside" id="content-inner"><div id="page"><div class="page-title">WebGPU 万有引力粒子</div><div class="container" id="article-container"><style>
+/* 限制 Canvas 大小，匹配博客正常宽度并在中间渲染 */
+.webgpu-demo-wrapper {
+    position: relative;
+    width: 100%;
+    margin-top: 10px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    background-color: #050505;
+}
+
+#gpuCanvas {
+    width: 100%;
+    height: 600px;
+    display: block;
+    cursor: crosshair;
+}
+
+#overlay-ui {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    color: rgba(255,255,255,0.8);
+    font-family: monospace;
+    pointer-events: none;
+    background: rgba(0,0,0,0.6);
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.15);
+    backdrop-filter: blur(4px);
+    z-index: 10;
+}
+
+.warning { color: #ff4d4f; font-weight: bold; }
+</style>
+
+<div class="webgpu-demo-wrapper">
+    <div id="overlay-ui">
+        <div id="fps-counter">FPS: 0</div>
+        <div id="particle-count">粒子数: 150,000</div>
+        <div style="margin-top: 10px; font-size: 12px; color: #aaa;">
+            🖱️ 移动鼠标产生引力扰动<br>
+            🖱️ 按下鼠标左键变为斥力场
+        </div>
+        <div id="gpu-error" class="warning" style="display: none; margin-top: 10px;"></div>
+    </div>
+    <canvas id="gpuCanvas"></canvas>
+</div>
+
+<script type="module">
+// WebGPU 十万级交互引力场 (Particle Gravity Field)
+// 核心逻辑：利用 Compute Shader 计算粒子受鼠标引力影响的速度/位移
+// 利用 Render Shader 渲染发光点
+
+const numParticles = 150000;
+let isMouseDown = 0.0; // 0=引力, 1.0=斥力
+let mousePos = [0.0, 0.0];
+let frameCount = 0;
+let lastTime = performance.now();
+
+//===============================
+// 1. WGSL Compute Shader
+//===============================
+const computeWGSL = `
+struct Particle {
+  pos : vec2<f32>,
+  vel : vec2<f32>,
+};
+
+@group(0) @binding(0) var<storage, read_write> particles : array<Particle>;
+
+struct SimParams {
+  mousePos : vec2<f32>,
+  isMouseDown : f32, // 0.0 吸引, 1.0 排斥
+  padding : f32,
+};
+@group(0) @binding(1) var<uniform> params : SimParams;
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
+    let index = GlobalInvocationID.x;
+    if (index >= ${numParticles}u) {
+        return;
+    }
+
+    var p = particles[index];
+    
+    // 引力计算
+    let dir = params.mousePos - p.pos;
+    let distSq = dot(dir, dir);
+    let dist = sqrt(distSq);
+    
+    // 避免除以 0 以及中心奇点爆炸
+    let safeDist = max(dist, 0.05); 
+    
+    // 万有引力公式简翻，斥力模式下加负号并改变数值范围
+    let forceMagnitude = 0.0001 / (safeDist * safeDist);
+    var force = normalize(dir) * forceMagnitude;
+    
+    // 如果按下鼠标，则反演表现斥力，且力量更大
+    if (params.isMouseDown > 0.5) {
+        force = -force * 2.0;
+    }
+
+    // 鼠标在一定范围内才有明显作用 (如 0.4 半径内)
+    if (dist < 0.4) {
+        p.vel = p.vel + force;
+    }
+
+    // 增加一点摩擦力衰减，防止粒子失控飞走
+    p.vel = p.vel * 0.985;
+    
+    // 增加一点趋向中心的微弱游荡引力，防止散出屏幕太远
+    let centerDir = vec2<f32>(0.0, 0.0) - p.pos;
+    p.vel = p.vel + (centerDir * 0.0001);
+
+    // 更新位置
+    p.pos = p.pos + p.vel;
+
+    // 边缘简单反弹 (屏幕坐标设为 -1 到 1)
+    if (p.pos.x < -1.0) { p.pos.x = -1.0; p.vel.x = -p.vel.x * 0.5; }
+    if (p.pos.x > 1.0) { p.pos.x = 1.0; p.vel.x = -p.vel.x * 0.5; }
+    if (p.pos.y < -1.0) { p.pos.y = -1.0; p.vel.y = -p.vel.y * 0.5; }
+    if (p.pos.y > 1.0) { p.pos.y = 1.0; p.vel.y = -p.vel.y * 0.5; }
+
+    particles[index] = p;
+}
+`;
+
+//===============================
+// 2. WGSL Render Shader
+//===============================
+const renderWGSL = `
+struct Particle {
+  pos : vec2<f32>,
+  vel : vec2<f32>,
+};
+
+struct VertexOutput {
+  @builtin(position) position : vec4<f32>,
+  @location(0) color : vec4<f32>,
+  @location(1) pointCoord : vec2<f32>, // 用于画圆圈的简单坐标映射
+};
+
+@vertex
+fn vs_main(
+    @location(0) particlePos : vec2<f32>,
+    @location(1) particleVel : vec2<f32>,
+    @builtin(vertex_index) vertexIndex : u32
+) -> VertexOutput {
+    // 画一个由两个三角形构成的方形代替点(Point-list 在一些 WebGPU 实现中不支持大小)
+    // 放大粒子的坐标并转为 4 个顶点
+    var pos = array<vec2<f32>, 6>(
+        vec2<f32>(-1.0, -1.0),
+        vec2<f32>( 1.0, -1.0),
+        vec2<f32>(-1.0,  1.0),
+        vec2<f32>(-1.0,  1.0),
+        vec2<f32>( 1.0, -1.0),
+        vec2<f32>( 1.0,  1.0)
+    );
+    let p = pos[vertexIndex % 6u];
+    
+    var out : VertexOutput;
+    
+    // 粒子大小 (例如 0.003)
+    let size = 0.004;
+    // 这里如果屏幕比例不是1:1，粒子会被拉伸成椭圆，这里做简单的 x轴 修正
+    // 但为保持代码精简我们直接加在 position 上
+    out.position = vec4<f32>(particlePos + p * size, 0.0, 1.0);
+    
+    // 根据速度长度确定颜色，越块越红，越慢越蓝
+    let speed = length(particleVel);
+    let baseColor = vec3<f32>(0.2, 0.5, 1.0); // 原生蓝色
+    let fastColor = vec3<f32>(1.0, 0.1, 0.3); // 冲刺红色
+    let finalColor = mix(baseColor, fastColor, clamp(speed * 30.0, 0.0, 1.0));
+    
+    out.color = vec4<f32>(finalColor, 0.8);
+    out.pointCoord = p; // -1 to 1 范围
+    
+    return out;
+}
+
+@fragment
+fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
+    // 计算点到中心的距离，将其裁剪成圆形，并带有一点边缘柔和
+    let dist = length(in.pointCoord);
+    if (dist > 1.0) {
+        discard;
+    }
+    // 发光效果衰减
+    let alpha = (1.0 - dist) * in.color.a;
+    return vec4<f32>(in.color.rgb, alpha);
+}
+`;
+
+function showError(msg) {
+    const errDiv = document.getElementById('gpu-error');
+    errDiv.style.display = 'block';
+    errDiv.innerHTML = msg;
+    console.error(msg);
+}
+
+async function init() {
+    if (!navigator.gpu) {
+        showError('当前浏览器不支持 WebGPU。\n请使用最新版 Chrome/Edge 并确保硬件加速开启。');
+        return;
+    }
+
+    const canvas = document.getElementById('gpuCanvas');
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) {
+        showError('求取 WebGPU Adapter 失败，可能缺少兼容的显卡驱动。');
+        return;
+    }
+    
+    const device = await adapter.requestDevice();
+    const context = canvas.getContext('webgpu');
+    
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    canvas.width = canvas.clientWidth * devicePixelRatio;
+    canvas.height = canvas.clientHeight * devicePixelRatio;
+    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+    
+    context.configure({
+        device,
+        format: presentationFormat,
+        alphaMode: 'premultiplied',
+    });
+    
+    // 自适应改变画板大小以应对浏览器缩放
+    window.addEventListener('resize', () => {
+        canvas.width = canvas.clientWidth * devicePixelRatio;
+        canvas.height = canvas.clientHeight * devicePixelRatio;
+    });
+
+    //===============================
+    // 数据初始化
+    //===============================
+    // 一个粒子包含位置 (x,y) 和 速度 (x,y)，总共 4 个 f32 = 16 字节
+    const initialParticleData = new Float32Array(numParticles * 4);
+    for (let i = 0; i < numParticles; i++) {
+        initialParticleData[i * 4 + 0] = (Math.random() - 0.5) * 2.0; // pos x [-1, 1]
+        initialParticleData[i * 4 + 1] = (Math.random() - 0.5) * 2.0; // pos y [-1, 1]
+        
+        let angle = Math.random() * Math.PI * 2.0;
+        let r = Math.random() * 0.01;
+        initialParticleData[i * 4 + 2] = Math.cos(angle) * r; // vel x
+        initialParticleData[i * 4 + 3] = Math.sin(angle) * r; // vel y
+    }
+
+    const particleBuffer = device.createBuffer({
+        size: initialParticleData.byteLength,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        mappedAtCreation: true,
+    });
+    new Float32Array(particleBuffer.getMappedRange()).set(initialParticleData);
+    particleBuffer.unmap();
+
+    // 交互参数 Uniform Buffer: mousePos(vec2) + isMouseDown(f32) + padding(f32) = 16 字节
+    const simParamsBuffer = device.createBuffer({
+        size: 16,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    //===============================
+    // Shader Modules
+    //===============================
+    const computeModule = device.createShaderModule({ code: computeWGSL });
+    const renderModule = device.createShaderModule({ code: renderWGSL });
+
+    //===============================
+    // Pipelines
+    //===============================
+    const computePipeline = device.createComputePipeline({
+        layout: 'auto',
+        compute: {
+            module: computeModule,
+            entryPoint: 'main',
+        },
+    });
+
+    const bindGroup = device.createBindGroup({
+        layout: computePipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: particleBuffer } },
+            { binding: 1, resource: { buffer: simParamsBuffer } }
+        ],
+    });
+
+    const renderPipeline = device.createRenderPipeline({
+        layout: 'auto',
+        vertex: {
+            module: renderModule,
+            entryPoint: 'vs_main',
+            buffers: [{
+                arrayStride: 16, // pos(8) + vel(8)
+                stepMode: 'instance', // 每个粒子作为一个实例进行处理
+                attributes: [
+                    { shaderLocation: 0, offset: 0, format: 'float32x2' }, // pos
+                    { shaderLocation: 1, offset: 8, format: 'float32x2' }, // vel
+                ],
+            }],
+        },
+        fragment: {
+            module: renderModule,
+            entryPoint: 'fs_main',
+            targets: [{
+                format: presentationFormat,
+                blend: {
+                    color: { srcFactor: 'src-alpha', dstFactor: 'one', operation: 'add' },
+                    alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+                }
+            }],
+        },
+        primitive: {
+            topology: 'triangle-list', // 我们用画6个顶点的方式画方形，代替无法改大小的 GPU 点拓扑
+        },
+    });
+
+    //===============================
+    // 鼠标交互监听
+    //===============================
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        // 映射到 Shader 的 [-1, 1] 坐标系，注意 Y 轴反转
+        mousePos[0] = ((e.clientX - rect.left) / rect.width) * 2.0 - 1.0;
+        mousePos[1] = -(((e.clientY - rect.top) / rect.height) * 2.0 - 1.0);
+    });
+    canvas.addEventListener('mousedown', () => isMouseDown = 1.0);
+    canvas.addEventListener('mouseup', () => isMouseDown = 0.0);
+    canvas.addEventListener('mouseleave', () => {
+        // 移出时把鼠标设到虚无空间，防止粒子堆积在屏幕边缘
+        mousePos[0] = 999.0; 
+        mousePos[1] = 999.0;
+        isMouseDown = 0.0;
+    });
+
+    const fpsEl = document.getElementById('fps-counter');
+
+    //===============================
+    // 主循环
+    //===============================
+    function frame() {
+        // 更新参数
+        device.queue.writeBuffer(simParamsBuffer, 0, new Float32Array([mousePos[0], mousePos[1], isMouseDown, 0.0]));
+
+        const commandEncoder = device.createCommandEncoder();
+
+        // 1. Compute Pass 计算粒子物理状态
+        const computePass = commandEncoder.beginComputePass();
+        computePass.setPipeline(computePipeline);
+        computePass.setBindGroup(0, bindGroup);
+        // 按每组 64 线程调度
+        computePass.dispatchWorkgroups(Math.ceil(numParticles / 64)); 
+        computePass.end();
+
+        // 2. Render Pass 按计算好的顶点绘制
+        const renderPass = commandEncoder.beginRenderPass({
+            colorAttachments: [{
+                view: context.getCurrentTexture().createView(),
+                clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+                loadOp: 'clear',
+                storeOp: 'store',
+            }],
+        });
+        renderPass.setPipeline(renderPipeline);
+        renderPass.setVertexBuffer(0, particleBuffer);
+        // 画 6 个顶点（两个三角形组成平面），渲染 instances 为粒子数
+        renderPass.draw(6, numParticles, 0, 0); 
+        renderPass.end();
+
+        device.queue.submit([commandEncoder.finish()]);
+
+        // FPS 计算
+        frameCount++;
+        let currentTime = performance.now();
+        if (currentTime - lastTime >= 1000) {
+            fpsEl.textContent = `FPS: ${frameCount}`;
+            frameCount = 0;
+            lastTime = currentTime;
+        }
+
+        requestAnimationFrame(frame);
+    }
+
+    requestAnimationFrame(frame);
+}
+
+// 启动
+window.addEventListener('load', init);
+</script>
+</div></div></main><footer id="footer" style="background-image: url(/img/040.jpg);"><div class="footer-other"><div class="footer-copyright"><span class="copyright">©&nbsp;2025 - 2026 By llbzow</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"></div><script>var OriginTitle = document.title; var titleTime; document.addEventListener('visibilitychange', function () { if (document.hidden) { document.title = '╭(°A°`)╮ 页面崩溃啦 ~'; clearTimeout(titleTime); } else { document.title = '(ฅ>ω<*ฅ) 噫又好啦 ~ ' + OriginTitle; titleTime = setTimeout(function () { document.title = OriginTitle; }, 2000); } });</script><script defer="defer" id="fluttering_ribbon" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="255,255,255" opacity="0.6" zindex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-nest.min.js"></script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>(() => {
   const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
 
   window.pjax = new Pjax({

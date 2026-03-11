@@ -65,7 +65,30 @@
     box-shadow: 0 5px 6px -5px rgba(0, 0, 0, 0.6);
 }
 
-/* 7. 隐藏不需要的线条组件 (如果配置中开启了 canvas_nest 觉得乱可以强行在此隐藏) */
+/* 隐藏不需要的线条组件 (如果配置中开启了 canvas_nest 觉得乱可以强行在此隐藏) */
 /* canvas {
     opacity: 0.3 !important; 
 } */
+
+/* ==========================================================
+   LQIP 图片懒加载渐入动效
+   使用 lazysizes 的 class 状态控制，确保加载后图片清晰还原
+   ========================================================== */
+
+/* 加载中：模糊 + 半透明（lazysizes 会自动添加这些 class）*/
+img.lazyload,
+img.lazyloading {
+    filter: blur(10px);
+    opacity: 0.6;
+    transition: filter 0.45s ease, opacity 0.45s ease;
+    will-change: filter, opacity;
+}
+
+/* 加载完成：完全清晰（lazysizes 添加 lazyloaded class 后生效）*/
+img.lazyloaded {
+    filter: blur(0) !important;
+    opacity: 1 !important;
+    transition: filter 0.45s ease, opacity 0.45s ease;
+}
+
+
