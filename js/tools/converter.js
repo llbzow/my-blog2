@@ -186,6 +186,29 @@
             }
         }
 
+        // --- 1.5 Cloud Backend (Testing Node.js Server) ---
+        else if (format === 'server-mock') {
+            updateQueueStatus(id, 'processing', '正在上传至 Node.js 服务器...');
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) throw new Error('服务器响应异常: ' + response.status);
+                const data = await response.json();
+                
+                // 根据后端的真实返回数据生成供用户下载的日志结果
+                const resultText = `【云端转换处理完毕】\n\n- 原始文件名: ${data.originalName}\n- 后端模拟地址: ${data.mockUrl}\n- 实际状态: ${data.message}\n- 处理大小: ${data.fileSize} 字节\n\n(此文件由服务端接口返回生成)`;
+                blob = new Blob([resultText], { type: 'text/plain' });
+                filename = `server-result-${file.name}.txt`;
+            } catch(e) {
+                throw new Error("云端请求失败: " + e.message + " (请确认后端服务器 localhost:3000 是否已启动)");
+            }
+        }
+
         // --- 2. Smart TXT Extraction (OCR fallback) ---
         else if (format === 'txt') {
             if (ext === 'pdf') {

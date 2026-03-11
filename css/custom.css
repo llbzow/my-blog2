@@ -1,184 +1,71 @@
-/* 透明度与毛玻璃效果 */
-#aside-content .card-widget,
-#recent-posts > .recent-post-item,
-.layout > .recent-posts .pagination > .page-number,
-.layout > .recent-posts .pagination > .extend,
-.layout > div:first-child:not(.recent-posts),
-#page,
-#archive,
-#tag,
-#category,
-.layout > .recent-posts .pagination {
-    background: rgba(255, 255, 255, 0.8) !important;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-}
+/* ==========================================================
+   自定义博客的美化样式 (Custom Style for Butterfly)
+   主要用于配合背景图片，实现内容容器的半透明毛玻璃效果
+   ========================================================== */
 
-/* 深色模式适配 */
-[data-theme='dark'] #aside-content .card-widget,
-[data-theme='dark'] #recent-posts > .recent-post-item,
-[data-theme='dark'] .layout > .recent-posts .pagination > .page-number,
-[data-theme='dark'] .layout > .recent-posts .pagination > .extend,
-[data-theme='dark'] .layout > div:first-child:not(.recent-posts),
-[data-theme='dark'] #page,
-[data-theme='dark'] #archive,
-[data-theme='dark'] #tag,
-[data-theme='dark'] #category,
-[data-theme='dark'] .layout > .recent-posts .pagination {
-    background: rgba(0, 0, 0, 0.6) !important;
-}
-
-/* ==================================
-   用户自定义样式 - 视觉优化
-   ================================== */
-
-/* 1. 全局背景图固定 */
-/* 解决页面切换或滚动时的背景跳动问题 */
-#web_bg {
-    position: fixed;
-    z-index: -999;
-    width: 100%;
-    height: 100%;
-    background-attachment: fixed;
-    background-position: center;
-    background-size: cover;
-    background-repeat: no-repeat;
-}
-
-/* 2. 顶部大图 (Top Img) 优化 */
-/* 添加黑色半透明遮罩，降低亮度，统一色调，提升文字清晰度 */
-#page-header {
-    position: relative;
-}
-
-#page-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.3); /* 遮罩浓度 */
-    pointer-events: none;
-    z-index: 1;
-}
-
-/* 确保标题等内容显示在遮罩之上 */
-#page-header > * {
-    position: relative;
-    z-index: 2;
-}
-
-/* 3. 顶部大图底部渐变融合 */
-/* 消除图片与页面内容的硬边界，使其自然过渡 */
-#page-header:not(.not-top-img) {
-    -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-    mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-}
-
-/* 4. 页脚 (Footer) 优化 - 与顶部保持一致 */
-/* 添加黑色半透明遮罩 */
-#footer {
-    position: relative;
-    /* 渐变融合 - 顶部边缘透明 */
-    /* to bottom: 从顶部透明(0%) 到 黑(15%) */
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
-    mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
-}
-
-#footer::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.3); /* 遮罩浓度 */
-    pointer-events: none;
-    z-index: 0;
-}
-
-/* 确保页脚内容在遮罩之上 */
-#footer > * {
-    position: relative;
-    z-index: 1;
-}
-
-/* 5. 去除背景图边缘水印 */
-/* 放大背景容器，将边缘挤出视口 */
-#web_bg {
-    transform: scale(1.02); /* 放大 2% */
-    transform-origin: center;
-}
-
-/* ==================================
-   6. 分页栏 (Pagination) 优化
-   ================================== */
-#pagination {
-    width: 100%;
-    margin: 20px auto;
-}
-
-#pagination .pagination {
-    text-align: center;
-}
-
-/* 移除原有的分页容器背景，改为独立按钮风格 (可选) */
-/* 如果您喜欢保留长条背景，可以注释掉下面这一段 */
-.layout > .recent-posts .pagination {
+/* 1. 整体布局页面背景透明，让 body 背景图透射出来 */
+#body-wrap {
     background: transparent !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
 }
 
-/* 独立卡片按钮样式 */
-#pagination .page-number, 
-#pagination .extend {
-    display: inline-block;
-    margin: 0 6px;
-    padding: 0;
-    width: 42px; /* 固定宽高，使其成为正方形或圆形 */
-    height: 42px;
-    line-height: 42px;
-    background: rgba(255, 255, 255, 0.9) !important;
-    border-radius: 12px; /* 圆角矩形 */
-    color: #333;
-    font-weight: bold;
-    font-size: 1.1em;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* 柔和阴影 */
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    border: none;
-    text-align: center;
+/* 2. 主卡片容器（文章列表、内容页）的半透明毛玻璃效果 */
+.layout > div:first-child:not(.recent-posts) {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border-radius: 12px;
+    box-shadow: 0 4px 8px 6px rgba(7, 17, 27, 0.06);
 }
 
-/* 选中状态 - 突出显示 */
+/* 首页文章卡片 */
+.recent-posts > .recent-post-item {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border-radius: 12px;
+    box-shadow: 0 4px 8px 6px rgba(7, 17, 27, 0.06);
+}
+
+/* 3. 侧边栏所有块状元素（名片、公告、分类等）透明毛玻璃效果 */
+#aside-content .card-widget {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border-radius: 12px;
+    box-shadow: 0 4px 8px 6px rgba(7, 17, 27, 0.06);
+}
+
+/* 4. 分页栏容器透明处理 */
+#pagination {
+    background: transparent !important;
+}
+
 #pagination .page-number.current {
-    background: #49b1f5 !important; /* 主题蓝 */
-    color: #fff !important;
-    box-shadow: 0 4px 12px rgba(73, 177, 245, 0.5); /* 蓝色光晕 */
-    transform: scale(1.15); /* 稍微放大 */
+    background: var(--btn-bg) !important;
 }
 
-/* 悬停效果 */
-#pagination .page-number:not(.current):hover, 
-#pagination .extend:hover {
-    background: #ff7242 !important; /* 悬停橙 */
-    color: #fff !important;
-    transform: translateY(-4px); /* 上浮效果 */
-    box-shadow: 0 8px 15px rgba(255, 114, 66, 0.4); /* 橙色光晕 */
+/* 5. 顶层导航栏（随屏幕滚动效果调整） */
+#page-header.nav-fixed #nav {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: 0 5px 6px -5px rgba(133, 133, 133, 0.6);
 }
 
-/* 深色模式适配 */
-[data-theme='dark'] #pagination .page-number, 
-[data-theme='dark'] #pagination .extend {
-    background: rgba(40, 40, 40, 0.9) !important;
-    color: #eee;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+/* 6. 深色模式下的适配 (Dark mode compatibility) */
+[data-theme="dark"] .layout > div:first-child:not(.recent-posts),
+[data-theme="dark"] .recent-posts > .recent-post-item,
+[data-theme="dark"] #aside-content .card-widget {
+    background: rgba(30, 30, 30, 0.8) !important; /* 深灰色半透明 */
+    box-shadow: 0 4px 8px 6px rgba(0, 0, 0, 0.5);
 }
 
-[data-theme='dark'] #pagination .page-number.current {
-    background: #49b1f5 !important;
-    box-shadow: 0 4px 12px rgba(73, 177, 245, 0.4);
+[data-theme="dark"] #page-header.nav-fixed #nav {
+    background: rgba(18, 18, 18, 0.8) !important;
+    box-shadow: 0 5px 6px -5px rgba(0, 0, 0, 0.6);
 }
+
+/* 7. 隐藏不需要的线条组件 (如果配置中开启了 canvas_nest 觉得乱可以强行在此隐藏) */
+/* canvas {
+    opacity: 0.3 !important; 
+} */

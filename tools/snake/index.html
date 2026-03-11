@@ -1,0 +1,1842 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>贪吃蛇 (Snake) | llbzow的摸鱼日记 (づ￣ 3￣)づ</title><meta name="author" content="llbzow"><meta name="copyright" content="llbzow"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content=".snake-container { display: flex; flex-direction: column; align-items: center; margin-top: 20px; } #snake-canvas { background-color: #000; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 4px;">
+<meta property="og:type" content="website">
+<meta property="og:title" content="贪吃蛇 (Snake)">
+<meta property="og:url" content="https://yourblog.com/tools/snake/index.html">
+<meta property="og:site_name" content="llbzow的摸鱼日记 (づ￣ 3￣)づ">
+<meta property="og:description" content=".snake-container { display: flex; flex-direction: column; align-items: center; margin-top: 20px; } #snake-canvas { background-color: #000; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 4px;">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://yourblog.com/img/cute_cat.svg">
+<meta property="article:published_time" content="2026-03-11T02:05:00.000Z">
+<meta property="article:modified_time" content="2026-03-11T02:54:12.120Z">
+<meta property="article:author" content="llbzow">
+<meta property="article:tag" content="技术, 生活, 博客, 分享">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://yourblog.com/img/cute_cat.svg"><script type="application/ld+json"></script><link rel="shortcut icon" href="/img/cute_cat.svg"><link rel="canonical" href="https://yourblog.com/tools/snake/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '贪吃蛇 (Snake)',
+  isHighlightShrink: false,
+  isToc: false,
+  pageType: 'page'
+}</script><link rel="stylesheet" href="/css/custom.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      if ($loadingBox.classList.contains('loaded')) return
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+
+  if (document.readyState === 'complete') {
+    preloader.endLoading()
+  } else {
+    window.addEventListener('load', preloader.endLoading)
+    document.addEventListener('DOMContentLoaded', preloader.endLoading)
+    // Add timeout protection: force end after 7 seconds
+    setTimeout(preloader.endLoading, 7000)
+  }
+
+  if (true) {
+    btf.addGlobalFn('pjaxSend', preloader.initLoading, 'preloader_init')
+    btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
+  }
+})()</script><div id="web_bg" style="background-image: url(/img/bg_main.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/cute_cat.svg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">18</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-gamepad"></i><span> 小游戏</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/%E4%BA%94%E5%AD%90%E6%A3%8B"><i class="fa-fw /tools/gomoku/"></i><span> 0</span></a></li><li><a class="site-page child" href="/%E6%89%AB%E9%9B%B7"><i class="fa-fw /tools/minesweeper/"></i><span> 1</span></a></li><li><a class="site-page child" href="/%E5%90%83%E8%B1%86%E4%BA%BA"><i class="fa-fw /tools/pacman/"></i><span> 2</span></a></li><li><a class="site-page child" href="/%E8%B4%AA%E5%90%83%E8%9B%87"><i class="fa-fw /tools/snake/"></i><span> 3</span></a></li><li><a class="site-page child" href="/2048"><i class="fa-fw /tools/2048/"></i><span> 4</span></a></li><li><a class="site-page child" href="/%E4%BF%84%E7%BD%97%E6%96%AF%E6%96%B9%E5%9D%97"><i class="fa-fw /tools/tetris/"></i><span> 5</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="page type-tools" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">llbzow的摸鱼日记 (づ￣ 3￣)づ</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-gamepad"></i><span> 小游戏</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/%E4%BA%94%E5%AD%90%E6%A3%8B"><i class="fa-fw /tools/gomoku/"></i><span> 0</span></a></li><li><a class="site-page child" href="/%E6%89%AB%E9%9B%B7"><i class="fa-fw /tools/minesweeper/"></i><span> 1</span></a></li><li><a class="site-page child" href="/%E5%90%83%E8%B1%86%E4%BA%BA"><i class="fa-fw /tools/pacman/"></i><span> 2</span></a></li><li><a class="site-page child" href="/%E8%B4%AA%E5%90%83%E8%9B%87"><i class="fa-fw /tools/snake/"></i><span> 3</span></a></li><li><a class="site-page child" href="/2048"><i class="fa-fw /tools/2048/"></i><span> 4</span></a></li><li><a class="site-page child" href="/%E4%BF%84%E7%BD%97%E6%96%AF%E6%96%B9%E5%9D%97"><i class="fa-fw /tools/tetris/"></i><span> 5</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><h1 class="title-seo">贪吃蛇 (Snake)</h1></header><main class="layout hide-aside" id="content-inner"><div id="page"><div class="page-title">贪吃蛇 (Snake)</div><div class="container" id="article-container"><style>
+.snake-container {
+display: flex;
+flex-direction: column;
+align-items: center;
+margin-top: 20px;
+}
+#snake-canvas {
+background-color: #000;
+box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+border-radius: 4px;
+max-width: 100%;
+}
+.snake-info {
+margin: 15px 0;
+font-size: 1.2rem;
+font-weight: bold;
+color: var(--text-color, #333);
+}
+.snake-btn {
+padding: 8px 20px;
+background-color: var(--btn-bg, #49b1f5);
+color: var(--btn-color, #fff);
+border: none;
+border-radius: 4px;
+cursor: pointer;
+font-size: 1rem;
+transition: all 0.3s;
+margin: 0 10px;
+}
+.snake-btn:hover {
+background-color: var(--btn-hover-color, #FF7D7D);
+}
+.snake-controls {
+margin-top: 20px;
+display: grid;
+grid-template-columns: 50px 50px 50px;
+grid-gap: 10px;
+justify-content: center;
+}
+.snake-ctrl-btn {
+height: 50px;
+background: #eee;
+border: 1px solid #ccc;
+border-radius: 8px;
+font-size: 20px;
+cursor: pointer;
+user-select: none;
+}
+.snake-ctrl-btn:active {
+background: #ddd;
+}
+.m-up { grid-column: 2; grid-row: 1; }
+.m-left { grid-column: 1; grid-row: 2; }
+.m-down { grid-column: 2; grid-row: 2; }
+.m-right { grid-column: 3; grid-row: 2; }
+</style>
+
+<div class="snake-container">
+<div class="snake-info" id="s-info">分数: 0</div>
+<label style="font-size:12px; margin-bottom: 10px; color:#ff9800;" id="gpu-label">
+<input type="checkbox" id="s-gpu-toggle" disabled> 🔍 探测 WebGPU 并发算力中...
+</label>
+<canvas id="snake-canvas" width="400" height="400"></canvas>
+<div style="margin-top:20px; display:flex; gap:10px;">
+<button class="snake-btn" id="s-ai">🤖 AI 托管</button>
+<button class="snake-btn" id="s-restart">重新开始</button>
+</div>
+
+<div class="snake-controls">
+<button class="snake-ctrl-btn m-up" id="btn-up">⬆️</button>
+<button class="snake-ctrl-btn m-left" id="btn-left">⬅️</button>
+<button class="snake-ctrl-btn m-down" id="btn-down">⬇️</button>
+<button class="snake-ctrl-btn m-right" id="btn-right">➡️</button>
+</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+const canvas = document.getElementById('snake-canvas');
+if (!canvas) return;
+const ctx = canvas.getContext('2d');
+const info = document.getElementById('s-info');
+const restartBtn = document.getElementById('s-restart');
+
+const gridSize = 20;
+const tileCount = canvas.width / gridSize;
+
+let snake = [];
+let food = {x: 10, y: 10};
+let dx = 0;
+let dy = 0;
+let score = 0;
+let gameLoop;
+let isGameOver = false;
+
+function resetGame() {
+snake = [
+{x: 10, y: 10},
+];
+dx = 0;
+dy = 0;
+score = 0;
+isGameOver = false;
+placeFood();
+info.innerText = `分数: ${score}`;
+if(gameLoop) clearInterval(gameLoop);
+gameLoop = setInterval(update, 100);
+}
+
+function placeFood() {
+food.x = Math.floor(Math.random() * tileCount);
+food.y = Math.floor(Math.random() * tileCount);
+// Ensure food is not on snake
+for (let segment of snake) {
+if (segment.x === food.x && segment.y === food.y) {
+placeFood();
+break;
+}
+}
+}
+
+function update() {
+if (isGameOver) return;
+
+// Move snake
+const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+
+// Wall collision
+if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+gameOver();
+return;
+}
+
+// Self collision (only if moving)
+if (dx !== 0 || dy !== 0) {
+for (let i = 0; i < snake.length; i++) {
+if (head.x === snake[i].x && head.y === snake[i].y) {
+gameOver();
+return;
+}
+}
+}
+
+snake.unshift(head);
+
+// Check food
+if (head.x === food.x && head.y === food.y) {
+score += 10;
+info.innerText = `分数: ${score}`;
+placeFood();
+} else {
+if (dx !== 0 || dy !== 0) {
+snake.pop();
+} else {
+snake.pop();
+snake.unshift(head); // Keep it steady when not moving
+}
+}
+
+draw();
+if (aiMode && (dx !== 0 || dy !== 0)) {
+setTimeout(aiStepAsync, 0); // 让 AI 决定立刻的下一步，但不阻断渲染
+}
+}
+
+let aiMode = false;
+const aiBtn = document.getElementById('s-ai');
+
+// ====== WEBGPU IMPLEMENTATION ======
+let device = null;
+let computePipeline = null;
+let gpuEnabled = false;
+let gpuBufferScore, gpuBufferMap, gpuBufferParams;
+
+const wgslCode = `
+@group(0) @binding(0) var<storage, read> distMap: array<i32>;
+@group(0) @binding(1) var<storage, read_write> scores: array<f32>;
+
+struct Params { hx: i32, hy: i32, fx: i32, fy: i32, len: i32 }
+@group(0) @binding(2) var<uniform> params: Params;
+
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let index = id.x + id.y * 20u;
+    if (id.x >= 20u || id.y >= 20u) { return; }
+
+    var score: f32 = -1000.0;
+    let dToFood = distMap[index];
+    
+    if (dToFood != 9999) {
+        score = 200.0 - f32(dToFood) * 5.0;
+    } else {
+        score = -500.0;
+    }
+    scores[index] = score;
+}
+`;
+
+async function initWebGPU() {
+    const gpuLabel = document.getElementById('gpu-label');
+    if (!navigator.gpu) {
+        gpuLabel.innerHTML = '❌ WebGPU 不可用 (平滑回退至 JS 串行寻路引擎)';
+        return;
+    }
+    try {
+        const adapter = await navigator.gpu.requestAdapter();
+        device = await adapter.requestDevice();
+        const shaderModule = device.createShaderModule({ code: wgslCode });
+        computePipeline = device.createComputePipeline({
+            layout: 'auto',
+            compute: { module: shaderModule, entryPoint: 'main' },
+        });
+
+        gpuBufferScore = device.createBuffer({ size: 400*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+        gpuBufferMap = device.createBuffer({ size: 400*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+        gpuBufferParams = device.createBuffer({ size: 20, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+
+        gpuEnabled = true;
+        gpuLabel.style.color = "#4caf50";
+        gpuLabel.innerHTML = '<input type="checkbox" id="s-gpu-toggle" checked> 🚀 已激活 WebGPU 高并发计算加速引擎 (400 渲染算核)';
+        document.getElementById('s-gpu-toggle').addEventListener('change', (e) => gpuEnabled = e.target.checked);
+    } catch(e) {
+        gpuLabel.innerHTML = '❌ 初始化 WebGPU 失败';
+    }
+}
+
+async function findPathGPU() {
+    if(!gpuEnabled || dx===0 && dy===0) return null;
+    
+    let isBody = new Int32Array(400).fill(0);
+    for(let i=0; i<snake.length-1; i++) isBody[snake[i].y*20 + snake[i].x] = 1;
+    
+    let distMap = new Int32Array(400).fill(9999);
+    let queue = [{x: food.x, y: food.y, d:0}];
+    distMap[food.y*20 + food.x] = 0;
+    let headIdx = 0;
+    const searchDirs = [{dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0}];
+    
+    while(headIdx < queue.length) {
+        let curr = queue[headIdx++];
+        for(let d of searchDirs) {
+            let nx = curr.x+d.dx, ny = curr.y+d.dy;
+            if(nx>=0 && nx<20 && ny>=0 && ny<20 && isBody[ny*20+nx] === 0 && distMap[ny*20+nx] > curr.d+1) {
+                distMap[ny*20+nx] = curr.d+1;
+                queue.push({x:nx, y:ny, d:curr.d+1});
+            }
+        }
+    }
+    
+    device.queue.writeBuffer(gpuBufferMap, 0, distMap);
+    device.queue.writeBuffer(gpuBufferParams, 0, new Int32Array([snake[0].x, snake[0].y, food.x, food.y, snake.length]));
+
+    const bindGroup = device.createBindGroup({
+        layout: computePipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: gpuBufferMap } },
+            { binding: 1, resource: { buffer: gpuBufferScore } },
+            { binding: 2, resource: { buffer: gpuBufferParams } }
+        ]
+    });
+
+    const commandEncoder = device.createCommandEncoder();
+    const passEncoder = commandEncoder.beginComputePass();
+    passEncoder.setPipeline(computePipeline);
+    passEncoder.setBindGroup(0, bindGroup);
+    passEncoder.dispatchWorkgroups(2, 2); // 20/16 CEIL -> 2x2
+    passEncoder.end();
+
+    const outputBuffer = device.createBuffer({ size: 400*4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    commandEncoder.copyBufferToBuffer(gpuBufferScore, 0, outputBuffer, 0, 400*4);
+    device.queue.submit([commandEncoder.finish()]);
+
+    await outputBuffer.mapAsync(GPUMapMode.READ);
+    const scores = new Float32Array(outputBuffer.getMappedRange());
+    
+    // Pick immediate valid neighborhood step with max score
+    const dirs = [{dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0}];
+    let bestScore = -Infinity;
+    let bestDir = null;
+
+    for(let d of dirs) {
+        if(dx === -d.dx && dy === -d.dy) continue; // no quick reverse
+        let nx = snake[0].x + d.dx, ny = snake[0].y + d.dy;
+        if(nx>=0 && nx<20 && ny>=0 && ny<20 && isBody[ny*20+nx] !== 1) {
+            let sc = scores[ny*20 + nx];
+            if (sc > bestScore) { bestScore = sc; bestDir = d; }
+        }
+    }
+    outputBuffer.unmap();
+    return bestDir;
+}
+
+function findPathJS() {
+if (dx===0 && dy===0) return null;
+let head = snake[0];
+let queue = [{x: head.x, y: head.y, path: []}];
+let visited = Array.from({length: tileCount}, () => Array(tileCount).fill(false));
+visited[head.y][head.x] = true;
+
+for(let i=1; i<snake.length-1; i++) {
+visited[snake[i].y][snake[i].x] = true;
+}
+
+while(queue.length > 0) {
+let curr = queue.shift();
+if (curr.x === food.x && curr.y === food.y) {
+return curr.path[0];
+}
+const dirs = [{dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0}];
+for(let d of dirs) {
+let nx = curr.x + d.dx, ny = curr.y + d.dy;
+if(nx>=0 && nx<tileCount && ny>=0 && ny<tileCount && !visited[ny][nx]) {
+visited[ny][nx] = true;
+queue.push({x: nx, y: ny, path: [...curr.path, d]});
+}
+}
+}
+return null;
+}
+
+async function aiStepAsync() {
+if(isGameOver || !aiMode) return;
+let nextMove;
+if (gpuEnabled) {
+nextMove = await findPathGPU();
+if(!nextMove) nextMove = findPathJS(); // fallback routing
+} else {
+nextMove = findPathJS();
+}
+
+if (nextMove) {
+changeDirection(nextMove.dx, nextMove.dy);
+} else {
+const dirs = [{dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0}];
+for(let d of dirs) {
+if(dx === -d.dx && dy === -d.dy) continue;
+let nx = snake[0].x + d.dx, ny = snake[0].y + d.dy;
+if(nx>=0 && nx<tileCount && ny>=0 && ny<tileCount) {
+let bodyHit = false;
+for(let i=1; i<snake.length-1; i++) {
+if(snake[i].x === nx && snake[i].y === ny) bodyHit = true;
+}
+if(!bodyHit) {
+changeDirection(d.dx, d.dy);
+break;
+}
+}
+}
+}
+}
+
+aiBtn.addEventListener('click', () => {
+aiMode = !aiMode;
+aiBtn.innerText = aiMode ? "停止托管" : "🤖 AI 托管";
+if(aiMode && dx === 0 && dy === 0) changeDirection(1, 0);
+if(aiMode) aiStepAsync();
+});
+
+function draw() {
+// Clear background
+ctx.fillStyle = '#111';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+// Draw food
+ctx.fillStyle = '#FF4136';
+ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 1, gridSize - 1);
+
+// Draw snake
+snake.forEach((segment, index) => {
+ctx.fillStyle = index === 0 ? '#2ECC40' : '#27AE60';
+ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 1, gridSize - 1);
+});
+}
+
+function gameOver() {
+isGameOver = true;
+info.innerText = `游戏结束! 最终分数: ${score}`;
+clearInterval(gameLoop);
+}
+
+function changeDirection(newDx, newDy) {
+if (isGameOver) return;
+if (dy === 0 && newDx !== 0) return; // Prevent reversing X
+if (dx === 0 && newDy !== 0) return; // Prevent reversing Y
+dx = newDx;
+dy = newDy;
+}
+
+document.addEventListener('keydown', (e) => {
+// Prevent default scrolling for arrow keys
+if([37, 38, 39, 40].indexOf(e.keyCode) > -1) {
+e.preventDefault();
+}
+
+switch (e.key) {
+case 'ArrowUp':
+case 'w':
+case 'W':
+changeDirection(0, -1);
+break;
+case 'ArrowDown':
+case 's':
+case 'S':
+changeDirection(0, 1);
+break;
+case 'ArrowLeft':
+case 'a':
+case 'A':
+changeDirection(-1, 0);
+break;
+case 'ArrowRight':
+case 'd':
+case 'D':
+changeDirection(1, 0);
+break;
+}
+});
+
+// Mobile controls
+document.getElementById('btn-up').addEventListener('click', () => changeDirection(0, -1));
+document.getElementById('btn-down').addEventListener('click', () => changeDirection(0, 1));
+document.getElementById('btn-left').addEventListener('click', () => changeDirection(-1, 0));
+document.getElementById('btn-right').addEventListener('click', () => changeDirection(1, 0));
+
+restartBtn.addEventListener('click', resetGame);
+initWebGPU();
+resetGame();
+});
+</script>
+</div></div></main><footer id="footer" style="background-image: url(/img/040.jpg);"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By llbzow</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"></div><script>var OriginTitle = document.title; var titleTime; document.addEventListener('visibilitychange', function () { if (document.hidden) { document.title = '╭(°A°`)╮ 页面崩溃啦 ~'; clearTimeout(titleTime); } else { document.title = '(ฅ>ω<*ฅ) 噫又好啦 ~ ' + OriginTitle; titleTime = setTimeout(function () { document.title = OriginTitle; }, 2000); } });</script><script defer="defer" id="fluttering_ribbon" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="255,255,255" opacity="0.6" zIndex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-nest.min.js"></script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      const usePjax = true
+      false
+        ? (usePjax ? pjax.loadUrl('/404.html') : window.location.href = '/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})()</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><!-- hexo injector body_end start -->
+<div id="dev-sidebar">
+    <div id="dev-toggle">💻</div>
+    <div id="dev-list">
+        <div class="dev-header">开发专栏</div>
+        <a href="/tools/sort/" class="dev-item">📊 排序算法演示</a>
+    </div>
+</div>
+
+<style>
+    #dev-sidebar {
+        position: fixed;
+        right: -150px; /* Width of the list */
+        top: calc(30vh + 80px); /* Positioned below game-sidebar */
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    /* Hover area to keep it open */
+    #dev-sidebar:hover {
+        right: 0;
+    }
+
+    #dev-toggle {
+        width: 40px;
+        height: 40px;
+        background: #52c41a; /* Green color for dev theme */
+        color: white;
+        text-align: center;
+        line-height: 40px;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+        font-size: 20px;
+        position: absolute;
+        left: -40px;
+        top: 0;
+    }
+
+    #dev-list {
+        width: 150px; /* Width for text */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 0 8px; /* Bottom left rounded */
+        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+    
+    /* 自定义滚动条样式 */
+    #dev-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    #dev-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #dev-list::-webkit-scrollbar-thumb {
+        background: rgba(82, 196, 26, 0.3);
+        border-radius: 4px;
+    }
+    #dev-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(82, 196, 26, 0.6);
+    }
+    
+    .dev-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 10px;
+        background: #f6ffed;
+        color: #52c41a;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .dev-item {
+        display: block;
+        padding: 12px 15px;
+        color: #4c4948;
+        text-decoration: none !important;
+        font-size: 13px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0;
+    }
+
+    .dev-item:last-child {
+        border-bottom: none;
+    }
+
+    .dev-item:hover {
+        background: #52c41a;
+        color: white !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var toolSidebar = document.getElementById('tool-sidebar');
+        var gameSidebar = document.getElementById('game-sidebar');
+        var devSidebar = document.getElementById('dev-sidebar');
+        
+        if(devSidebar) {
+            devSidebar.addEventListener('mouseenter', function() {
+                if(toolSidebar) toolSidebar.style.right = '-220px'; // 180px + 40px(按钮宽度)
+                if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+            });
+            devSidebar.addEventListener('mouseleave', function() {
+                if(toolSidebar) toolSidebar.style.right = ''; 
+                if(gameSidebar) gameSidebar.style.right = ''; 
+            });
+        }
+    });
+</script>
+
+  <style id="oml2d-force-styles">
+    /* ==========================================================================
+       1. STYLES
+       ========================================================================== */
+    .oml2d-menus .oml2d-menu-item,
+    .oml2d-menu-item {
+        background-color: #f0f0f0 !important;
+        border: 1px solid #ccc !important;
+    }
+    .oml2d-menus svg, .oml2d-menus path,
+    .oml2d-menu-item svg, .oml2d-menu-item path,
+    .oml2d-icon, .oml2d-icon svg, .oml2d-icon path {
+        fill: #333333 !important;
+        stroke: #333333 !important;
+        color: #333333 !important;
+        opacity: 1 !important;
+    }
+    .oml2d-menu-item:hover {
+        background-color: #ffffff !important;
+        transform: scale(1.1);
+    }
+    .oml2d-tips {
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(5px) !important;
+        -webkit-backdrop-filter: blur(5px) !important;
+        color: #333333 !important;
+        border: 1px solid rgba(0,0,0,0.1) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+        font-family: "Microsoft YaHei", sans-serif !important;
+        z-index: 9999 !important;
+        min-height: 40px;
+        height: auto !important; /* Force auto height */
+        max-height: 50vh !important;
+        overflow-y: auto !important;
+        width: auto !important;
+        max-width: 350px !important;
+        word-wrap: break-word !important;
+        white-space: pre-wrap !important;
+        display: block !important;
+        padding: 12px 15px;
+        font-size: 14px;
+        line-height: 1.6;
+        border-radius: 8px;
+        scrollbar-width: thin;
+        text-align: left;
+    }
+
+    /* Helper: Hide Legacy / Duplicate Widgets from other plugins */
+    /* Only specific legacy IDs */
+    #live2d-widget, .waifu { display: none !important; }
+
+    /* ==========================================================================
+       2. NEW UI COMPONENTS (Chat)
+       ========================================================================== */
+    #oml2d-chat-widget {
+        position: fixed;
+        left: 10px; /* Align with menu */
+        bottom: 10px; /* Tightly stuck to bottom-left */
+        z-index: 10000;
+        display: flex;
+        align-items: center; /* Center vertically */
+        gap: 8px;
+        flex-direction: row; /* Button left, Input right */
+    }
+
+    /* Toggle Button (Floating Chat Icon) */
+    #oml2d-toggle-btn {
+        width: 42px;
+        height: 42px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 22px;
+        transition: transform 0.2s, background 0.2s;
+        border: 1px solid #ddd;
+        user-select: none;
+        color: #555;
+        flex-shrink: 0; /* Don't shrink */
+    }
+
+    #oml2d-toggle-btn:hover {
+        transform: scale(1.1);
+        background: #f8f8f8;
+        color: #000;
+    }
+
+    /* Input Area */
+    #oml2d-input-area {
+        width: 260px;
+        background: rgba(255, 255, 255, 0.15); /* Very transparent */
+        padding: 10px;
+        border-radius: 12px;
+        border-bottom-left-radius: 4px; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        backdrop-filter: blur(3px); /* Low blur to see model */
+        display: flex;
+        gap: 8px;
+        transform-origin: left center; /* Expand from left */
+        transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        opacity: 1;
+        transform: scale(1);
+        margin-left: 2px;
+    }
+
+    #oml2d-input-area.hidden {
+        opacity: 0;
+        transform: scale(0.8) translateX(-20px);
+        pointer-events: none;
+    }
+
+    #oml2d-chat-input {
+        flex: 1;
+        border: 1px solid #eee;
+        background: #fafafa;
+        padding: 6px 12px;
+        border-radius: 20px;
+        outline: none;
+        font-size: 14px;
+        color: #333;
+        transition: border-color 0.2s;
+    }
+
+    #oml2d-chat-input:focus {
+        border-color: #4A90E2;
+        background: white;
+    }
+
+    #oml2d-send-btn-inner {
+        border: none;
+        background: #4A90E2;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+        color: #fff;
+        flex-shrink: 0;
+    }
+
+    #oml2d-send-btn-inner:hover {
+        background: #357ABD;
+    }
+
+    #oml2d-reply-area {
+        position: absolute;
+        bottom: 60px;
+        left: 50px; /* Align with input */
+        width: 300px;
+        max-height: 60vh;
+        background: rgba(255, 255, 255, 0.15); /* Very transparent */
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 12px;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        padding: 15px;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #000;
+        text-shadow: 0 0 4px #fff, 0 0 8px #fff; /* Stronger glow for readability */
+        overflow-y: auto;
+        backdrop-filter: blur(3px); /* Low blur */
+        transform-origin: bottom left;
+        transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+        pointer-events: none;
+        z-index: 10001;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: "Microsoft YaHei", sans-serif;
+        scrollbar-width: thin;
+    }
+    
+    #oml2d-reply-area.visible {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        pointer-events: auto;
+    }
+  </style>
+
+  <div id="oml2d-chat-widget">
+      <div id="oml2d-toggle-btn" title="AI对话">💬</div>
+      
+      <!-- Custom Reply Area -->
+      <div id="oml2d-reply-area"></div>
+      
+      <div id="oml2d-input-area" class="hidden">
+          <input type="text" id="oml2d-chat-input" placeholder="和宁宁聊聊天..." autocomplete="off">
+          <button id="oml2d-send-btn-inner">➤</button>
+      </div>
+  </div>
+
+  <script type="module">
+    import { loadOml2d } from 'https://unpkg.com/oh-my-live2d@latest?module';
+
+    const API_KEY = "sk-9a9f51b5638c4df79e53debf3aa12182";
+    const API_URL = "https://api.deepseek.com/chat/completions";
+
+    // CONFIG
+    const CONFIG = {
+      // Global Stage Style
+      stageStyle: { width: 350, height: 500 },
+      models: [
+        { path: '/live2d_models/ningning/model.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_1.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_2.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_3.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_4.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_5.json', scale: 0.18, position: [-50, -30] }
+      ],
+      dockedPosition: "left",
+      mobileDisplay: true,
+      menus: { 
+          disable: false, 
+          style: { left: '10px', bottom: '70px' } 
+      },
+      tips: {
+         disable: false,
+         style: { offsetY: -70, offsetX: 10 },
+         idleTips: { interval: 15000, message: [] },
+         welcomeTips: { message: { "default": "前辈，你来啦！(｡•̀ᴗ-)✧" } }
+      }
+    };
+
+    let oml2dInstance = null;
+    let blogIndex = null;
+    let chatHistory = [];
+    let autoHideTimer = null;
+    try {
+        const stored = localStorage.getItem('oml2d_history');
+        if (stored) chatHistory = JSON.parse(stored);
+    } catch(e) { console.error("History Load Error", e); }
+
+    let idleTimer = null;
+    const stopIdleLoop = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = null;
+    };
+    const startIdleLoop = () => {
+        stopIdleLoop();
+        const delay = Math.floor(Math.random() * 10000) + 5000; // 5-15s
+        idleTimer = setTimeout(triggerIdleTsukkomi, delay);
+    };
+    const triggerIdleTsukkomi = async () => {
+        if (!oml2dInstance) { startIdleLoop(); return; }
+        
+        const time = new Date().toLocaleTimeString();
+        let context = "无";
+        if (chatHistory.length > 0) {
+             for (let i = chatHistory.length - 1; i >= 0; i--) {
+                 if (chatHistory[i].role === 'user') {
+                     context = chatHistory[i].content.substring(0, 20);
+                     break;
+                 }
+             }
+        }
+        
+        try {
+             const res = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + API_KEY },
+                body: JSON.stringify({
+                    model: "deepseek-chat",
+                    messages: [
+                        { role: "system", content: "你是绫地宁宁。现在是发呆时间。请根据当前时间(" + time + ")和刚才聊的话题(" + context + ")，自言自语一句简短的吐槽或卖萌（10字以内）。不要重复。" },
+                    ],
+                    stream: false
+                })
+            });
+            const data = await res.json();
+            if (data.choices && data.choices[0]) {
+                let content = data.choices[0].message.content;
+                content = content.replace(/{{|}}/g, '');
+                oml2dInstance.tips.notification(content, 4000);
+            }
+        } catch(e) { }
+        
+        startIdleLoop();
+    };
+
+    // --- TOOLS (Client-Side Logic) ---
+    const Tools = {
+        async searchBlog(query) {
+            console.log("Searching blog for:", query);
+            if (!blogIndex) {
+                try {
+                    const res = await fetch('/search.json');
+                    blogIndex = await res.json();
+                } catch (e) {
+                    console.error("Failed to load search index", e);
+                    return "搜索服务暂时不可用。";
+                }
+            }
+            if (!blogIndex || blogIndex.length === 0) return "博客好像是空的...";
+
+            const keywords = query.toLowerCase().split(' ');
+            const results = blogIndex.filter(post => {
+                const text = (post.title + post.content).toLowerCase();
+                return keywords.every(k => text.includes(k));
+            }).slice(0, 3);
+
+            if (results.length === 0) return "抱歉，没有找到相关文章。";
+
+            return JSON.stringify(results.map(r => ({
+                title: r.title,
+                url: r.url,
+                preview: r.content.substring(0, 100).replace(new RegExp("<[^>]*>?", "gm"), '') + '...'
+            })));
+        },
+
+        triggerMotion(motionName) {
+            console.log("Tool Trigger Motion:", motionName);
+            if (!oml2dInstance || !oml2dInstance.models || !oml2dInstance.models[0]) return "Live2D模型未就绪";
+            
+            const model = oml2dInstance.models[0];
+            let success = false;
+
+            // Strategy 1: High Level
+            if (typeof oml2dInstance.setMotion === 'function') {
+                oml2dInstance.setMotion(motionName);
+                success = true;
+            } 
+            // Strategy 2: Model Level
+            else if (typeof model.motion === 'function') {
+                model.motion(motionName);
+                success = true;
+            }
+            // Strategy 3: Internal Model (Pixi/Cubism) - Aggressive Probe
+            else if (model.internalModel && model.internalModel.motionManager) {
+                try {
+                    console.log("Strategy 3 (Internal): Starting random motion for group", motionName);
+                    
+                    // LOCK FOCUS to prevent mouse tracking from overriding motion
+                    if (typeof model.focus === 'function') {
+                        model._lockFocus = true;
+                        // Unlock after 4 seconds (approx motion duration)
+                        setTimeout(() => { model._lockFocus = false; }, 4000);
+                    }
+
+                    // Priority 3 = FORCE. Use startRandomMotion to avoid index errors.
+                    const result = model.internalModel.motionManager.startRandomMotion(motionName, 3);
+                    success = !!result;
+                } catch (e) {
+                    console.warn("Strategy 3 failed:", e);
+                }
+            }
+
+            return success ? "动作已执行: " + motionName : "动作触发失败，请检查模型组名";
+        },
+
+        navigate(path) {
+            window.location.href = path;
+            return "正在跳转...";
+        },
+
+        readCurrentPage() {
+            // Butterfly theme uses #article-container usually
+            const article = document.getElementById('article-container') || 
+                            document.querySelector('.post-content') || 
+                            document.querySelector('article') ||
+                            document.body;
+            
+            if (!article) return "无法读取当前页面内容。";
+            
+            // Clean up text (remove scripts, styles)
+            const clone = article.cloneNode(true);
+            const scripts = clone.querySelectorAll('script, style, noscript');
+            scripts.forEach(n => n.remove());
+            
+            let text = clone.innerText || "";
+            // Truncate if too long (e.g. > 5000 chars) to save tokens, or trust V3
+            return text.substring(0, 5000) + (text.length > 5000 ? "...(内容太长，已截断)" : "");
+        },
+
+        async compressHistory() {
+            if (chatHistory.length <= 32) return;
+            console.log("Compressing history...");
+            
+            const toSummarize = chatHistory.slice(0, chatHistory.length - 10);
+            const keep = chatHistory.slice(-10);
+            
+            try {
+                 const summaryRes = await fetch("https://api.deepseek.com/chat/completions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + API_KEY },
+                    body: JSON.stringify({
+                        model: "deepseek-chat",
+                        messages: [
+                            { role: "system", content: "Summarize the following conversation briefly in Chinese." },
+                            ...toSummarize
+                        ],
+                        stream: false
+                    })
+                });
+                const data = await summaryRes.json();
+                const summary = data.choices[0].message.content;
+                
+                chatHistory = [
+                    { role: "system", content: "Previous Summary: " + summary },
+                    ...keep
+                ];
+                localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                console.log("History compressed.");
+            } catch(e) { console.error("Compression failed", e); }
+        }
+    };
+
+    // --- LLM SERVICE ---
+    const LLM = {
+        async chat(userMessage, callbacks) {
+            stopIdleLoop();
+            callbacks.onLoading(true);
+
+            try {
+                // System Prompt (Nene Persona)
+                // Use space concatenation to avoid syntax errors
+                const systemContent = "你叫宁宁（Nene），全名绫地宁宁，是《魔女的夜宴》中的角色，现在兼职 llbzow 博客的看板娘。 " +
+                        "你的主人 llbzow 既是开发者也是工地施工员（打灰人）。 " +
+                        "【性格设定】 " +
+                        "1. 性格温柔体贴，有些纯真和天然呆，非常容易害羞（动不动就脸红）。 " +
+                        "2. 做事非常认真，但偶尔会因为太紧张而出错。 " +
+                        "3. 称呼用户为“前辈”或者“主人”。 " +
+                        "4. 说话语气要软萌、有礼貌。 " +
+                        "5. 面对奇怪的问题会变得慌乱，不知所措。 " +
+                        "【能力】 " +
+                        "请使用工具（function calling）来搜索博客、触发动作或读取当前页面内容。 " +
+                        "当用户问“这篇文章讲了什么”时，调用 read_current_page。 " +
+                        "【双通道回复】" +
+                        "请务必在回答开头加入一句犀利或可爱的吐槽（10字以内），必须用 {{ 和 }} 包裹。这部分内容会显示在Live2D气泡中。" +
+                        "吐槽内容要结合：当前时间、对话上下文、用户的问题（如是否重复、是否愚蠢）。例如：{{大半夜的问这个...}} {{这已经是第三次问了哦...}} {{笨蛋前辈...}}" +
+                        "动作对应：Tap身体=开心/普通，Tap头顶=害羞/抱歉，Tap裙子=生气/拒绝，Tap呆毛=卖萌/唱歌，Tap左胸=亲近。 " +
+                        "当前时间：" + new Date().toLocaleString() + "。";
+
+                const messages = [
+                    { role: "system", content: systemContent },
+                    ...chatHistory, // Use full history (managed by compression)
+                    { role: "user", content: userMessage }
+                ];
+
+                // Tool Definitions
+                const tools = [
+                    {
+                        type: "function",
+                        function: {
+                            name: "search_blog",
+                            description: "Search blog posts when user asks about technical topics or blog content.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    query: { type: "string", description: "Keywords to search" }
+                                },
+                                required: ["query"]
+                            }
+                        }
+                    },
+                    {
+                        type: "function",
+                        function: {
+                            name: "react_motion",
+                            description: "Trigger a Live2D motion based on emotion.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    motion: { 
+                                        type: "string", 
+                                        description: "Motion group name", 
+                                        enum: ["Tap身体", "Tap头顶", "Tap脸", "Tap裙子", "Tap左胸", "Tap呆毛"] 
+                                    }
+                                },
+                                required: ["motion"]
+                            }
+                        }
+                    },
+                    {
+                        type: "function",
+                        function: {
+                            name: "navigate",
+                            description: "Navigate to a specific path/URL.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    path: { type: "string", description: "URL or path (e.g. /about/)" }
+                                },
+                                required: ["path"]
+                            }
+                        }
+                    },
+                    {
+                        type: "function",
+                        function: {
+                            name: "read_current_page",
+                            description: "Read the text content of the current page. Use this when user asks about 'this article' or 'current page'.",
+                            parameters: {
+                                type: "object",
+                                properties: {},
+                                required: []
+                            }
+                        }
+                    }
+                ];
+
+                const API_URL = "https://api.deepseek.com/chat/completions";
+
+                // First Call
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + API_KEY
+                    },
+                    body: JSON.stringify({
+                        model: "deepseek-chat", // Use V3 for speed & tools
+                        messages: messages,
+                        tools: tools,
+                        stream: false
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+
+                const choice = data.choices[0];
+                const message = choice.message;
+
+                // Handle Tool Calls
+                if (message.tool_calls) {
+                    messages.push(message); // Add assistant's thought/tool_call
+
+                    for (const toolCall of message.tool_calls) {
+                        const fnName = toolCall.function.name;
+                        const args = JSON.parse(toolCall.function.arguments);
+                        
+                        let toolResult = "";
+                        if (fnName === 'search_blog') {
+                            toolResult = await Tools.searchBlog(args.query);
+                        } else if (fnName === 'react_motion') {
+                            toolResult = Tools.triggerMotion(args.motion);
+                        } else if (fnName === 'navigate') {
+                            toolResult = Tools.navigate(args.path);
+                        } else if (fnName === 'read_current_page') {
+                            toolResult = Tools.readCurrentPage();
+                        }
+
+                        messages.push({
+                            role: "tool",
+                            tool_call_id: toolCall.id,
+                            content: toolResult
+                        });
+                    }
+
+                    // Second Call (Streamed)
+                    const secondResponse = await fetch(API_URL, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": "Bearer " + API_KEY
+                        },
+                        body: JSON.stringify({
+                            model: "deepseek-chat",
+                            messages: messages,
+                            tools: tools,
+                            stream: true
+                        })
+                    });
+                    
+                    const reader = secondResponse.body.getReader();
+                    const decoder = new TextDecoder("utf-8");
+                    let finalMsg = "";
+                    let buffer = "";
+                    let streamBuffer = "";
+                    let pendingReaction = true;
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop();
+
+                        for (const line of lines) {
+                            if (line.trim().startsWith('data: ')) {
+                                const dataStr = line.trim().substring(6);
+                                if (dataStr === '[DONE]') continue;
+                                try {
+                                    const json = JSON.parse(dataStr);
+                                    const content = json.choices[0].delta.content;
+                                    if (content) {
+                                        if (pendingReaction) {
+                                            streamBuffer += content;
+                                            if (streamBuffer.trimStart().startsWith('{{')) {
+                                                const closeIdx = streamBuffer.indexOf('}}');
+                                                if (closeIdx !== -1) {
+                                                    const reaction = streamBuffer.substring(streamBuffer.indexOf('{{') + 2, closeIdx);
+                                                    const duration = 3000 + reaction.length * 30;
+                                                    if (oml2dInstance) oml2dInstance.tips.notification(reaction, duration);
+                                                    
+                                                    const rest = streamBuffer.substring(closeIdx + 2);
+                                                    finalMsg += rest;
+                                                    callbacks.onMessage(finalMsg);
+                                                    
+                                                    pendingReaction = false;
+                                                    streamBuffer = "";
+                                                }
+                                            } else if (streamBuffer.length > 10) {
+                                                finalMsg += streamBuffer;
+                                                callbacks.onMessage(finalMsg);
+                                                pendingReaction = false;
+                                                streamBuffer = "";
+                                            }
+                                        } else {
+                                            finalMsg += content;
+                                            callbacks.onMessage(finalMsg);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error("Stream parse error", e);
+                                }
+                            }
+                        }
+                    }
+                    if (pendingReaction && streamBuffer) {
+                         finalMsg += streamBuffer;
+                         callbacks.onMessage(finalMsg);
+                    }
+
+                    // Save History & Compress
+                    chatHistory.push({ role: "user", content: userMessage });
+                    chatHistory.push({ role: "assistant", content: finalMsg });
+                    localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                    
+                    const replyArea = document.getElementById('oml2d-reply-area');
+                    if (replyArea && finalMsg) {
+                        const autoHideDuration = 3000 + finalMsg.length * 30;
+                        autoHideTimer = setTimeout(() => replyArea.classList.remove('visible'), autoHideDuration);
+                    }
+                    Tools.compressHistory();
+
+                } else {
+                    let content = message.content;
+                    // Dual Channel Check for non-stream response
+                    if (content.trim().startsWith('{{')) {
+                         const closeIdx = content.indexOf('}}');
+                         if (closeIdx !== -1) {
+                             const reaction = content.substring(content.indexOf('{{') + 2, closeIdx);
+                             const duration = 3000 + reaction.length * 30;
+                             if (oml2dInstance) oml2dInstance.tips.notification(reaction, duration);
+                             content = content.substring(closeIdx + 2);
+                         }
+                    }
+                    callbacks.onMessage(content);
+
+                    // Save History & Compress
+                    chatHistory.push({ role: "user", content: userMessage });
+                    chatHistory.push({ role: "assistant", content: content });
+                    localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                    
+                    const replyArea = document.getElementById('oml2d-reply-area');
+                    if (replyArea && content) {
+                        const autoHideDuration = 3000 + content.length * 30;
+                        autoHideTimer = setTimeout(() => replyArea.classList.remove('visible'), autoHideDuration);
+                    }
+                    Tools.compressHistory();
+                }
+
+            } catch (error) {
+                console.error("LLM Error:", error);
+                callbacks.onMessage("宁宁有点晕... 😵 (网络错误)");
+            } finally {
+                callbacks.onLoading(false);
+                startIdleLoop();
+            }
+        }
+    };
+
+    // 5. UI & INIT
+    try {
+        const toggleBtn = document.getElementById('oml2d-toggle-btn');
+        const inputArea = document.getElementById('oml2d-input-area');
+        const chatInput = document.getElementById('oml2d-chat-input');
+        const sendBtn = document.getElementById('oml2d-send-btn-inner');
+        const replyArea = document.getElementById('oml2d-reply-area');
+
+        if (replyArea) {
+            replyArea.addEventListener('click', () => {
+                replyArea.classList.remove('visible');
+            });
+        }
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isHidden = inputArea.classList.contains('hidden');
+                if (isHidden) {
+                    inputArea.classList.remove('hidden');
+                    setTimeout(() => chatInput.focus(), 100);
+                    toggleBtn.innerHTML = '×';
+                } else {
+                    inputArea.classList.add('hidden');
+                    replyArea.classList.remove('visible'); // Hide reply too
+                    toggleBtn.innerHTML = '💬';
+                }
+            });
+        }
+
+        const sendMessage = () => {
+            const text = chatInput.value.trim();
+            if (!text) return;
+            
+            chatInput.value = '';
+            if (autoHideTimer) clearTimeout(autoHideTimer);
+            
+            // Show loading in reply area
+            if (replyArea) {
+                replyArea.innerText = "思考中... 🧠";
+                replyArea.classList.add('visible');
+            }
+
+            LLM.chat(text, {
+                onLoading: (isLoading) => {
+                     // Handled locally above for instant feedback
+                },
+                onMessage: (msg) => {
+                    if (replyArea && msg) {
+                        replyArea.innerText = msg;
+                        replyArea.classList.add('visible');
+                        // Auto scroll to bottom
+                        replyArea.scrollTop = replyArea.scrollHeight;
+                    } 
+                    // Fallback to alert if something is wrong (shouldn't happen)
+                    else if (msg) {
+                        alert("宁宁: " + msg);
+                    }
+                }
+            });
+        };
+
+        if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+        if (chatInput) chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        if (window.innerWidth >= 768) {
+            // Safe Load Logic
+            try {
+                const res = loadOml2d(CONFIG);
+                const setupModel = (inst) => {
+                    oml2dInstance = inst;
+                    // Monkey Patch Focus to allow motion override
+                    if (inst.models && inst.models[0]) {
+                        const model = inst.models[0];
+                        if (typeof model.focus === 'function') {
+                            const originalFocus = model.focus;
+                            model.focus = function(x, y) {
+                                if (this._lockFocus) return;
+                                originalFocus.apply(this, arguments);
+                            };
+                            console.log("OML2D: Focus controller patched");
+                        }
+                    }
+                };
+
+                if (res && typeof res.then === 'function') {
+                    res.then(inst => {
+                        setupModel(inst);
+                        console.log('OML2D: Async Loaded');
+                        startIdleLoop();
+                    }).catch(e => console.error('OML2D Async Error:', e));
+                } else {
+                    setupModel(res);
+                    console.log('OML2D: Sync Loaded');
+                    startIdleLoop();
+                }
+            } catch(e) {
+                console.error('OML2D Load Error:', e);
+            }
+        }
+    } catch (e) {
+        console.error('UI Init Failed:', e);
+    }
+  </script>
+
+<div id="game-sidebar">
+    <div id="game-toggle">🎮</div>
+    <div id="game-list">
+        <div class="game-header">博客游戏</div>
+        <a href="/tools/2048" class="game-item">🧩 经典 2048</a>
+        <a href="/tools/tetris" class="game-item">🧱 俄罗斯方块 (Tetris)</a>
+        <a href="/tools/pacman" class="game-item">🟡 回忆吃豆人 (Pac-Man)</a>
+        <a href="/tools/snake" class="game-item">🐍 贪吃蛇 (Snake)</a>
+        <a href="/tools/gomoku" class="game-item">⚪ 五子棋 (Gomoku)</a>
+        <a href="/tools/minesweeper" class="game-item">💣 扫雷 (Minesweeper)</a>
+    </div>
+</div>
+
+<style>
+    #game-sidebar {
+        position: fixed; /* Fixed position */
+        right: -150px; /* Width of the list */
+        top: calc(30vh + 40px); /* Positioned exactly below tool-sidebar */
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    /* Hover area to keep it open */
+    #game-sidebar:hover {
+        right: 0;
+    }
+
+    #game-toggle {
+        width: 40px;
+        height: 40px;
+        background: #FF7D7D; /* Pink/Red color to distinguish from tool-sidebar */
+        color: white;
+        text-align: center;
+        line-height: 40px;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+        font-size: 20px;
+        position: absolute; /* Absolute relative to #game-sidebar */
+        left: -40px; /* Hangs off the left of the container */
+        top: 0;
+    }
+
+    #game-list {
+        width: 150px; /* Width for text */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 0 8px; /* Bottom left rounded */
+        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+    
+    /* 自定义滚动条样式 */
+    #game-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    #game-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #game-list::-webkit-scrollbar-thumb {
+        background: rgba(255, 125, 125, 0.3);
+        border-radius: 4px;
+    }
+    #game-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 125, 125, 0.6);
+    }
+    
+    .game-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 10px;
+        background: #fff0f0;
+        color: #FF7D7D;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .game-item {
+        display: block;
+        padding: 12px 15px;
+        color: #4c4948;
+        text-decoration: none !important;
+        font-size: 13px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0; /* 防止内容被挤压 */
+    }
+
+    .game-item:last-child {
+        border-bottom: none;
+    }
+
+    .game-item:hover {
+        background: #FF7D7D;
+        color: white !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var toolSidebar = document.getElementById('tool-sidebar');
+        var gameSidebar = document.getElementById('game-sidebar');
+        var devSidebar = document.getElementById('dev-sidebar');
+        
+        if(gameSidebar) {
+            gameSidebar.addEventListener('mouseenter', function() {
+                if(toolSidebar) toolSidebar.style.right = '-220px'; // 180px + 40px(按钮)
+                if(devSidebar) devSidebar.style.right = '-190px'; // 150px + 40px(按钮)
+            });
+            gameSidebar.addEventListener('mouseleave', function() {
+                if(toolSidebar) toolSidebar.style.right = ''; 
+                if(devSidebar) devSidebar.style.right = ''; 
+            });
+        }
+    });
+</script>
+
+<div id="tool-sidebar">
+    <div id="tool-toggle">🛠️</div>
+    <div id="tool-list">
+        <div class="tool-header">博客工具</div>
+        <a href="/tools/time" class="tool-item">📅 时间戳与地理时间</a>
+        <a href="/tools/base64-img" class="tool-item">🖼️ 图片↔Base64</a>
+        <a href="/tools/hash" class="tool-item">🔐 MD5/SHA256 计算</a>
+        <a href="/tools/geojson" class="tool-item">🌍 GeoJSON 查询</a>
+        <a href="/tools/remove-bg" class="tool-item">✂️ 快速抠图</a>
+        <a href="/tools/watermark" class="tool-item">💧 水印生成与检测</a>
+        <a href="/tools/gif" class="tool-item">🎬 GIF 生成</a>
+        <a href="/tools/mirage-tank" class="tool-item">👻 幻影坦克制作</a>
+        <a href="/tools/converter" class="tool-item">🔄 文件全能转换</a>
+        <a href="/tools/qrcode" class="tool-item">📱 二维码生成/解析</a>
+        <a href="/tools/unit-converter" class="tool-item">📏 工程单位换算</a>
+        <a href="/tools/color" class="tool-item">🎨 颜色转换与调色</a>
+    </div>
+</div>
+
+<style>
+    #tool-sidebar {
+        position: fixed;
+        right: -180px; /* Width of the list */
+        top: 30vh;
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    /* Hover area to keep it open */
+    #tool-sidebar:hover {
+        right: 0;
+    }
+
+    #tool-toggle {
+        width: 40px;
+        height: 40px;
+        background: #49b1f5;
+        color: white;
+        text-align: center;
+        line-height: 40px;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+        font-size: 20px;
+        position: absolute;
+        left: -40px; /* Hangs off the left of the sidebar container */
+        top: 0;
+    }
+
+    #tool-list {
+        width: 180px; /* Width for text */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 0 8px; /* Bottom left rounded */
+        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        max-height: 50vh; /* 限制最大高度以便能滚动 */
+        overflow-y: auto; /* 允许纵向滚动 */
+    }
+    
+    /* 自定义滚动条样式，使其不那么突兀 */
+    #tool-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    #tool-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #tool-list::-webkit-scrollbar-thumb {
+        background: rgba(73, 177, 245, 0.3);
+        border-radius: 4px;
+    }
+    #tool-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(73, 177, 245, 0.6);
+    }
+
+    .tool-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 10px;
+        background: #f7f9fe;
+        color: #49b1f5;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .tool-item {
+        display: block;
+        padding: 12px 15px;
+        color: #4c4948;
+        text-decoration: none !important;
+        font-size: 13px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0; /* 防止由于 max-height 导致内容被挤压 */
+    }
+
+    .tool-item:last-child {
+        border-bottom: none;
+    }
+
+    .tool-item:hover {
+        background: #49b1f5;
+        color: white !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var toolSidebar = document.getElementById('tool-sidebar');
+        var gameSidebar = document.getElementById('game-sidebar');
+        var devSidebar = document.getElementById('dev-sidebar');
+        
+        if(toolSidebar) {
+            toolSidebar.addEventListener('mouseenter', function() {
+                if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+                if(devSidebar) devSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+            });
+            toolSidebar.addEventListener('mouseleave', function() {
+                if(gameSidebar) gameSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
+                if(devSidebar) devSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
+            });
+        }
+    });
+</script>
+<!-- hexo injector body_end end --></body></html>

@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+  <defs>
+    <!-- 渐变效果 -->
+    <linearGradient id="cyberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00f2fe;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#4facfe;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="neonPink" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ff0844;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffb199;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 发光滤镜 -->
+    <filter id="neonGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur1" />
+      <feGaussianBlur in="SourceGraphic" stdDeviation="15" result="blur2" />
+      <feGaussianBlur in="SourceGraphic" stdDeviation="30" result="blur3" />
+      <feMerge>
+        <feMergeNode in="blur3" />
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- 背景深色背景（带有网格图案） -->
+  <rect width="100%" height="100%" fill="#0a0a16" />
+  
+  <g opacity="0.1">
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff" stroke-width="1" />
+    </pattern>
+    <rect width="100%" height="100%" fill="url(#grid)" />
+  </g>
+
+  <!-- 中心图形层 -->
+  <g transform="translate(400, 300)">
+    <!-- 外侧旋转光环 -->
+    <circle cx="0" cy="0" r="220" fill="none" stroke="url(#cyberGrad)" stroke-width="2" stroke-dasharray="10 20 50 10" filter="url(#neonGlow)">
+      <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="20s" repeatCount="indefinite" />
+    </circle>
+    
+    <!-- 内侧反向旋转光环 -->
+    <circle cx="0" cy="0" r="190" fill="none" stroke="url(#neonPink)" stroke-width="3" stroke-dasharray="60 40 10 30" filter="url(#neonGlow)" opacity="0.8">
+      <animateTransform attributeName="transform" type="rotate" from="360" to="0" dur="15s" repeatCount="indefinite" />
+    </circle>
+    
+    <!-- 核心几何体：六边形 -->
+    <g filter="url(#neonGlow)">
+      <polygon points="0,-140 121.2,-70 121.2,70 0,140 -121.2,70 -121.2,-70" fill="none" stroke="url(#cyberGrad)" stroke-width="6" />
+      <polygon points="0,-160 138.6,-80 138.6,80 0,160 -138.6,80 -138.6,-80" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.4" />
+      
+      <!-- 内部多边形网格 -->
+      <path d="M 0,-140 L 0,140 M -121.2,-70 L 121.2,70 M -121.2,70 L 121.2,-70" stroke="url(#cyberGrad)" stroke-width="2" opacity="0.6" />
+      
+      <!-- 内嵌发光三角形 -->
+      <polygon points="0,-80 69.3,40 -69.3,40" fill="none" stroke="url(#neonPink)" stroke-width="5" />
+      <polygon points="0,80 -69.3,-40 69.3,-40" fill="none" stroke="url(#cyberGrad)" stroke-width="5" opacity="0.8" />
+    </g>
+    
+    <!-- 核心发光球体 -->
+    <circle cx="0" cy="0" r="30" fill="#ffffff" filter="url(#neonGlow)">
+      <animate attributeName="r" values="25;35;25" dur="4s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="4s" repeatCount="indefinite" />
+    </circle>
+    
+    <circle cx="0" cy="0" r="15" fill="#0a0a16" />
+    
+    <!-- 科技感点缀元素 -->
+    <g fill="#ffffff" filter="url(#neonGlow)">
+      <circle cx="-190" cy="0" r="5" />
+      <circle cx="190" cy="0" r="5" />
+      <circle cx="0" cy="-190" r="5" />
+      <circle cx="0" cy="190" r="5" />
+    </g>
+  </g>
+</svg>
