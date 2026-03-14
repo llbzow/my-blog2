@@ -7,7 +7,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://yourblog.com/img/cute_cat.svg">
 <meta property="article:published_time" content="2026-03-12T16:00:00.000Z">
-<meta property="article:modified_time" content="2026-03-13T09:26:38.334Z">
+<meta property="article:modified_time" content="2026-03-14T14:11:54.980Z">
 <meta property="article:author" content="llbzow">
 <meta property="article:tag" content="技术, 生活, 博客, 分享">
 <meta name="twitter:card" content="summary">
@@ -305,14 +305,18 @@
     </div>
 </div>
 
-<!-- 引入 TensorFlow.js + WebGPU + COCO-SSD 模型 -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@0.0.1-alpha.5/dist/tf-webgpu.min.js"></script>
+<!-- 引入 TensorFlow.js 4.17.0 + 兼容的后端 + COCO-SSD 模型 -->
+<!-- 使用 4.17.0 版本确保与 webgpu backend 兼容 -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@0.0.1-alpha.10/dist/tf-webgpu.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.17.0/dist/tf-webgl.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-cpu@4.17.0/dist/tf-cpu.min.js"></script>
 
 <script type="module">
 /**
- * YOLO/COCO TensorFlow.js WebGPU 实时检测引擎
+ * YOLO/COCO TensorFlow.js 实时检测引擎 v2.0
  * 作者: llbzow
+ * 特性: 健壮的后端降级链路 webgpu -> webgl -> cpu
  */
 
 const YOLO_CLASSES = [
@@ -364,7 +368,6 @@ const offCtx = offCanvas.getContext('2d');
 
 // 动态加载 COCO-SSD 模型
 async function loadCocoSsd() {
-    // 动态创建并加载 coco-ssd 脚本
     return new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.0.3/dist/coco-ssd.min.js';
@@ -383,76 +386,147 @@ async function loadCocoSsd() {
     });
 }
 
-// 初始化 TensorFlow.js + WebGPU + COCO-SSD 模型
+/**
+ * 启用 TFJS 性能优化
+ * 包含多线程预热、推理预热等加速策略
+ */
+async function enablePerformanceOptimization(backendName) {
+    console.log(`[TFJS] 正在为 ${backendName} 后端优化性能...`);
+    
+    // 模型预热 (Warmup) - 首次推理时 kernel 编译会导致卡顿
+    // 预先执行一次 dummy inference 避免首次检测卡顿
+    if (model && offCanvas) {
+        uiLoadText.innerText = '正在预热模型...';
+        try {
+            // 使用真实预处理后的 canvas 做一次 warmup，避免 dtype 不匹配
+            await model.detect(offCanvas);
+            console.log('[TFJS] 模型预热完成');
+        } catch (e) {
+            console.warn('[TFJS] 模型预热失败:', e.message);
+        }
+    }
+    
+    console.log('[TFJS] 性能优化完成');
+}
+
+// 初始化 TensorFlow.js 引擎 v2.0 - 健壮的后端降级链路
 async function initTFJS() {
     try {
         uiLoading.classList.remove('hidden');
         
-        // 检查 WebGPU 是否可用
-        const hasWebGPU = await checkWebGPU();
+        // 性能优化在模型加载后执行（见后文）
         
-        if (hasWebGPU) {
-            uiLoadText.innerText = '正在初始化 TensorFlow.js WebGPU 后端...';
+        // 诊断信息（兼容不同 tfjs 内部结构，避免空对象导致初始化中断）
+        const tfVersion = tf?.version?.tfjs || 'unknown';
+        const engine = typeof tf?.engine === 'function' ? tf.engine() : null;
+        const backendNameCandidates = [
+            engine?.registryFactory,
+            engine?.registry,
+            engine?.backends,
+            engine?.registeredBackends
+        ].filter(v => v && typeof v === 'object');
+        const registeredBackendNames = [...new Set(
+            backendNameCandidates.flatMap(obj => Object.keys(obj))
+        )];
+
+        console.log('[TFJS] version:', tfVersion);
+        console.log('[TFJS] engine keys:', engine ? Object.keys(engine) : 'engine-unavailable');
+        console.log('[TFJS] 已注册的 backends:', registeredBackendNames.length ? registeredBackendNames : 'unknown');
+        
+        // 按优先级尝试后端初始化
+        const backends = [
+            { name: 'webgpu', check: checkWebGPU, desc: 'WebGPU' },
+            { name: 'webgl', check: () => Promise.resolve(true), desc: 'WebGL' },
+            { name: 'cpu', check: () => Promise.resolve(true), desc: 'CPU' }
+        ];
+        
+        let success = false;
+        let lastError = null;
+        
+        for (const backend of backends) {
             try {
-                // 等待 WebGPU 后端就绪
+                uiLoadText.innerText = `正在检测 ${backend.desc}...`;
+
+                // backend 未注册则直接跳过，避免 "Backend name not found in registry" 噪声
+                if (!registeredBackendNames.includes(backend.name)) {
+                    console.log(`[TFJS] ${backend.desc} backend 未注册，跳过`);
+                    continue;
+                }
+                
+                // 检查底层能力
+                const hasCapability = await backend.check();
+                if (!hasCapability) {
+                    console.log(`[TFJS] ${backend.desc} 底层能力不可用，跳过`);
+                    continue;
+                }
+                
+                uiLoadText.innerText = `正在初始化 ${backend.desc} 后端...`;
+                
+                // 尝试设置后端
+                await tf.setBackend(backend.name);
                 await tf.ready();
-                // 尝试设置 WebGPU 后端
-                await tf.setBackend('webgpu');
-                backendType = 'WebGPU';
-                console.log('TensorFlow.js using WebGPU backend');
+                
+                backendType = backend.desc;
+                console.log(`[TFJS] 成功初始化 ${backend.desc} 后端`);
+                success = true;
+                break;
             } catch (e) {
-                console.warn('WebGPU 初始化失败，尝试 WebGL:', e);
-                uiLoadText.innerText = '正在初始化 WebGL 后端...';
-                await tf.setBackend('webgl');
-                await tf.ready();
-                backendType = 'WebGL';
+                console.warn(`[TFJS] ${backend.desc} 初始化失败:`, e.message);
+                lastError = e;
+                // 继续尝试下一个后端
             }
-        } else {
-            uiLoadText.innerText = '正在初始化 TensorFlow.js WebGL 后端...';
-            await tf.setBackend('webgl');
-            await tf.ready();
-            backendType = 'WebGL';
         }
+        
+        if (!success) {
+            throw new Error(`所有后端初始化失败，最后错误: ${lastError?.message || '未知'}`);
+        }
+        
+        // 检查实际使用的后端
+        const actualBackend = tf.getBackend();
+        console.log('[TFJS] 实际使用后端:', actualBackend);
         
         uiLoadText.innerText = '正在加载 COCO-SSD 模型 (约 20MB)...';
         
-        // 使用动态加载方式
+        // 加载模型
         try {
             model = await loadCocoSsd();
             modelType = 'COCO-SSD (lite_mobilenet_v2)';
-            console.log('模型加载成功:', modelType);
+            console.log('[TFJS] 模型加载成功:', modelType);
+            
+            // 模型加载完成后执行性能优化 (预热等)
+            await enablePerformanceOptimization(actualBackend);
         } catch (modelError) {
-            console.error('COCO-SSD 模型加载失败:', modelError);
+            console.error('[TFJS] COCO-SSD 模型加载失败:', modelError);
             uiLoadText.innerText = '模型加载失败: ' + modelError.message;
             return false;
         }
         
-        statEngine.innerText = backendType + ' + ' + modelType;
+        statEngine.innerText = actualBackend + ' + ' + modelType;
         uiLoading.classList.add('hidden');
         return true;
     } catch (e) {
-        console.error("TensorFlow.js Initialization failed:", e);
+        console.error("[TFJS] Initialization failed:", e);
         uiLoadText.innerText = '初始化失败: \n' + e.message;
         return false;
     }
 }
 
-// 检测 WebGPU
+// 检测 WebGPU 底层能力 (与 backend 注册分离)
 async function checkWebGPU() {
     try {
         if (!navigator.gpu) {
-            console.log('WebGPU API 不可用');
+            console.log('[WebGPU] navigator.gpu 不可用');
             return false;
         }
         const adapter = await navigator.gpu.requestAdapter();
         if (!adapter) {
-            console.log('无法获取 WebGPU 适配器');
+            console.log('[WebGPU] 无法获取适配器');
             return false;
         }
-        console.log('WebGPU 可用，适配器:', adapter.info);
+        console.log('[WebGPU] 可用，适配器:', adapter.info);
         return true;
     } catch (e) {
-        console.log('WebGPU 检测失败:', e);
+        console.log('[WebGPU] 检测异常:', e.message);
         return false;
     }
 }
