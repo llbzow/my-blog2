@@ -1,0 +1,3109 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>坦克大战 (Tank Battle) - 终极困难版 | llbzow的摸鱼日记 (づ￣ 3￣)づ</title><meta name="author" content="llbzow"><meta name="copyright" content="llbzow"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content=":root {   --bg: #0a0e14;   --card: #151b23;   --border: #30363d;   --blue: #58a6ff;   --red: #f85149;   --green: #3fb950;   --yellow: #d29922;   --text: #c9d1d9;   --text2: #8b949e; } body { backgro">
+<meta property="og:type" content="website">
+<meta property="og:title" content="坦克大战 (Tank Battle) - 终极困难版">
+<meta property="og:url" content="https://yourblog.com/tools/tank-battle/index.html">
+<meta property="og:site_name" content="llbzow的摸鱼日记 (づ￣ 3￣)づ">
+<meta property="og:description" content=":root {   --bg: #0a0e14;   --card: #151b23;   --border: #30363d;   --blue: #58a6ff;   --red: #f85149;   --green: #3fb950;   --yellow: #d29922;   --text: #c9d1d9;   --text2: #8b949e; } body { backgro">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://yourblog.com/img/cute_cat.svg">
+<meta property="article:published_time" content="2026-03-16T02:00:00.000Z">
+<meta property="article:modified_time" content="2026-03-16T08:09:07.999Z">
+<meta property="article:author" content="llbzow">
+<meta property="article:tag" content="技术, 生活, 博客, 分享">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://yourblog.com/img/cute_cat.svg"><script type="application/ld+json"></script><link rel="shortcut icon" href="/img/cute_cat.svg"><link rel="canonical" href="https://yourblog.com/tools/tank-battle/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="preconnect" href="//busuanzi.ibruce.info"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '坦克大战 (Tank Battle) - 终极困难版',
+  isHighlightShrink: false,
+  isToc: false,
+  pageType: 'page'
+}</script><link rel="stylesheet" href="/css/custom.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      if ($loadingBox.classList.contains('loaded')) return
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+
+  if (document.readyState === 'complete') {
+    preloader.endLoading()
+  } else {
+    window.addEventListener('load', preloader.endLoading)
+    document.addEventListener('DOMContentLoaded', preloader.endLoading)
+    // Add timeout protection: force end after 7 seconds
+    setTimeout(preloader.endLoading, 7000)
+  }
+
+  if (true) {
+    btf.addGlobalFn('pjaxSend', preloader.initLoading, 'preloader_init')
+    btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
+  }
+})()</script><div id="web_bg" style="background-image: url(/img/bg_main.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="data:image/webp;base64,UklGRhoBAABXRUJQVlA4WAoAAAAQAAAAJwAAJwAAQUxQSLgAAAAFuTJE9D80UiRJkiTpxvPo4fPha2lWw0WWMtgkeIot7wfsAyImYAI+vnvEjz++fJs9sbA+tfcM/HtDiBgr3c8SJP/Dk1FWC2LCxjhcwxkH4oQuQtNwSOdgixw5o+0TyIUCQoMJti7B3ALGhZLGNuJiAYfblG7kb/RON5GjZNeEtA+QtC6omDsY2aoIwv2KDLiAzPYvzhmyNVWWzAtzzGHxSBnzCwFja3Igk3sSwSooc7gTFtmKJoIQVlA4IDwAAABQAwCdASooACgAPzmcxF0vKqcko4gB4CcJZwDNSAn82OhFYAD+7iKcpmiMeBjtx3LPQK2rXKK9ARvvVAA=" data-lazy-src="/img/cute_cat.svg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar" loading="eager" fetchpriority="high" decoding="sync"></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">18</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="page type-tools" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">llbzow的摸鱼日记 (づ￣ 3￣)づ</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><h1 class="title-seo">坦克大战 (Tank Battle) - 终极困难版</h1></header><main class="layout hide-aside" id="content-inner"><div id="page"><div class="page-title">坦克大战 (Tank Battle) - 终极困难版</div><div class="container" id="article-container">
+<style>
+:root {
+  --bg: #0a0e14;
+  --card: #151b23;
+  --border: #30363d;
+  --blue: #58a6ff;
+  --red: #f85149;
+  --green: #3fb950;
+  --yellow: #d29922;
+  --text: #c9d1d9;
+  --text2: #8b949e;
+}
+body { background: var(--bg); color: var(--text); margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; overflow-x: hidden; }
+.tank-app { display: flex; flex-direction: column; min-height: 100vh; padding: 12px; box-sizing: border-box; gap: 12px; }
+.tank-header { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; }
+.tank-setup { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 8px; }
+.tank-setup-title { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+.tank-setup-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tank-select { flex: 1; min-width: 70px; padding: 6px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-size: 12px; }
+.tank-btn { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s; white-space: nowrap; }
+.tank-btn-primary { background: linear-gradient(135deg, #238636, #2ea043); color: white; }
+.tank-btn-secondary { background: var(--border); color: var(--text); }
+.tank-main { display: flex; gap: 12px; flex: 1; flex-wrap: wrap; justify-content: center; }
+.tank-canvas-wrap { position: relative; flex: 1; min-width: 300px; max-width: 900px; }
+#tank-canvas { width: 100%; height: auto; aspect-ratio: 4/3; background: #050810; border: 2px solid var(--border); border-radius: 8px; display: block; }
+.tank-side { width: 240px; display: flex; flex-direction: column; gap: 10px; min-width: 200px; }
+.tank-stats, .tank-controls, .tank-tanklist, .tank-engine, .tank-hint { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+.tank-stats-title { font-size: 11px; color: var(--text2); text-transform: uppercase; margin-bottom: 10px; font-weight: 600; }
+.tank-faction-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.tank-faction-row:last-child { border: none; }
+.tank-faction-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.tank-faction-name { flex: 1; }
+.tank-faction-stat { color: var(--text); font-weight: 600; }
+.tank-control-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.tank-control-row:last-child { margin: 0; }
+.tank-control-row .tank-btn { flex: 1; }
+.tank-tanklist { max-height: 220px; overflow-y: auto; }
+.tank-tankitem { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 11px; transition: 0.15s; margin-bottom: 4px; }
+.tank-tankitem:hover { background: rgba(88,166,255,0.1); }
+.tank-tankitem.controlled { background: rgba(88,166,255,0.2); border: 1px solid var(--blue); }
+.tank-tankitem-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.tank-tankitem-hp { width: 44px; height: 4px; background: #333; border-radius: 2px; overflow: hidden; }
+.tank-tankitem-hpfill { height: 100%; background: var(--green); }
+.tank-tankitem-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tank-engine-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 11px; }
+.tank-badge { padding: 2px 6px; border-radius: 8px; font-size: 9px; font-weight: 700; background: linear-gradient(135deg, #f78166, #ffa657); color: #fff; }
+.tank-hint { font-size: 10px; color: var(--text2); line-height: 1.5; }
+.tank-minimap { position: absolute; bottom: 10px; left: 10px; width: 120px; height: 120px; background: rgba(0,0,0,0.75); border: 1px solid var(--border); border-radius: 6px; }
+.tank-mobile { display: none; }
+.tank-topbar { display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+.tank-chip { background: linear-gradient(135deg,#1a2534,#18202c); border:1px solid #334155; color:#cfe7ff; border-radius:999px; padding:5px 10px; font-size:11px; }
+.tank-legend { display:grid; grid-template-columns: repeat(3,minmax(70px,1fr)); gap:6px; font-size:11px; margin-top:6px; }
+.tank-legend-item { display:flex; align-items:center; gap:5px; }
+.tank-legend-dot { width:10px; height:10px; border-radius:2px; display:inline-block; }
+@media (max-width: 768px) {
+  .tank-app { padding: 8px; }
+  .tank-main { flex-direction: column; }
+  .tank-canvas-wrap { min-width: 100%; max-width: 100%; }
+  .tank-side { width: 100%; flex-direction: row; flex-wrap: wrap; }
+  .tank-stats, .tank-controls, .tank-tanklist, .tank-engine, .tank-hint { flex: 1; min-width: 150px; }
+  .tank-mobile { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+}
+.tank-ctrl { width: 50px; height: 50px; background: var(--card); border: 2px solid var(--border); border-radius: 10px; font-size: 18px; color: var(--blue); cursor: pointer; }
+</style>
+
+<div class="tank-app">
+  <div class="tank-header">
+    <div class="tank-setup">
+      <div class="tank-setup-title">⚔️ 阵营数量</div>
+      <div class="tank-setup-row">
+        <select class="tank-select" id="faction-count">
+          <option value="2">2 阵营</option>
+          <option value="3">3 阵营</option>
+          <option value="4" selected="">4 阵营</option>
+        </select>
+      </div>
+    </div>
+    <div class="tank-setup">
+      <div class="tank-setup-title">👥 每阵人数</div>
+      <div class="tank-setup-row">
+        <select class="tank-select" id="tanks-per-faction">
+          <option value="5">5 / 阵营</option>
+          <option value="10" selected="">10 / 阵营</option>
+          <option value="20">20 / 阵营</option>
+        </select>
+      </div>
+    </div>
+    <div class="tank-setup">
+      <div class="tank-setup-title">🧠 AI 难度</div>
+      <div class="tank-setup-row">
+        <select class="tank-select" id="ai-difficulty" disabled="">
+          <option value="ultimate" selected="">终极困难（固定）</option>
+        </select>
+      </div>
+    </div>
+    <div class="tank-setup" style="flex:0;">
+      <div class="tank-setup-title">▶️ 开局</div>
+      <div class="tank-setup-row">
+        <button class="tank-btn tank-btn-primary" id="btn-start">开始</button>
+        <button class="tank-btn tank-btn-secondary" id="btn-reset">重置</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tank-main">
+    <div class="tank-canvas-wrap">
+      <div class="tank-topbar" id="battle-topbar"></div>
+      <canvas id="tank-canvas"></canvas>
+      <canvas id="minimap" class="tank-minimap" width="120" height="120"></canvas>
+      <div class="tank-mobile">
+        <button class="tank-ctrl" id="m-up">⬆️</button>
+        <button class="tank-ctrl" id="m-left">⬅️</button>
+        <button class="tank-ctrl" id="m-down">⬇️</button>
+        <button class="tank-ctrl" id="m-right">➡️</button>
+        <button class="tank-ctrl" id="m-fire" style="background:var(--red);border-color:var(--red);color:white;">🔫</button>
+      </div>
+    </div>
+
+    <div class="tank-side">
+      <div class="tank-stats">
+        <div class="tank-stats-title">📊 战场状态（基地制）</div>
+        <div id="faction-stats"></div>
+      </div>
+
+      <div class="tank-controls">
+        <div class="tank-stats-title">🎮 控制</div>
+        <div class="tank-control-row">
+          <label style="font-size:11px;color:var(--text2);">缩放</label>
+          <input id="zoom-range" type="range" min="0.6" max="2.2" step="0.1" value="1" style="flex:1;">
+        </div>
+        <div class="tank-control-row">
+          <select class="tank-select" id="follow-mode">
+            <option value="auto" selected="">跟随: 自动</option>
+            <option value="player">跟随: 玩家</option>
+            <option value="center">跟随: 战场中心</option>
+            <option value="free">跟随: 自由视角</option>
+          </select>
+        </div>
+        <div class="tank-control-row">
+          <button class="tank-btn tank-btn-secondary" id="btn-view-center" style="flex:1;">📍 回到中心</button>
+        </div>
+      </div>
+
+      <div class="tank-tanklist">
+        <div class="tank-stats-title">🚩 接管坦克 (蓝方)</div>
+        <div id="tank-list"></div>
+      </div>
+
+      <div class="tank-engine">
+        <div class="tank-stats-title">⚡ 引擎指标</div>
+        <div id="engine-display"></div>
+      </div>
+
+      <div class="tank-hint">
+        地图 720×720，坦克 2×2，基地 16×16。<br>
+        河流不可通行，只有桥可过河。炮弹射程 60，存在飞行时间，可被规避。<br>
+        地形速度：平原x1，公路x3，沼泽x0.2。<br>
+        操作：WASD/方向键移动，空格射击。
+        <div class="tank-stats-title" style="margin-top:8px;">🗺 地形图例</div>
+        <div class="tank-legend">
+          <div class="tank-legend-item"><span class="tank-legend-dot" style="background:#11151d"></span>平原</div>
+          <div class="tank-legend-item"><span class="tank-legend-dot" style="background:#7a7f88"></span>公路</div>
+          <div class="tank-legend-item"><span class="tank-legend-dot" style="background:#1f4e86"></span>河流</div>
+          <div class="tank-legend-item"><span class="tank-legend-dot" style="background:#b08968"></span>桥</div>
+          <div class="tank-legend-item"><span class="tank-legend-dot" style="background:#4a5d3c"></span>沼泽</div>
+          <div class="tank-legend-item"><span class="tank-legend-dot" style="background:#2f343d"></span>障碍</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+const canvas = document.getElementById('tank-canvas');
+const ctx = canvas.getContext('2d');
+const miniCanvas = document.getElementById('minimap');
+const miniCtx = miniCanvas.getContext('2d');
+
+// ==================== Constants ====================
+const WORLD = 720;
+const TILE = 2;
+const NAV = 6;
+let VIEW_W = 900, VIEW_H = 675;
+
+const TEAM_COLORS = {0:'#58a6ff',1:'#f85149',2:'#3fb950',3:'#d29922'};
+const TEAM_NAMES = ['蓝','红','绿','黄'];
+const TEAM_MAX = 4;
+
+const TANK_HALF = 1; // 坦克 2x2
+const BASE_HALF = 8; // 基地 16x16
+
+const MAX_HP = 120;
+const FIRE_CD = 28;
+const RESPAWN_T = 180;
+const BASE_HP = 1800;
+
+const BULLET_SPEED = 1.35;
+const BULLET_RANGE = 60;
+const BULLET_DAMAGE = 20;
+const BASE_DAMAGE = 28;
+const BASE_HIT_SCORE = 15;
+const BASE_DESTROY_SCORE = 2200;
+
+const AI_TICK_BUDGET = 26;
+const FOCUS_LIMIT = 3;
+const DANGER_RADIUS = 90;
+const GPU_MAX_TANKS = 128;
+
+const TERRAIN = {
+  PLAIN: 0,
+  ROAD: 1,
+  RIVER: 2,
+  BRIDGE: 3,
+  WALL: 4,
+  BASE: 5,
+  SWAMP: 6
+};
+const TERRAIN_COLOR = {
+  0: '#11151d',
+  1: '#7a7f88',
+  2: '#1f4e86',
+  3: '#b08968',
+  4: '#2f343d',
+  5: '#3a2f46',
+  6: '#4a5d3c'
+};
+
+// ==================== State ====================
+let factions = 4, perTeam = 10;
+let gameRunning = false;
+let controlledTank = null;
+let keys = {};
+let camera = {x: WORLD / 2, y: WORLD / 2};
+
+let tanks = [];
+let bullets = [];
+let stats = {};
+let bases = [];
+
+let terrain = [];
+let navGrid = [];
+let frameNo = 0;
+let aiCursor = 0;
+let teamFocus = {};
+const pathCache = new Map();
+let zoom = 1;
+let followMode = 'auto';
+let dragging = false;
+let lastDrag = null;
+let teamTactic = {};
+let webgpu = {
+  supported: false,
+  ready: false,
+  device: null,
+  queue: null,
+  pipeline: null,
+  bindGroup: null,
+  tankBuf: null,
+  paramBuf: null,
+  outBuf: null,
+  readBuf: null,
+  tankData: null,
+  outData: null,
+  pending: false,
+  enabled: true
+};
+
+const metrics = {
+  frameMsAvg: 0,
+  replan: 0,
+  evade: 0,
+  riverBlocked: 0,
+  riverWaypoints: 0,
+  bridgeCross: 0
+};
+
+// ==================== Helpers ====================
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function rand(a, b) { return a + Math.random() * (b - a); }
+function keyOf(x, y) { return `${x},${y}`; }
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+function worldToCell(x, y) {
+  return { x: clamp(Math.floor(x / NAV), 0, Math.floor(WORLD / NAV) - 1), y: clamp(Math.floor(y / NAV), 0, Math.floor(WORLD / NAV) - 1) };
+}
+
+function resize() {
+  const wrap = canvas.parentElement;
+  const w = Math.min(wrap.clientWidth, 900);
+  canvas.width = w;
+  canvas.height = w * 0.75;
+  VIEW_W = canvas.width;
+  VIEW_H = canvas.height;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function worldToScr(wx, wy) {
+  const s = TILE * zoom;
+  return { x: (wx - camera.x) * s + VIEW_W / 2, y: (wy - camera.y) * s + VIEW_H / 2 };
+}
+
+function terrainAt(x, y) {
+  const gx = Math.floor(x), gy = Math.floor(y);
+  if (gx < 0 || gx >= WORLD || gy < 0 || gy >= WORLD) return TERRAIN.WALL;
+  return terrain[gy][gx];
+}
+
+function nearBridge(x, y, r = 3) {
+  for (let oy = -r; oy <= r; oy++) {
+    for (let ox = -r; ox <= r; ox++) {
+      if (terrainAt(x + ox, y + oy) === TERRAIN.BRIDGE) return true;
+    }
+  }
+  return false;
+}
+
+function isTerrainPassable(t) {
+  return t === TERRAIN.PLAIN || t === TERRAIN.ROAD || t === TERRAIN.BRIDGE || t === TERRAIN.BASE;
+}
+
+function speedByTerrain(t) {
+  if (t === TERRAIN.ROAD) return 3;
+  if (t === TERRAIN.SWAMP) return 0.2;
+  if (t === TERRAIN.BRIDGE) return 1.0;
+  if (t === TERRAIN.BASE) return 0.95;
+  return 1.0;
+}
+
+function costByTerrain(t) {
+  if (t === TERRAIN.ROAD) return 0.35;
+  if (t === TERRAIN.SWAMP) return 5.2;
+  if (t === TERRAIN.BRIDGE) return 1.0;
+  return 1.0;
+}
+
+function refineLocalMove(x, y, vx, vy) {
+  const len = Math.hypot(vx, vy) || 1;
+  const dx = vx / len, dy = vy / len;
+  const candidates = [
+    {x: dx, y: dy},
+    {x: Math.sign(dx), y: 0},
+    {x: 0, y: Math.sign(dy)},
+    {x: -dy, y: dx},
+    {x: dy, y: -dx}
+  ];
+  let best = {x: 0, y: 0, score: -1e9};
+  for (const c of candidates) {
+    const l = Math.hypot(c.x, c.y) || 1;
+    const ux = c.x / l, uy = c.y / l;
+    const nx = x + ux * 1.0, ny = y + uy * 1.0;
+    const t = terrainAt(nx, ny);
+    const blocked = !isTerrainPassable(t);
+    let s = ux * dx + uy * dy;
+    s -= costByTerrain(t) * 0.35;
+    if (t === TERRAIN.ROAD || t === TERRAIN.BRIDGE) s += 0.8;
+    if (t === TERRAIN.RIVER) s -= 4;
+    if (blocked) s -= 8;
+    if (s > best.score) best = {x: ux, y: uy, score: s};
+  }
+  return {x: best.x, y: best.y};
+}
+
+function rectHitBlocked(x, y, half) {
+  const pts = [
+    {x: x - half, y: y - half},
+    {x: x + half, y: y - half},
+    {x: x - half, y: y + half},
+    {x: x + half, y: y + half}
+  ];
+  for (const p of pts) {
+    const t = terrainAt(p.x, p.y);
+    if (!isTerrainPassable(t)) return true;
+  }
+  return false;
+}
+
+async function initWebGPUAI() {
+  if (!navigator.gpu) return;
+  try {
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) return;
+    const device = await adapter.requestDevice();
+    const shader = device.createShaderModule({
+      code: `
+struct TankData {
+  p0: vec4<f32>, // x y dirx diry
+  p1: vec4<f32>, // hp team alive cd
+}
+
+@group(0) @binding(0) var<storage, read> tanks: array<TankData>;
+@group(0) @binding(1) var<storage, read_write> outv: array<vec4<f32>>;
+@group(0) @binding(2) var<uniform> params: vec4<f32>; // n, world, t, reserved
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let i = gid.x;
+  let n = u32(params.x);
+  if (i >= n) { return; }
+
+  let me = tanks[i];
+  if (me.p1.z < 0.5) {
+    outv[i] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    return;
+  }
+
+  let myTeam = me.p1.y;
+  var best = 1e9;
+  var tx = me.p0.x;
+  var ty = me.p0.y;
+
+  var j: u32 = 0u;
+  loop {
+    if (j >= n) { break; }
+    let ot = tanks[j];
+    if (ot.p1.z > 0.5 && ot.p1.y != myTeam) {
+      let dx = ot.p0.x - me.p0.x;
+      let dy = ot.p0.y - me.p0.y;
+      let d2 = dx * dx + dy * dy;
+      if (d2 < best) {
+        best = d2;
+        tx = ot.p0.x;
+        ty = ot.p0.y;
+      }
+    }
+    j = j + 1u;
+  }
+
+  var vx = 0.0;
+  var vy = 0.0;
+  let dx = tx - me.p0.x;
+  let dy = ty - me.p0.y;
+  let d = sqrt(max(best, 0.0001));
+
+  if (d > 14.0) {
+    vx = dx / d;
+    vy = dy / d;
+  } else {
+    vx = -dy / d;
+    vy = dx / d;
+  }
+
+  let canFire = select(0.0, 1.0, d <= 60.0 && me.p1.w <= 0.0);
+  outv[i] = vec4<f32>(vx, vy, canFire, d);
+}`
+    });
+
+    const pipeline = device.createComputePipeline({
+      layout: 'auto',
+      compute: { module: shader, entryPoint: 'main' }
+    });
+
+    const tankBuf = device.createBuffer({ size: GPU_MAX_TANKS * 32, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    const outBuf = device.createBuffer({ size: GPU_MAX_TANKS * 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+    const readBuf = device.createBuffer({ size: GPU_MAX_TANKS * 16, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+    const paramBuf = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+
+    const bindGroup = device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: tankBuf } },
+        { binding: 1, resource: { buffer: outBuf } },
+        { binding: 2, resource: { buffer: paramBuf } }
+      ]
+    });
+
+    webgpu.supported = true;
+    webgpu.ready = true;
+    webgpu.device = device;
+    webgpu.queue = device.queue;
+    webgpu.pipeline = pipeline;
+    webgpu.bindGroup = bindGroup;
+    webgpu.tankBuf = tankBuf;
+    webgpu.outBuf = outBuf;
+    webgpu.readBuf = readBuf;
+    webgpu.paramBuf = paramBuf;
+    webgpu.tankData = new Float32Array(GPU_MAX_TANKS * 8);
+    webgpu.outData = new Float32Array(GPU_MAX_TANKS * 4);
+  } catch (e) {
+    webgpu.ready = false;
+  }
+}
+
+function dispatchWebGPUAI() {
+  if (!webgpu.ready || webgpu.pending || !webgpu.enabled) return;
+  const n = Math.min(tanks.length, GPU_MAX_TANKS);
+
+  for (let i = 0; i < n; i++) {
+    const t = tanks[i];
+    const o = i * 8;
+    webgpu.tankData[o + 0] = t.x;
+    webgpu.tankData[o + 1] = t.y;
+    webgpu.tankData[o + 2] = t.dir.x;
+    webgpu.tankData[o + 3] = t.dir.y;
+    webgpu.tankData[o + 4] = t.hp;
+    webgpu.tankData[o + 5] = t.team;
+    webgpu.tankData[o + 6] = t.alive ? 1 : 0;
+    webgpu.tankData[o + 7] = t.cd;
+  }
+
+  webgpu.queue.writeBuffer(webgpu.tankBuf, 0, webgpu.tankData, 0, n * 8);
+  const params = new Float32Array([n, WORLD, frameNo, 0]);
+  webgpu.queue.writeBuffer(webgpu.paramBuf, 0, params);
+
+  const encoder = webgpu.device.createCommandEncoder();
+  const pass = encoder.beginComputePass();
+  pass.setPipeline(webgpu.pipeline);
+  pass.setBindGroup(0, webgpu.bindGroup);
+  pass.dispatchWorkgroups(Math.ceil(n / 64));
+  pass.end();
+  encoder.copyBufferToBuffer(webgpu.outBuf, 0, webgpu.readBuf, 0, n * 16);
+  webgpu.queue.submit([encoder.finish()]);
+
+  webgpu.pending = true;
+  webgpu.readBuf.mapAsync(GPUMapMode.READ).then(() => {
+    const view = new Float32Array(webgpu.readBuf.getMappedRange());
+    webgpu.outData.set(view.subarray(0, n * 4), 0);
+    webgpu.readBuf.unmap();
+    webgpu.pending = false;
+  }).catch(() => { webgpu.pending = false; });
+}
+
+function applyWebGPUAIActions() {
+  if (!webgpu.ready || !webgpu.outData) return;
+  const n = Math.min(tanks.length, GPU_MAX_TANKS);
+  for (let i = 0; i < n; i++) {
+    const t = tanks[i];
+    if (!t.alive || t === controlledTank) continue;
+    const o = i * 4;
+    const vx = webgpu.outData[o + 0] || 0;
+    const vy = webgpu.outData[o + 1] || 0;
+    const fire = webgpu.outData[o + 2] || 0;
+    const refined = refineLocalMove(t.x, t.y, vx, vy);
+    t.move(refined.x, refined.y);
+    if (fire > 0.5) {
+      const tx = t.x + t.dir.x * 20;
+      const ty = t.y + t.dir.y * 20;
+      t.fire(tx, ty);
+    }
+  }
+}
+
+// ==================== Terrain Generation ====================
+function lineDraw(x0, y0, x1, y1, width, type) {
+  const dx = x1 - x0, dy = y1 - y0;
+  const steps = Math.max(1, Math.floor(Math.hypot(dx, dy)));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const x = Math.floor(x0 + dx * t);
+    const y = Math.floor(y0 + dy * t);
+    for (let oy = -width; oy <= width; oy++) {
+      for (let ox = -width; ox <= width; ox++) {
+        const nx = x + ox, ny = y + oy;
+        if (nx < 0 || nx >= WORLD || ny < 0 || ny >= WORLD) continue;
+        terrain[ny][nx] = type;
+      }
+    }
+  }
+}
+
+function makeTerrain() {
+  terrain = Array.from({length: WORLD}, () => Array(WORLD).fill(TERRAIN.PLAIN));
+
+  // 边界墙
+  for (let y = 0; y < WORLD; y++) {
+    for (let x = 0; x < WORLD; x++) {
+      if (x < 3 || y < 3 || x > WORLD - 4 || y > WORLD - 4) terrain[y][x] = TERRAIN.WALL;
+    }
+  }
+
+  // 公路网
+  for (let y = 72; y < WORLD - 72; y += 96) lineDraw(12, y, WORLD - 12, y, 2, TERRAIN.ROAD);
+  for (let x = 72; x < WORLD - 72; x += 96) lineDraw(x, 12, x, WORLD - 12, 2, TERRAIN.ROAD);
+
+  // 河流（不可通行）
+  for (let x = 6; x < WORLD - 6; x++) {
+    const y1 = Math.floor(WORLD * 0.32 + Math.sin(x * 0.02) * 28);
+    const y2 = Math.floor(WORLD * 0.67 + Math.cos(x * 0.018) * 24);
+    for (let w = -3; w <= 3; w++) {
+      if (y1 + w > 0 && y1 + w < WORLD) terrain[y1 + w][x] = TERRAIN.RIVER;
+      if (y2 + w > 0 && y2 + w < WORLD) terrain[y2 + w][x] = TERRAIN.RIVER;
+    }
+  }
+
+  // 桥（连续桥带）：按竖向公路与河流交点生成，避免断桥
+  function carveBridgeAt(xc, yc) {
+    let yTop = yc, yBottom = yc;
+    while (yTop > 2 && terrain[yTop][xc] === TERRAIN.RIVER) yTop--;
+    while (yBottom < WORLD - 3 && terrain[yBottom][xc] === TERRAIN.RIVER) yBottom++;
+    yTop = Math.max(2, yTop - 8);
+    yBottom = Math.min(WORLD - 3, yBottom + 8);
+    for (let y = yTop; y <= yBottom; y++) {
+      for (let ox = -6; ox <= 6; ox++) {
+        const nx = xc + ox;
+        if (nx <= 1 || nx >= WORLD - 1) continue;
+        terrain[y][nx] = TERRAIN.BRIDGE;
+      }
+    }
+    for (let y = yTop - 8; y <= yBottom + 8; y++) {
+      if (y <= 1 || y >= WORLD - 1) continue;
+      for (let ox = -7; ox <= 7; ox++) {
+        const nx = xc + ox;
+        if (nx <= 1 || nx >= WORLD - 1) continue;
+        if (terrain[y][nx] === TERRAIN.WALL || terrain[y][nx] === TERRAIN.SWAMP) terrain[y][nx] = TERRAIN.ROAD;
+      }
+    }
+  }
+  for (let xRoad = 72; xRoad < WORLD - 72; xRoad += 96) {
+    const y1 = Math.floor(WORLD * 0.32 + Math.sin(xRoad * 0.02) * 28);
+    const y2 = Math.floor(WORLD * 0.67 + Math.cos(xRoad * 0.018) * 24);
+    carveBridgeAt(xRoad, y1);
+    carveBridgeAt(xRoad, y2);
+  }
+
+  // 障碍块
+  for (let i = 0; i < 180; i++) {
+    const cx = Math.floor(rand(30, WORLD - 30));
+    const cy = Math.floor(rand(30, WORLD - 30));
+    const r = Math.floor(rand(3, 8));
+    for (let y = -r; y <= r; y++) {
+      for (let x = -r; x <= r; x++) {
+        const nx = cx + x, ny = cy + y;
+        if (nx < 4 || ny < 4 || nx >= WORLD - 4 || ny >= WORLD - 4) continue;
+        if (Math.hypot(x, y) <= r && Math.random() > 0.25) {
+          if (terrain[ny][nx] !== TERRAIN.RIVER && terrain[ny][nx] !== TERRAIN.BRIDGE) terrain[ny][nx] = TERRAIN.WALL;
+        }
+      }
+    }
+  }
+
+  // 沼泽区（随机分布）
+  for (let i = 0; i < 80; i++) {
+    const cx = Math.floor(rand(20, WORLD - 20));
+    const cy = Math.floor(rand(20, WORLD - 20));
+    const rx = Math.floor(rand(6, 16));
+    const ry = Math.floor(rand(6, 14));
+    for (let y = -ry; y <= ry; y++) {
+      for (let x = -rx; x <= rx; x++) {
+        const nx = cx + x, ny = cy + y;
+        if (nx < 4 || ny < 4 || nx >= WORLD - 4 || ny >= WORLD - 4) continue;
+        const inEllipse = (x * x) / (rx * rx) + (y * y) / (ry * ry) <= 1;
+        if (!inEllipse) continue;
+        if (terrain[ny][nx] === TERRAIN.PLAIN && Math.random() > 0.12) terrain[ny][nx] = TERRAIN.SWAMP;
+      }
+    }
+  }
+}
+
+function paintBaseArea(base) {
+  for (let y = Math.floor(base.y - BASE_HALF); y <= Math.floor(base.y + BASE_HALF); y++) {
+    for (let x = Math.floor(base.x - BASE_HALF); x <= Math.floor(base.x + BASE_HALF); x++) {
+      if (x < 1 || y < 1 || x >= WORLD - 1 || y >= WORLD - 1) continue;
+      terrain[y][x] = TERRAIN.BASE;
+    }
+  }
+}
+
+function buildNavGrid() {
+  const CW = Math.floor(WORLD / NAV);
+  const CH = Math.floor(WORLD / NAV);
+  navGrid = Array.from({length: CH}, () => Array(CW).fill(0));
+  for (let cy = 0; cy < CH; cy++) {
+    for (let cx = 0; cx < CW; cx++) {
+      let blocked = 0;
+      for (let oy = 0; oy < NAV; oy += 2) {
+        for (let ox = 0; ox < NAV; ox += 2) {
+          const tx = cx * NAV + ox;
+          const ty = cy * NAV + oy;
+          const t = terrain[ty][tx];
+          if (!isTerrainPassable(t)) blocked++;
+        }
+      }
+      navGrid[cy][cx] = blocked >= 3 ? 1 : 0;
+    }
+  }
+}
+
+function isCellFree(x, y) {
+  return y >= 0 && y < navGrid.length && x >= 0 && x < navGrid[0].length && !navGrid[y][x];
+}
+
+function nearestFreeCell(cell, maxR = 8) {
+  if (isCellFree(cell.x, cell.y)) return {x: cell.x, y: cell.y};
+  for (let r = 1; r <= maxR; r++) {
+    for (let oy = -r; oy <= r; oy++) {
+      for (let ox = -r; ox <= r; ox++) {
+        if (Math.abs(ox) !== r && Math.abs(oy) !== r) continue;
+        const nx = cell.x + ox, ny = cell.y + oy;
+        if (isCellFree(nx, ny)) return {x: nx, y: ny};
+      }
+    }
+  }
+  return null;
+}
+
+function octile(a, b) {
+  const dx = Math.abs(a.x - b.x), dy = Math.abs(a.y - b.y);
+  return dx + dy + (Math.SQRT2 - 2) * Math.min(dx, dy);
+}
+
+class MinHeap {
+  constructor() { this.a = []; }
+  get size() { return this.a.length; }
+  push(v) {
+    const a = this.a; a.push(v);
+    let i = a.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (a[p].f <= a[i].f) break;
+      [a[p], a[i]] = [a[i], a[p]];
+      i = p;
+    }
+  }
+  pop() {
+    const a = this.a;
+    if (!a.length) return null;
+    const top = a[0], t = a.pop();
+    if (a.length) {
+      a[0] = t;
+      let i = 0;
+      while (true) {
+        let l = i * 2 + 1, r = l + 1, s = i;
+        if (l < a.length && a[l].f < a[s].f) s = l;
+        if (r < a.length && a[r].f < a[s].f) s = r;
+        if (s === i) break;
+        [a[s], a[i]] = [a[i], a[s]];
+        i = s;
+      }
+    }
+    return top;
+  }
+}
+
+const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+function findPath(start, goal, maxExpand = 2600) {
+  if (!start || !goal || !isCellFree(start.x, start.y) || !isCellFree(goal.x, goal.y)) return null;
+  const sK = keyOf(start.x, start.y), gK = keyOf(goal.x, goal.y);
+  if (sK === gK) return [start];
+  const open = new MinHeap();
+  open.push({x:start.x, y:start.y, f:octile(start, goal)});
+  const gs = new Map([[sK, 0]]);
+  const from = new Map();
+  const closed = new Set();
+  let ex = 0;
+
+  while (open.size && ex < maxExpand) {
+    const cur = open.pop();
+    const ck = keyOf(cur.x, cur.y);
+    if (closed.has(ck)) continue;
+    closed.add(ck); ex++;
+    if (ck === gK) {
+      const p = [{x: goal.x, y: goal.y}];
+      let k = ck;
+      while (from.has(k)) {
+        const q = from.get(k);
+        p.push({x: q.x, y: q.y});
+        k = keyOf(q.x, q.y);
+      }
+      p.reverse();
+      return p;
+    }
+    const g0 = gs.get(ck) ?? Infinity;
+    for (const [dx, dy] of DIRS) {
+      const nx = cur.x + dx, ny = cur.y + dy;
+      if (!isCellFree(nx, ny)) continue;
+      if (dx && dy && (!isCellFree(cur.x + dx, cur.y) || !isCellFree(cur.x, cur.y + dy))) continue;
+      const nk = keyOf(nx, ny);
+      if (closed.has(nk)) continue;
+      const tx = nx * NAV + (NAV >> 1), ty = ny * NAV + (NAV >> 1);
+      const tg = terrainAt(tx, ty);
+      const stepCost = (dx && dy ? 1.414 : 1) * costByTerrain(tg);
+      const ng = g0 + stepCost;
+      if (ng < (gs.get(nk) ?? Infinity)) {
+        gs.set(nk, ng);
+        from.set(nk, {x: cur.x, y: cur.y});
+        open.push({x: nx, y: ny, f: ng + octile({x:nx, y:ny}, goal)});
+      }
+    }
+  }
+  return null;
+}
+
+function smoothPath(path) {
+  if (!path || path.length <= 2) return path;
+  const out = [path[0]];
+  let i = 0;
+  while (i < path.length - 1) {
+    let j = path.length - 1;
+    for (; j > i + 1; j--) {
+      const a = {x: path[i].x * NAV + NAV / 2, y: path[i].y * NAV + NAV / 2};
+      const b = {x: path[j].x * NAV + NAV / 2, y: path[j].y * NAV + NAV / 2};
+      if (rayPassable(a.x, a.y, b.x, b.y)) break;
+    }
+    out.push(path[j]);
+    i = j;
+  }
+  return out;
+}
+
+function getPathCached(start, goal) {
+  const k = `${start.x},${start.y}->${goal.x},${goal.y}`;
+  const got = pathCache.get(k);
+  if (got && frameNo - got.t < 160) {
+    got.t = frameNo;
+    return got.p;
+  }
+  let p = findPath(start, goal);
+  if (!p) return null;
+  p = smoothPath(p).map(n => ({x: n.x * NAV + NAV / 2, y: n.y * NAV + NAV / 2}));
+  pathCache.set(k, {p, t: frameNo});
+  if (pathCache.size > 600) {
+    let oldK = null, oldT = Infinity;
+    for (const [kk, vv] of pathCache) if (vv.t < oldT) { oldT = vv.t; oldK = kk; }
+    if (oldK) pathCache.delete(oldK);
+  }
+  metrics.replan++;
+  return p;
+}
+
+function rayPassable(ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const st = Math.max(1, Math.floor(Math.hypot(dx, dy) / 1.2));
+  for (let i = 0; i <= st; i++) {
+    const t = i / st;
+    const x = ax + dx * t, y = ay + dy * t;
+    if (!isTerrainPassable(terrainAt(x, y))) return false;
+  }
+  return true;
+}
+
+function lineOfFire(ax, ay, bx, by, maxD = BULLET_RANGE) {
+  const d = Math.hypot(bx - ax, by - ay);
+  if (d > maxD) return false;
+  const st = Math.max(1, Math.floor(d));
+  for (let i = 1; i <= st; i++) {
+    const t = i / st;
+    const x = ax + (bx - ax) * t;
+    const y = ay + (by - ay) * t;
+    const tr = terrainAt(x, y);
+    if (tr === TERRAIN.WALL || tr === TERRAIN.RIVER) return false;
+  }
+  return true;
+}
+
+// ==================== Entities ====================
+class Base {
+  constructor(team, x, y) {
+    this.team = team;
+    this.x = x;
+    this.y = y;
+    this.hp = BASE_HP;
+    this.alive = true;
+  }
+  hit(dmg) {
+    if (!this.alive) return;
+    this.hp -= dmg;
+    if (this.hp <= 0) {
+      this.hp = 0;
+      this.alive = false;
+      stats[this.team].baseAlive = false;
+    }
+  }
+}
+
+class Tank {
+  constructor(id, team, x, y, role) {
+    this.id = id;
+    this.team = team;
+    this.x = x; this.y = y;
+    this.dir = {x: 0, y: -1};
+    this.hp = MAX_HP;
+    this.alive = true;
+    this.cd = 0;
+    this.respawnT = 0;
+    this.stuck = 0;
+    this.lastX = x; this.lastY = y;
+    this.path = [];
+    this.pathIdx = 0;
+    this.replanCd = 0;
+    this.evadeT = 0;
+    this.role = role;
+    this.aiStride = 1;
+    this.aiOffset = id % 4;
+  }
+  update() {
+    if (!this.alive) {
+      this.respawnT--;
+      if (this.respawnT <= 0) this.respawnIfPossible();
+      return;
+    }
+    if (this.cd > 0) this.cd--;
+    const d = Math.abs(this.x - this.lastX) + Math.abs(this.y - this.lastY);
+    if (d < 0.04) this.stuck++; else this.stuck = 0;
+    this.lastX = this.x; this.lastY = this.y;
+  }
+  respawnIfPossible() {
+    const b = bases[this.team];
+    if (!b || !b.alive) {
+      // 基地被炸毁后永久淘汰
+      this.respawnT = 999999;
+      return;
+    }
+    const p = spawnNearBase(this.team);
+    if (!p) {
+      this.respawnT = 60;
+      return;
+    }
+    this.x = p.x; this.y = p.y;
+    this.hp = MAX_HP;
+    this.alive = true;
+    this.path = [];
+    this.pathIdx = 0;
+    this.evadeT = 0;
+    this.dir = {x: 0, y: -1};
+  }
+  move(vx, vy) {
+    if (!this.alive) return;
+    const n = Math.hypot(vx, vy) || 1;
+    vx /= n; vy /= n;
+    const t = terrainAt(this.x, this.y);
+    const s = 0.48 * speedByTerrain(t);
+    const nx = this.x + vx * s;
+    const ny = this.y + vy * s;
+    const nt = terrainAt(nx, ny);
+    if (nt === TERRAIN.BRIDGE) metrics.bridgeCross++;
+    if (vx || vy) this.dir = {x: Math.sign(vx), y: Math.sign(vy)};
+    // 尝试滑墙
+    if (!rectHitBlocked(nx, ny, TANK_HALF)) { this.x = nx; this.y = ny; return; }
+    if (nt === TERRAIN.RIVER || (this.stuck > 12 && nearBridge(this.x, this.y, 4))) {
+      metrics.riverBlocked++;
+      if (metrics.riverBlocked % 120 === 0) {
+        console.warn('[AI-DEBUG] river blocked / near bridge jitter', {
+          id: this.id,
+          team: this.team,
+          x: this.x.toFixed(1),
+          y: this.y.toFixed(1),
+          nx: nx.toFixed(1),
+          ny: ny.toFixed(1),
+          terrain: nt,
+          stuck: this.stuck
+        });
+      }
+    }
+    if (!rectHitBlocked(nx, this.y, TANK_HALF)) { this.x = nx; return; }
+    if (!rectHitBlocked(this.x, ny, TANK_HALF)) { this.y = ny; return; }
+  }
+  fire(tx, ty) {
+    if (!this.alive || this.cd > 0) return;
+    const dx = tx - this.x, dy = ty - this.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len, uy = dy / len;
+    this.dir = {x: Math.sign(ux), y: Math.sign(uy)};
+    bullets.push({
+      x: this.x + ux * 1.3,
+      y: this.y + uy * 1.3,
+      dx: ux,
+      dy: uy,
+      team: this.team,
+      from: this.id,
+      travel: 0,
+      maxTravel: BULLET_RANGE
+    });
+    this.cd = FIRE_CD;
+  }
+}
+
+// ==================== Spawn / Setup ====================
+function basePos(team) {
+  const m = 34;
+  const ps = [
+    {x: m, y: m},
+    {x: WORLD - m, y: m},
+    {x: m, y: WORLD - m},
+    {x: WORLD - m, y: WORLD - m}
+  ];
+  return ps[team];
+}
+
+function spawnNearBase(team) {
+  const b = bases[team];
+  if (!b || !b.alive) return null;
+  for (let i = 0; i < 80; i++) {
+    // 优先在基地外圈出生，避免单位在基地内部拥堵
+    const ang = rand(0, Math.PI * 2);
+    const r = rand(18, 34);
+    const x = b.x + Math.cos(ang) * r;
+    const y = b.y + Math.sin(ang) * r;
+    if (x < 5 || x > WORLD - 5 || y < 5 || y > WORLD - 5) continue;
+    if (!rectHitBlocked(x, y, TANK_HALF)) return {x, y};
+  }
+  return null;
+}
+
+function roleFor(idx) {
+  if (idx % 5 === 0) return 'defender';
+  if (idx % 3 === 0) return 'support';
+  if (idx % 2 === 0) return 'assault';
+  return 'scout';
+}
+
+function initWorld() {
+  makeTerrain();
+  bases = [];
+  for (let t = 0; t < factions; t++) {
+    const p = basePos(t);
+    const b = new Base(t, p.x, p.y);
+    bases.push(b);
+    paintBaseArea(b);
+  }
+  buildNavGrid();
+}
+
+function spawnAll() {
+  tanks = [];
+  bullets = [];
+  stats = {};
+  pathCache.clear();
+  frameNo = 0;
+  aiCursor = 0;
+  for (let t = 0; t < factions; t++) {
+    stats[t] = { alive: 0, kills: 0, score: 0, baseAlive: true };
+    for (let i = 0; i < perTeam; i++) {
+      const p = spawnNearBase(t) || basePos(t);
+      tanks.push(new Tank(t * perTeam + i, t, p.x, p.y, roleFor(i)));
+    }
+  }
+  camera.x = WORLD / 2; camera.y = WORLD / 2;
+  controlledTank = null;
+}
+
+// ==================== Ultimate AI ====================
+function incomingThreat(tank) {
+  for (const b of bullets) {
+    if (b.team === tank.team) continue;
+    const rx = tank.x - b.x, ry = tank.y - b.y;
+    const proj = rx * b.dx + ry * b.dy;
+    if (proj < 0 || proj > 10) continue;
+    const px = b.x + b.dx * proj;
+    const py = b.y + b.dy * proj;
+    const d = Math.hypot(tank.x - px, tank.y - py);
+    if (d < 2.5) return true;
+  }
+  return false;
+}
+
+function nearestEnemyToBase(team) {
+  const b = bases[team];
+  if (!b || !b.alive) return null;
+  let target = null, best = Infinity;
+  for (const t of tanks) {
+    if (!t.alive || t.team === team) continue;
+    const d = Math.hypot(t.x - b.x, t.y - b.y);
+    if (d < best) { best = d; target = t; }
+  }
+  return best < DANGER_RADIUS ? target : null;
+}
+
+function weakestEnemyBase(team) {
+  let best = null;
+  for (const b of bases) {
+    if (!b.alive || b.team === team) continue;
+    if (!best || b.hp < best.hp) best = b;
+  }
+  return best;
+}
+
+function teamForwardPoint(team) {
+  const b = bases[team];
+  if (!b) return {x: WORLD / 2, y: WORLD / 2};
+  const dirs = [
+    {x: 1, y: 1},   // 蓝 -> 中央
+    {x: -1, y: 1},  // 红 -> 中央
+    {x: 1, y: -1},  // 绿 -> 中央
+    {x: -1, y: -1}  // 黄 -> 中央
+  ];
+  const d = dirs[team] || {x: 0, y: 0};
+  return {
+    x: clamp(b.x + d.x * 120, 20, WORLD - 20),
+    y: clamp(b.y + d.y * 120, 20, WORLD - 20)
+  };
+}
+
+function chooseEnemyTarget(tank) {
+  let best = null;
+  let scoreBest = -Infinity;
+  for (const e of tanks) {
+    if (!e.alive || e.team === tank.team) continue;
+    const d = Math.hypot(e.x - tank.x, e.y - tank.y);
+    const los = lineOfFire(tank.x, tank.y, e.x, e.y) ? 1 : 0;
+    const hpScore = 1 - e.hp / MAX_HP;
+    const fk = `${tank.team}:${e.id}`;
+    const fN = teamFocus[fk] || 0;
+    let s = 0;
+    s += Math.max(0, 72 - d) * 0.04;
+    s += los * 2.3;
+    s += hpScore * 2;
+    s -= fN * 1.5;
+    if (s > scoreBest) { scoreBest = s; best = e; }
+  }
+  if (best) {
+    const fk = `${tank.team}:${best.id}`;
+    teamFocus[fk] = (teamFocus[fk] || 0) + 1;
+  }
+  return best;
+}
+
+function aiMoveTo(tank, tx, ty) {
+  const sc = nearestFreeCell(worldToCell(tank.x, tank.y));
+  const gc = nearestFreeCell(worldToCell(tx, ty));
+  if (!sc || !gc) return {x:0, y:0};
+
+  tank.replanCd--;
+  if (!tank.path.length || tank.pathIdx >= tank.path.length || tank.replanCd <= 0 || tank.stuck > 14) {
+    const p = getPathCached(sc, gc);
+    if (p && p.length) { tank.path = p; tank.pathIdx = 0; }
+    tank.replanCd = 14 + Math.floor(Math.random() * 10);
+  }
+
+  let gx = tx, gy = ty;
+  if (tank.path.length && tank.pathIdx < tank.path.length) {
+    const wp = tank.path[tank.pathIdx];
+    const wpt = terrainAt(wp.x, wp.y);
+    if (wpt === TERRAIN.RIVER) {
+      metrics.riverWaypoints++;
+      if (metrics.riverWaypoints % 60 === 0) {
+        console.warn('[AI-DEBUG] river waypoint detected', {
+          id: tank.id,
+          team: tank.team,
+          wpX: wp.x.toFixed(1),
+          wpY: wp.y.toFixed(1),
+          pathIdx: tank.pathIdx,
+          pathLen: tank.path.length
+        });
+      }
+    }
+    if (Math.hypot(wp.x - tank.x, wp.y - tank.y) < 2.3) tank.pathIdx++;
+    if (tank.pathIdx < tank.path.length) {
+      gx = tank.path[tank.pathIdx].x;
+      gy = tank.path[tank.pathIdx].y;
+    }
+  }
+
+  const dx = gx - tank.x, dy = gy - tank.y;
+  const l = Math.hypot(dx, dy) || 1;
+  return {x: dx / l, y: dy / l};
+}
+
+function doAi(tank) {
+  if (!tank.alive || tank === controlledTank) return;
+
+  const home = bases[tank.team];
+  if (!home || !home.alive) return;
+
+  const tactic = teamTactic[tank.team] || 'strike';
+  // 战术层：先判断防守态势
+  const intruder = nearestEnemyToBase(tank.team);
+  let objective = null;
+  let mode = 'attack';
+
+  if (tactic === 'defense' || tank.role === 'defender' || intruder) {
+    mode = 'defend';
+    // 只有真入侵或专职防守才贴基地；否则去前沿防区，避免全员基地抽搐
+    if (intruder || tank.role === 'defender') objective = intruder || home;
+    else objective = teamForwardPoint(tank.team);
+  } else {
+    if (tactic === 'ambush') {
+      const eb = weakestEnemyBase(tank.team);
+      if (eb) {
+        objective = {x: eb.x + ((tank.id % 2 === 0) ? -24 : 24), y: eb.y + ((tank.id % 3 === 0) ? -20 : 20)};
+      }
+    }
+    objective = objective || weakestEnemyBase(tank.team) || chooseEnemyTarget(tank) || home;
+  }
+
+  const enemy = chooseEnemyTarget(tank);
+  const threat = incomingThreat(tank);
+  if (threat) { tank.evadeT = 8; metrics.evade++; }
+
+  let vx = 0, vy = 0;
+  if (tank.evadeT > 0 && enemy) {
+    const ex = enemy.x - tank.x, ey = enemy.y - tank.y;
+    const l = Math.hypot(ex, ey) || 1;
+    // 横移规避
+    vx = -ey / l;
+    vy = ex / l;
+    if ((tank.id + frameNo) % 2 === 0) { vx = -vx; vy = -vy; }
+    tank.evadeT--;
+  } else {
+    const tx = objective.x ?? home.x;
+    const ty = objective.y ?? home.y;
+    const mv = aiMoveTo(tank, tx, ty);
+    vx = mv.x; vy = mv.y;
+  }
+
+  // 基地脱困：若长期在己方基地附近且无防守压力，强制外推
+  const dHome = Math.hypot(tank.x - home.x, tank.y - home.y);
+  if (!intruder && dHome < 24) {
+    let outX = tank.x - home.x;
+    let outY = tank.y - home.y;
+    const ol = Math.hypot(outX, outY) || 1;
+    outX /= ol; outY /= ol;
+    vx = vx * 0.35 + outX * 0.65;
+    vy = vy * 0.35 + outY * 0.65;
+    // 如果径向太小，给一个切向分量避免原地打转
+    if (Math.abs(outX) + Math.abs(outY) < 0.25) {
+      vx += ((tank.id % 2) ? 0.45 : -0.45);
+      vy += ((tank.id % 3) ? -0.35 : 0.35);
+    }
+  }
+
+  // 作战小组：按 id 分组（偷袭/防守/打击/歼灭）
+  const squad = tank.id % 4;
+  if (squad === 0 && mode === 'attack') {
+    vx += ((tank.id % 2 === 0) ? 0.35 : -0.35);
+  } else if (squad === 1 && mode === 'defend') {
+    const hb = bases[tank.team];
+    if (hb) {
+      const hx = hb.x - tank.x, hy = hb.y - tank.y;
+      const hl = Math.hypot(hx, hy) || 1;
+      vx = vx * 0.55 + (hx / hl) * 0.45;
+      vy = vy * 0.55 + (hy / hl) * 0.45;
+    }
+  }
+
+  // 协作：支援位尽量靠近友军前排
+  if (tank.role === 'support') {
+    let mate = null, dBest = Infinity;
+    for (const m of tanks) {
+      if (!m.alive || m.team !== tank.team || m.id === tank.id) continue;
+      const d = Math.hypot(m.x - tank.x, m.y - tank.y);
+      if (d < dBest) { dBest = d; mate = m; }
+    }
+    if (mate && dBest > 14) {
+      const dmx = mate.x - tank.x, dmy = mate.y - tank.y;
+      const dl = Math.hypot(dmx, dmy) || 1;
+      vx = vx * 0.5 + (dmx / dl) * 0.5;
+      vy = vy * 0.5 + (dmy / dl) * 0.5;
+    }
+  }
+
+  const refined = refineLocalMove(tank.x, tank.y, vx, vy);
+  tank.move(refined.x, refined.y);
+
+  // 射击：优先敌方坦克，其次敌方基地
+  if (tank.cd <= 0) {
+    if (enemy) {
+      const d = Math.hypot(enemy.x - tank.x, enemy.y - tank.y);
+      const fk = `${tank.team}:${enemy.id}`;
+      const focused = teamFocus[fk] || 0;
+      const chance = focused > FOCUS_LIMIT ? 0.04 : 0.08;
+      if (d <= BULLET_RANGE && lineOfFire(tank.x, tank.y, enemy.x, enemy.y) && Math.random() < chance) {
+        // 预瞄一点，体现飞行时间
+        const lead = d / BULLET_SPEED;
+        const tx = enemy.x + enemy.dir.x * lead * 0.03;
+        const ty = enemy.y + enemy.dir.y * lead * 0.03;
+        tank.fire(tx, ty);
+      }
+    }
+    const targetBase = weakestEnemyBase(tank.team);
+    if (targetBase && mode === 'attack') {
+      const d = Math.hypot(targetBase.x - tank.x, targetBase.y - tank.y);
+      if (d <= BULLET_RANGE && lineOfFire(tank.x, tank.y, targetBase.x, targetBase.y) && Math.random() < 0.06) {
+        tank.fire(targetBase.x, targetBase.y);
+      }
+    }
+  }
+}
+
+function updateTeamTactic() {
+  for (let t = 0; t < factions; t++) {
+    const ownBase = bases[t];
+    const alive = tanks.filter(x => x.alive && x.team === t).length;
+    // 不再用“所有敌军总数”对比（多阵营会导致永远防守）
+    let maxEnemyAlive = 0;
+    for (let e = 0; e < factions; e++) {
+      if (e === t) continue;
+      const c = tanks.filter(x => x.alive && x.team === e).length;
+      if (c > maxEnemyAlive) maxEnemyAlive = c;
+    }
+    const pressure = nearestEnemyToBase(t);
+    if (!ownBase || !ownBase.alive || pressure) {
+      teamTactic[t] = 'defense';
+      continue;
+    }
+    if (alive > maxEnemyAlive * 1.15) {
+      teamTactic[t] = (frameNo % 240 < 110) ? 'eliminate' : 'ambush';
+    } else if (alive < maxEnemyAlive * 0.75) {
+      teamTactic[t] = 'defense';
+    } else {
+      teamTactic[t] = 'strike';
+    }
+  }
+}
+
+// ==================== Game Loop ====================
+function allEnemiesDead(team) {
+  for (const t of tanks) if (t.alive && t.team !== team) return false;
+  for (const b of bases) if (b.team !== team && b.alive) return false;
+  return true;
+}
+
+function update() {
+  if (!gameRunning) return;
+  const t0 = performance.now();
+  frameNo++;
+  teamFocus = {};
+  if (frameNo % 45 === 0) updateTeamTactic();
+
+  // 玩家控制
+  if (controlledTank && controlledTank.alive) {
+    let dx = 0, dy = 0;
+    if (keys['w'] || keys['arrowup']) dy = -1;
+    if (keys['s'] || keys['arrowdown']) dy = 1;
+    if (keys['a'] || keys['arrowleft']) dx = -1;
+    if (keys['d'] || keys['arrowright']) dx = 1;
+    if (dx || dy) controlledTank.move(dx, dy);
+    if (keys[' '] || keys['j']) {
+      const tx = controlledTank.x + controlledTank.dir.x * 12;
+      const ty = controlledTank.y + controlledTank.dir.y * 12;
+      controlledTank.fire(tx, ty);
+    }
+  }
+
+  // AI 调度（WebGPU优先，CPU兜底）
+  if (webgpu.ready && webgpu.enabled) {
+    dispatchWebGPUAI();
+    applyWebGPUAIActions();
+  } else {
+    let acted = 0;
+    for (let i = 0; i < tanks.length; i++) {
+      const idx = (aiCursor + i) % tanks.length;
+      const t = tanks[idx];
+      if (!t.alive || t === controlledTank) continue;
+      const dCam = Math.hypot(t.x - camera.x, t.y - camera.y);
+      t.aiStride = dCam < 120 ? 1 : (dCam < 220 ? 2 : 3);
+      if ((frameNo + t.aiOffset) % t.aiStride !== 0) continue;
+      if (acted >= AI_TICK_BUDGET) break;
+      doAi(t);
+      acted++;
+    }
+    aiCursor = (aiCursor + 1) % Math.max(1, tanks.length);
+  }
+
+  // 更新坦克
+  for (const t of tanks) t.update();
+
+  // 子弹更新（飞行时间+射程）
+  bullets = bullets.filter(b => {
+    b.x += b.dx * BULLET_SPEED;
+    b.y += b.dy * BULLET_SPEED;
+    b.travel += BULLET_SPEED;
+    if (b.travel > b.maxTravel) return false;
+
+    const tr = terrainAt(b.x, b.y);
+    if (tr === TERRAIN.WALL || tr === TERRAIN.RIVER) return false;
+
+    // 打基地（仅炮弹可伤害基地）
+    for (const base of bases) {
+      if (!base.alive || base.team === b.team) continue;
+      if (Math.abs(b.x - base.x) <= BASE_HALF && Math.abs(b.y - base.y) <= BASE_HALF) {
+        const wasAlive = base.alive;
+        base.hit(BASE_DAMAGE);
+        stats[b.team].score += BASE_HIT_SCORE;
+        if (wasAlive && !base.alive) {
+          // 推塔高额奖励：强化 AI 对基地目标的价值感知
+          stats[b.team].score += BASE_DESTROY_SCORE;
+        }
+        return false;
+      }
+    }
+
+    // 打坦克
+    for (const t of tanks) {
+      if (!t.alive || t.team === b.team) continue;
+      if (Math.abs(b.x - t.x) <= TANK_HALF && Math.abs(b.y - t.y) <= TANK_HALF) {
+        t.hp -= BULLET_DAMAGE;
+        if (t.hp <= 0) {
+          t.alive = false;
+          t.respawnT = RESPAWN_T;
+          stats[b.team].kills++;
+          stats[b.team].score += 30;
+        }
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // 摄像机
+  if (followMode === 'player' && controlledTank && controlledTank.alive) {
+    const fx = controlledTank.x + controlledTank.dir.x * 8;
+    const fy = controlledTank.y + controlledTank.dir.y * 8;
+    camera.x += (fx - camera.x) * 0.14;
+    camera.y += (fy - camera.y) * 0.14;
+  } else if (followMode === 'center') {
+    const alive = tanks.filter(t => t.alive);
+    if (alive.length) {
+      const cx = alive.reduce((s, t) => s + t.x, 0) / alive.length;
+      const cy = alive.reduce((s, t) => s + t.y, 0) / alive.length;
+      camera.x += (cx - camera.x) * 0.08;
+      camera.y += (cy - camera.y) * 0.08;
+    }
+  } else if (followMode === 'auto') {
+    if (controlledTank && controlledTank.alive) {
+      camera.x += ((controlledTank.x + controlledTank.dir.x * 6) - camera.x) * 0.12;
+      camera.y += ((controlledTank.y + controlledTank.dir.y * 6) - camera.y) * 0.12;
+    } else {
+      const alive = tanks.filter(t => t.alive);
+      if (alive.length) {
+        const cx = alive.reduce((s, t) => s + t.x, 0) / alive.length;
+        const cy = alive.reduce((s, t) => s + t.y, 0) / alive.length;
+        camera.x += (cx - camera.x) * 0.06;
+        camera.y += (cy - camera.y) * 0.06;
+      }
+    }
+  }
+  camera.x = clamp(camera.x, 0, WORLD);
+  camera.y = clamp(camera.y, 0, WORLD);
+
+  for (let t = 0; t < factions; t++) {
+    stats[t].alive = tanks.filter(x => x.team === t && x.alive).length;
+    stats[t].baseAlive = !!bases[t]?.alive;
+  }
+
+  // 终局
+  let winner = null;
+  for (let t = 0; t < factions; t++) {
+    if (allEnemiesDead(t)) { winner = t; break; }
+  }
+  if (winner !== null) gameRunning = false;
+
+  draw();
+  updateStats(winner);
+
+  const dt = performance.now() - t0;
+  metrics.frameMsAvg = metrics.frameMsAvg * 0.92 + dt * 0.08;
+  setTimeout(update, 16);
+}
+
+// ==================== Render ====================
+function drawTerrain() {
+  const s = TILE * zoom;
+  const wx0 = Math.floor(camera.x - VIEW_W / s / 2 - 2);
+  const wy0 = Math.floor(camera.y - VIEW_H / s / 2 - 2);
+  const wx1 = Math.ceil(camera.x + VIEW_W / s / 2 + 2);
+  const wy1 = Math.ceil(camera.y + VIEW_H / s / 2 + 2);
+  for (let y = Math.max(0, wy0); y < Math.min(WORLD, wy1); y++) {
+    for (let x = Math.max(0, wx0); x < Math.min(WORLD, wx1); x++) {
+      const p = worldToScr(x, y);
+      ctx.fillStyle = TERRAIN_COLOR[terrain[y][x]];
+      ctx.fillRect(p.x, p.y, s + 0.2, s + 0.2);
+    }
+  }
+}
+
+function drawBases() {
+  for (const b of bases) {
+    if (!b) continue;
+    const p = worldToScr(b.x, b.y);
+    const s = BASE_HALF * TILE * 2;
+    ctx.fillStyle = b.alive ? TEAM_COLORS[b.team] : '#333';
+    ctx.globalAlpha = 0.35;
+    ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(p.x - s / 2, p.y - s / 2, s, s);
+    const hp = b.hp / BASE_HP;
+    ctx.fillStyle = '#111';
+    ctx.fillRect(p.x - 12, p.y - s / 2 - 7, 24, 3);
+    ctx.fillStyle = hp > 0.5 ? '#3fb950' : (hp > 0.25 ? '#d29922' : '#f85149');
+    ctx.fillRect(p.x - 12, p.y - s / 2 - 7, 24 * hp, 3);
+  }
+}
+
+function drawTanks() {
+  for (const t of tanks) {
+    if (!t.alive) continue;
+    const p = worldToScr(t.x, t.y);
+    if (p.x < -20 || p.y < -20 || p.x > VIEW_W + 20 || p.y > VIEW_H + 20) continue;
+    const s = TANK_HALF * TILE * 2;
+    ctx.fillStyle = TEAM_COLORS[t.team];
+    ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x + t.dir.x * 6, p.y + t.dir.y * 6);
+    ctx.stroke();
+
+    const hp = Math.max(0, t.hp / MAX_HP);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(p.x - 6, p.y - 8, 12, 2);
+    ctx.fillStyle = hp > 0.5 ? '#3fb950' : (hp > 0.25 ? '#d29922' : '#f85149');
+    ctx.fillRect(p.x - 6, p.y - 8, 12 * hp, 2);
+
+    if (t === controlledTank) {
+      ctx.strokeStyle = '#fff';
+      ctx.strokeRect(p.x - s / 2 - 2, p.y - s / 2 - 2, s + 4, s + 4);
+    }
+  }
+}
+
+function drawBullets() {
+  for (const b of bullets) {
+    const p = worldToScr(b.x, b.y);
+    if (p.x < 0 || p.y < 0 || p.x > VIEW_W || p.y > VIEW_H) continue;
+    ctx.fillStyle = TEAM_COLORS[b.team];
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawMinimap() {
+  miniCtx.fillStyle = 'rgba(0,0,0,0.85)';
+  miniCtx.fillRect(0, 0, 120, 120);
+  const sc = 120 / WORLD;
+
+  for (let y = 0; y < WORLD; y += 6) {
+    for (let x = 0; x < WORLD; x += 6) {
+      const t = terrain[y][x];
+      if (t === TERRAIN.PLAIN) continue;
+      miniCtx.fillStyle = TERRAIN_COLOR[t];
+      miniCtx.fillRect(x * sc, y * sc, 1, 1);
+    }
+  }
+
+  for (const b of bases) {
+    miniCtx.fillStyle = b.alive ? TEAM_COLORS[b.team] : '#333';
+    miniCtx.fillRect((b.x - 4) * sc, (b.y - 4) * sc, 8 * sc, 8 * sc);
+  }
+  for (const t of tanks) {
+    if (!t.alive) continue;
+    miniCtx.fillStyle = TEAM_COLORS[t.team];
+    miniCtx.fillRect(t.x * sc, t.y * sc, 1.5, 1.5);
+  }
+
+  miniCtx.strokeStyle = '#fff';
+  miniCtx.lineWidth = 1;
+  const s = TILE * zoom;
+  miniCtx.strokeRect((camera.x - VIEW_W / s / 2) * sc, (camera.y - VIEW_H / s / 2) * sc, (VIEW_W / s) * sc, (VIEW_H / s) * sc);
+}
+
+function draw() {
+  ctx.fillStyle = '#050810';
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  drawTerrain();
+  drawBases();
+  drawTanks();
+  drawBullets();
+  drawMinimap();
+  renderTankList();
+}
+
+// ==================== UI ====================
+function renderTankList() {
+  const el = document.getElementById('tank-list');
+  let html = '';
+  for (const t of tanks) {
+    if (t.team !== 0) continue;
+    const cls = t === controlledTank ? 'tank-tankitem controlled' : 'tank-tankitem';
+    const hp = Math.max(0, t.hp / MAX_HP) * 100;
+    html += `<div class="${cls}" data-id="${t.id}">
+      <span class="tank-tankitem-dot" style="background:${TEAM_COLORS[t.team]}"></span>
+      <span class="tank-tankitem-name">T${t.id + 1} ${t.role}</span>
+      <div class="tank-tankitem-hp"><div class="tank-tankitem-hpfill" style="width:${hp}%"></div></div>
+    </div>`;
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('.tank-tankitem').forEach(item => {
+    item.onclick = () => {
+      const id = parseInt(item.dataset.id);
+      const t = tanks.find(x => x.id === id);
+      if (t && t.alive) controlledTank = (controlledTank === t) ? null : t;
+    };
+  });
+}
+
+function updateStats(winner) {
+  const el = document.getElementById('faction-stats');
+  let html = '';
+  for (let i = 0; i < factions; i++) {
+    const s = stats[i] || {alive:0,kills:0,baseAlive:false};
+    const b = bases[i];
+    html += `<div class="tank-faction-row">
+      <span class="tank-faction-dot" style="background:${TEAM_COLORS[i]}"></span>
+      <span class="tank-faction-name">${TEAM_NAMES[i]}方 基地:${b?.alive ? Math.floor(b.hp) : '已毁'}</span>
+      <span class="tank-faction-stat">${s.alive}/${perTeam}</span>
+    </div>`;
+  }
+  if (winner !== null) {
+    html += `<div class="tank-faction-row"><span>🏁 胜利</span><span class="tank-faction-stat" style="color:${TEAM_COLORS[winner]}">${TEAM_NAMES[winner]}方</span></div>`;
+  }
+  el.innerHTML = html;
+
+  const top = document.getElementById('battle-topbar');
+  const tacticText = Array.from({length:factions}).map((_,i)=>`${TEAM_NAMES[i]}:${teamTactic[i]||'strike'}`).join(' | ');
+  top.innerHTML = `<span class="tank-chip">🧠 战术 ${tacticText}</span><span class="tank-chip">🔭 缩放 x${zoom.toFixed(1)}</span><span class="tank-chip">🎯 跟随 ${followMode}</span>`;
+
+  const eng = document.getElementById('engine-display');
+  eng.innerHTML = `
+    <div class="tank-engine-row"><span>AI</span><span class="tank-badge">${webgpu.ready && webgpu.enabled ? 'WebGPU' : 'CPU'}</span></div>
+    <div class="tank-engine-row"><span>地图</span><span>${WORLD}×${WORLD}</span></div>
+    <div class="tank-engine-row"><span>帧耗时</span><span>${metrics.frameMsAvg.toFixed(1)} ms</span></div>
+    <div class="tank-engine-row"><span>重规划/帧</span><span>${metrics.replan}</span></div>
+    <div class="tank-engine-row"><span>规避触发/帧</span><span>${metrics.evade}</span></div>
+    <div class="tank-engine-row"><span>地形倍率</span><span>平原1 公路3 沼泽0.2</span></div>
+    <div class="tank-engine-row"><span>河道阻塞</span><span>${metrics.riverBlocked}</span></div>
+    <div class="tank-engine-row"><span>河道路点</span><span>${metrics.riverWaypoints}</span></div>
+    <div class="tank-engine-row"><span>过桥计数</span><span>${metrics.bridgeCross}</span></div>
+  `;
+  metrics.replan = 0;
+  metrics.evade = 0;
+}
+
+// ==================== Input ====================
+document.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === ' ') e.preventDefault();
+});
+document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+['up','down','left','right','fire'].forEach(k => {
+  const b = document.getElementById('m-' + k);
+  if (!b) return;
+  const map = {up:'arrowup',down:'arrowdown',left:'arrowleft',right:'arrowright',fire:' '};
+  b.ontouchstart = e => { e.preventDefault(); keys[map[k]] = true; };
+  b.ontouchend = e => { e.preventDefault(); keys[map[k]] = false; };
+});
+
+// ==================== Controls ====================
+document.getElementById('btn-start').onclick = () => {
+  if (!gameRunning) {
+    factions = parseInt(document.getElementById('faction-count').value);
+    perTeam = parseInt(document.getElementById('tanks-per-faction').value);
+    initWorld();
+    spawnAll();
+    gameRunning = true;
+    update();
+  }
+};
+
+document.getElementById('btn-reset').onclick = () => {
+  gameRunning = false;
+  initWorld();
+  spawnAll();
+  draw();
+  updateStats(null);
+};
+
+document.getElementById('btn-view-center').onclick = () => {
+  camera.x = WORLD / 2;
+  camera.y = WORLD / 2;
+};
+
+document.getElementById('zoom-range').oninput = (e) => {
+  zoom = clamp(parseFloat(e.target.value), 0.6, 2.2);
+};
+document.getElementById('follow-mode').onchange = (e) => {
+  followMode = e.target.value;
+};
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  zoom = clamp(zoom + (e.deltaY < 0 ? 0.1 : -0.1), 0.6, 2.2);
+  document.getElementById('zoom-range').value = String(zoom);
+}, {passive:false});
+canvas.addEventListener('mousedown', (e) => {
+  if (followMode !== 'free') return;
+  dragging = true;
+  lastDrag = {x:e.clientX, y:e.clientY};
+});
+window.addEventListener('mouseup', () => { dragging = false; });
+window.addEventListener('mousemove', (e) => {
+  if (!dragging || followMode !== 'free' || !lastDrag) return;
+  const dx = e.clientX - lastDrag.x;
+  const dy = e.clientY - lastDrag.y;
+  lastDrag = {x:e.clientX, y:e.clientY};
+  camera.x -= dx / (TILE * zoom);
+  camera.y -= dy / (TILE * zoom);
+  camera.x = clamp(camera.x, 0, WORLD);
+  camera.y = clamp(camera.y, 0, WORLD);
+});
+
+// init
+initWebGPUAI();
+initWorld();
+spawnAll();
+draw();
+updateStats(null);
+})();
+</script>
+
+</div></div></main><footer id="footer" style="background-image: url(/img/040.jpg);"><div class="footer-other"><div class="footer-copyright"><span class="copyright">©&nbsp;2025 - 2026 By llbzow</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"></div><script>var OriginTitle = document.title; var titleTime; document.addEventListener('visibilitychange', function () { if (document.hidden) { document.title = '╭(°A°`)╮ 页面崩溃啦 ~'; clearTimeout(titleTime); } else { document.title = '(ฅ>ω<*ฅ) 噫又好啦 ~ ' + OriginTitle; titleTime = setTimeout(function () { document.title = OriginTitle; }, 2000); } });</script><script defer="defer" id="fluttering_ribbon" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="255,255,255" opacity="0.6" zindex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-nest.min.js"></script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      const usePjax = true
+      false
+        ? (usePjax ? pjax.loadUrl('/404.html') : window.location.href = '/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})()</script><script async="" data-pjax="" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><!-- hexo injector body_end start -->
+<div id="dev-sidebar">
+    <div id="dev-toggle">💻</div>
+    <div id="dev-list">
+        <div class="dev-header">开发专栏</div>
+        <a href="/tools/sort/" class="dev-item">📊 排序算法演示</a>
+        <a href="/tools/webgpu-gravity/" class="dev-item">🌌 WebGPU 万有引力粒子</a>
+        <a href="/tools/yolo-detect/" class="dev-item">👁️ YOLO 实时目标检测</a>
+        <a href="/tools/fire-creation/" class="dev-item">🔥 火之创造 (元素沙盒)</a>
+    </div>
+</div>
+
+<style>
+    #dev-sidebar {
+        position: fixed;
+        right: -150px; /* Width of the list */
+        top: calc(30vh + 80px); /* Positioned below game-sidebar */
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    /* Hover area to keep it open */
+    #dev-sidebar:hover {
+        right: 0;
+    }
+
+    #dev-toggle {
+        width: 40px;
+        height: 40px;
+        background: #52c41a; /* Green color for dev theme */
+        color: white;
+        text-align: center;
+        line-height: 40px;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+        font-size: 20px;
+        position: absolute;
+        left: -40px;
+        top: 0;
+    }
+
+    #dev-list {
+        width: 150px; /* Width for text */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 0 8px; /* Bottom left rounded */
+        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+    
+    /* 自定义滚动条样式 */
+    #dev-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    #dev-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #dev-list::-webkit-scrollbar-thumb {
+        background: rgba(82, 196, 26, 0.3);
+        border-radius: 4px;
+    }
+    #dev-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(82, 196, 26, 0.6);
+    }
+    
+    .dev-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 10px;
+        background: #f6ffed;
+        color: #52c41a;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .dev-item {
+        display: block;
+        padding: 12px 15px;
+        color: #4c4948;
+        text-decoration: none !important;
+        font-size: 13px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0;
+    }
+
+    .dev-item:last-child {
+        border-bottom: none;
+    }
+
+    .dev-item:hover {
+        background: #52c41a;
+        color: white !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var toolSidebar = document.getElementById('tool-sidebar');
+        var gameSidebar = document.getElementById('game-sidebar');
+        var devSidebar = document.getElementById('dev-sidebar');
+        
+        if(devSidebar) {
+            devSidebar.addEventListener('mouseenter', function() {
+                if(toolSidebar) toolSidebar.style.right = '-220px'; // 180px + 40px(按钮宽度)
+                if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+            });
+            devSidebar.addEventListener('mouseleave', function() {
+                if(toolSidebar) toolSidebar.style.right = ''; 
+                if(gameSidebar) gameSidebar.style.right = ''; 
+            });
+        }
+    });
+</script>
+
+<div id="game-sidebar">
+    <div id="game-toggle">🎮</div>
+    <div id="game-list">
+        <div class="game-header">博客游戏</div>
+        <a href="/tools/2048" class="game-item">🧩 经典 2048</a>
+        <a href="/tools/tetris" class="game-item">🧱 俄罗斯方块 (Tetris)</a>
+        <a href="/tools/pacman" class="game-item">🟡 回忆吃豆人 (Pac-Man)</a>
+        <a href="/tools/snake" class="game-item">🐍 贪吃蛇 (Snake)</a>
+        <a href="/tools/gomoku" class="game-item">⚪ 五子棋 (Gomoku)</a>
+        <a href="/tools/minesweeper" class="game-item">💣 扫雷 (Minesweeper)</a>
+        <a href="/tools/tank-battle" class="game-item">🚓 坦克大战 (Tank Battle)</a>
+    </div>
+</div>
+
+<style>
+    #game-sidebar {
+        position: fixed; /* Fixed position */
+        right: -150px; /* Width of the list */
+        top: calc(30vh + 40px); /* Positioned exactly below tool-sidebar */
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    /* Hover area to keep it open */
+    #game-sidebar:hover {
+        right: 0;
+    }
+
+    #game-toggle {
+        width: 40px;
+        height: 40px;
+        background: #FF7D7D; /* Pink/Red color to distinguish from tool-sidebar */
+        color: white;
+        text-align: center;
+        line-height: 40px;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+        font-size: 20px;
+        position: absolute; /* Absolute relative to #game-sidebar */
+        left: -40px; /* Hangs off the left of the container */
+        top: 0;
+    }
+
+    #game-list {
+        width: 150px; /* Width for text */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 0 8px; /* Bottom left rounded */
+        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+    
+    /* 自定义滚动条样式 */
+    #game-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    #game-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #game-list::-webkit-scrollbar-thumb {
+        background: rgba(255, 125, 125, 0.3);
+        border-radius: 4px;
+    }
+    #game-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 125, 125, 0.6);
+    }
+    
+    .game-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 10px;
+        background: #fff0f0;
+        color: #FF7D7D;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .game-item {
+        display: block;
+        padding: 12px 15px;
+        color: #4c4948;
+        text-decoration: none !important;
+        font-size: 13px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0; /* 防止内容被挤压 */
+    }
+
+    .game-item:last-child {
+        border-bottom: none;
+    }
+
+    .game-item:hover {
+        background: #FF7D7D;
+        color: white !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var toolSidebar = document.getElementById('tool-sidebar');
+        var gameSidebar = document.getElementById('game-sidebar');
+        var devSidebar = document.getElementById('dev-sidebar');
+        
+        if(gameSidebar) {
+            gameSidebar.addEventListener('mouseenter', function() {
+                if(toolSidebar) toolSidebar.style.right = '-220px'; // 180px + 40px(按钮)
+                if(devSidebar) devSidebar.style.right = '-190px'; // 150px + 40px(按钮)
+            });
+            gameSidebar.addEventListener('mouseleave', function() {
+                if(toolSidebar) toolSidebar.style.right = ''; 
+                if(devSidebar) devSidebar.style.right = ''; 
+            });
+        }
+    });
+</script>
+
+<div id="tool-sidebar">
+    <div id="tool-toggle">🛠️</div>
+    <div id="tool-list">
+        <div class="tool-header">博客工具</div>
+        <a href="/tools/time" class="tool-item">📅 时间戳与地理时间</a>
+        <a href="/tools/base64-img" class="tool-item">🖼️ 图片↔Base64</a>
+        <a href="/tools/hash" class="tool-item">🔐 MD5/SHA256 计算</a>
+        <a href="/tools/geojson" class="tool-item">🌍 GeoJSON 查询</a>
+        <a href="/tools/remove-bg" class="tool-item">✂️ 快速抠图</a>
+        <a href="/tools/watermark" class="tool-item">💧 水印生成与检测</a>
+        <a href="/tools/gif" class="tool-item">🎬 GIF 生成</a>
+        <a href="/tools/mirage-tank" class="tool-item">👻 幻影坦克制作</a>
+        <a href="/tools/converter" class="tool-item">🔄 文件全能转换</a>
+        <a href="/tools/qrcode" class="tool-item">📱 二维码生成/解析</a>
+        <a href="/tools/unit-converter" class="tool-item">📏 工程单位换算</a>
+        <a href="/tools/color" class="tool-item">🎨 颜色转换与调色</a>
+    </div>
+</div>
+
+<style>
+    #tool-sidebar {
+        position: fixed;
+        right: -180px; /* Width of the list */
+        top: 30vh;
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    /* Hover area to keep it open */
+    #tool-sidebar:hover {
+        right: 0;
+    }
+
+    #tool-toggle {
+        width: 40px;
+        height: 40px;
+        background: #49b1f5;
+        color: white;
+        text-align: center;
+        line-height: 40px;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+        font-size: 20px;
+        position: absolute;
+        left: -40px; /* Hangs off the left of the sidebar container */
+        top: 0;
+    }
+
+    #tool-list {
+        width: 180px; /* Width for text */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 0 8px; /* Bottom left rounded */
+        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        max-height: 50vh; /* 限制最大高度以便能滚动 */
+        overflow-y: auto; /* 允许纵向滚动 */
+    }
+    
+    /* 自定义滚动条样式，使其不那么突兀 */
+    #tool-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    #tool-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #tool-list::-webkit-scrollbar-thumb {
+        background: rgba(73, 177, 245, 0.3);
+        border-radius: 4px;
+    }
+    #tool-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(73, 177, 245, 0.6);
+    }
+
+    .tool-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 10px;
+        background: #f7f9fe;
+        color: #49b1f5;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .tool-item {
+        display: block;
+        padding: 12px 15px;
+        color: #4c4948;
+        text-decoration: none !important;
+        font-size: 13px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0; /* 防止由于 max-height 导致内容被挤压 */
+    }
+
+    .tool-item:last-child {
+        border-bottom: none;
+    }
+
+    .tool-item:hover {
+        background: #49b1f5;
+        color: white !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var toolSidebar = document.getElementById('tool-sidebar');
+        var gameSidebar = document.getElementById('game-sidebar');
+        var devSidebar = document.getElementById('dev-sidebar');
+        
+        if(toolSidebar) {
+            toolSidebar.addEventListener('mouseenter', function() {
+                if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+                if(devSidebar) devSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+            });
+            toolSidebar.addEventListener('mouseleave', function() {
+                if(gameSidebar) gameSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
+                if(devSidebar) devSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
+            });
+        }
+    });
+</script>
+
+  <style id="oml2d-force-styles">
+    /* ==========================================================================
+       1. STYLES
+       ========================================================================== */
+    .oml2d-menus .oml2d-menu-item,
+    .oml2d-menu-item {
+        background-color: #f0f0f0 !important;
+        border: 1px solid #ccc !important;
+    }
+    .oml2d-menus svg, .oml2d-menus path,
+    .oml2d-menu-item svg, .oml2d-menu-item path,
+    .oml2d-icon, .oml2d-icon svg, .oml2d-icon path {
+        fill: #333333 !important;
+        stroke: #333333 !important;
+        color: #333333 !important;
+        opacity: 1 !important;
+    }
+    .oml2d-menu-item:hover {
+        background-color: #ffffff !important;
+        transform: scale(1.1);
+    }
+    .oml2d-tips {
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(5px) !important;
+        -webkit-backdrop-filter: blur(5px) !important;
+        color: #333333 !important;
+        border: 1px solid rgba(0,0,0,0.1) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+        font-family: "Microsoft YaHei", sans-serif !important;
+        z-index: 9999 !important;
+        min-height: 40px;
+        height: auto !important; /* Force auto height */
+        max-height: 50vh !important;
+        overflow-y: auto !important;
+        width: auto !important;
+        max-width: 350px !important;
+        word-wrap: break-word !important;
+        white-space: pre-wrap !important;
+        display: block !important;
+        padding: 12px 15px;
+        font-size: 14px;
+        line-height: 1.6;
+        border-radius: 8px;
+        scrollbar-width: thin;
+        text-align: left;
+    }
+
+    /* Helper: Hide Legacy / Duplicate Widgets from other plugins */
+    /* Only specific legacy IDs */
+    #live2d-widget, .waifu { display: none !important; }
+
+    /* ==========================================================================
+       2. NEW UI COMPONENTS (Chat)
+       ========================================================================== */
+    #oml2d-chat-widget {
+        position: fixed;
+        left: 10px; /* Align with menu */
+        bottom: 10px; /* Tightly stuck to bottom-left */
+        z-index: 10000;
+        display: flex;
+        align-items: center; /* Center vertically */
+        gap: 8px;
+        flex-direction: row; /* Button left, Input right */
+    }
+
+    /* Toggle Button (Floating Chat Icon) */
+    #oml2d-toggle-btn {
+        width: 42px;
+        height: 42px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 22px;
+        transition: transform 0.2s, background 0.2s;
+        border: 1px solid #ddd;
+        user-select: none;
+        color: #555;
+        flex-shrink: 0; /* Don't shrink */
+    }
+
+    #oml2d-toggle-btn:hover {
+        transform: scale(1.1);
+        background: #f8f8f8;
+        color: #000;
+    }
+
+    /* Input Area */
+    #oml2d-input-area {
+        width: 260px;
+        background: rgba(255, 255, 255, 0.15); /* Very transparent */
+        padding: 10px;
+        border-radius: 12px;
+        border-bottom-left-radius: 4px; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        backdrop-filter: blur(3px); /* Low blur to see model */
+        display: flex;
+        gap: 8px;
+        transform-origin: left center; /* Expand from left */
+        transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        opacity: 1;
+        transform: scale(1);
+        margin-left: 2px;
+    }
+
+    #oml2d-input-area.hidden {
+        opacity: 0;
+        transform: scale(0.8) translateX(-20px);
+        pointer-events: none;
+    }
+
+    #oml2d-chat-input {
+        flex: 1;
+        border: 1px solid #eee;
+        background: #fafafa;
+        padding: 6px 12px;
+        border-radius: 20px;
+        outline: none;
+        font-size: 14px;
+        color: #333;
+        transition: border-color 0.2s;
+    }
+
+    #oml2d-chat-input:focus {
+        border-color: #4A90E2;
+        background: white;
+    }
+
+    #oml2d-send-btn-inner {
+        border: none;
+        background: #4A90E2;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+        color: #fff;
+        flex-shrink: 0;
+    }
+
+    #oml2d-send-btn-inner:hover {
+        background: #357ABD;
+    }
+
+    #oml2d-reply-area {
+        position: absolute;
+        bottom: 60px;
+        left: 50px; /* Align with input */
+        width: 300px;
+        max-height: 60vh;
+        background: rgba(255, 255, 255, 0.15); /* Very transparent */
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 12px;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        padding: 15px;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #000;
+        text-shadow: 0 0 4px #fff, 0 0 8px #fff; /* Stronger glow for readability */
+        overflow-y: auto;
+        backdrop-filter: blur(3px); /* Low blur */
+        transform-origin: bottom left;
+        transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+        pointer-events: none;
+        z-index: 10001;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: "Microsoft YaHei", sans-serif;
+        scrollbar-width: thin;
+    }
+    
+    #oml2d-reply-area.visible {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        pointer-events: auto;
+    }
+  </style>
+
+  <div id="oml2d-chat-widget">
+      <div id="oml2d-toggle-btn" title="AI对话">💬</div>
+      
+      <!-- Custom Reply Area -->
+      <div id="oml2d-reply-area"></div>
+      
+      <div id="oml2d-input-area" class="hidden">
+          <input type="text" id="oml2d-chat-input" placeholder="和宁宁聊聊天..." autocomplete="off">
+          <button id="oml2d-send-btn-inner">➤</button>
+      </div>
+  </div>
+
+  <script type="module">
+    import { loadOml2d } from 'https://unpkg.com/oh-my-live2d@latest?module';
+
+    const API_KEY = "sk-9a9f51b5638c4df79e53debf3aa12182";
+    const API_URL = "https://api.deepseek.com/chat/completions";
+
+    // CONFIG
+    const CONFIG = {
+      // Global Stage Style
+      stageStyle: { width: 350, height: 500 },
+      models: [
+        { path: '/live2d_models/ningning/model.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_1.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_2.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_3.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_4.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_5.json', scale: 0.18, position: [-50, -30] }
+      ],
+      dockedPosition: "left",
+      mobileDisplay: true,
+      menus: { 
+          disable: false, 
+          style: { left: '10px', bottom: '70px' } 
+      },
+      tips: {
+         disable: false,
+         style: { offsetY: -70, offsetX: 10 },
+         idleTips: { interval: 15000, message: [] },
+         welcomeTips: { message: { "default": "前辈，你来啦！(｡•̀ᴗ-)✧" } }
+      }
+    };
+
+    let oml2dInstance = null;
+    let blogIndex = null;
+    let chatHistory = [];
+    let autoHideTimer = null;
+    try {
+        const stored = localStorage.getItem('oml2d_history');
+        if (stored) chatHistory = JSON.parse(stored);
+    } catch(e) { console.error("History Load Error", e); }
+
+    let idleTimer = null;
+    const stopIdleLoop = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = null;
+    };
+    const startIdleLoop = () => {
+        stopIdleLoop();
+        const delay = Math.floor(Math.random() * 10000) + 5000; // 5-15s
+        idleTimer = setTimeout(triggerIdleTsukkomi, delay);
+    };
+    const triggerIdleTsukkomi = async () => {
+        if (!oml2dInstance) { startIdleLoop(); return; }
+        
+        const time = new Date().toLocaleTimeString();
+        let context = "无";
+        if (chatHistory.length > 0) {
+             for (let i = chatHistory.length - 1; i >= 0; i--) {
+                 if (chatHistory[i].role === 'user') {
+                     context = chatHistory[i].content.substring(0, 20);
+                     break;
+                 }
+             }
+        }
+        
+        try {
+             const res = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + API_KEY },
+                body: JSON.stringify({
+                    model: "deepseek-chat",
+                    messages: [
+                        { role: "system", content: "你是绫地宁宁。现在是发呆时间。请根据当前时间(" + time + ")和刚才聊的话题(" + context + ")，自言自语一句简短的吐槽或卖萌（10字以内）。不要重复。" },
+                    ],
+                    stream: false
+                })
+            });
+            const data = await res.json();
+            if (data.choices && data.choices[0]) {
+                let content = data.choices[0].message.content;
+                content = content.replace(/{{|}}/g, '');
+                oml2dInstance.tips.notification(content, 4000);
+            }
+        } catch(e) { }
+        
+        startIdleLoop();
+    };
+
+    // --- TOOLS (Client-Side Logic) ---
+    const Tools = {
+        async searchBlog(query) {
+            console.log("Searching blog for:", query);
+            if (!blogIndex) {
+                try {
+                    const res = await fetch('/search.json');
+                    blogIndex = await res.json();
+                } catch (e) {
+                    console.error("Failed to load search index", e);
+                    return "搜索服务暂时不可用。";
+                }
+            }
+            if (!blogIndex || blogIndex.length === 0) return "博客好像是空的...";
+
+            const keywords = query.toLowerCase().split(' ');
+            const results = blogIndex.filter(post => {
+                const text = (post.title + post.content).toLowerCase();
+                return keywords.every(k => text.includes(k));
+            }).slice(0, 3);
+
+            if (results.length === 0) return "抱歉，没有找到相关文章。";
+
+            return JSON.stringify(results.map(r => ({
+                title: r.title,
+                url: r.url,
+                preview: r.content.substring(0, 100).replace(new RegExp("<[^>]*>?", "gm"), '') + '...'
+            })));
+        },
+
+        triggerMotion(motionName) {
+            console.log("Tool Trigger Motion:", motionName);
+            if (!oml2dInstance || !oml2dInstance.models || !oml2dInstance.models[0]) return "Live2D模型未就绪";
+            
+            const model = oml2dInstance.models[0];
+            let success = false;
+
+            // Strategy 1: High Level
+            if (typeof oml2dInstance.setMotion === 'function') {
+                oml2dInstance.setMotion(motionName);
+                success = true;
+            } 
+            // Strategy 2: Model Level
+            else if (typeof model.motion === 'function') {
+                model.motion(motionName);
+                success = true;
+            }
+            // Strategy 3: Internal Model (Pixi/Cubism) - Aggressive Probe
+            else if (model.internalModel && model.internalModel.motionManager) {
+                try {
+                    console.log("Strategy 3 (Internal): Starting random motion for group", motionName);
+                    
+                    // LOCK FOCUS to prevent mouse tracking from overriding motion
+                    if (typeof model.focus === 'function') {
+                        model._lockFocus = true;
+                        // Unlock after 4 seconds (approx motion duration)
+                        setTimeout(() => { model._lockFocus = false; }, 4000);
+                    }
+
+                    // Priority 3 = FORCE. Use startRandomMotion to avoid index errors.
+                    const result = model.internalModel.motionManager.startRandomMotion(motionName, 3);
+                    success = !!result;
+                } catch (e) {
+                    console.warn("Strategy 3 failed:", e);
+                }
+            }
+
+            return success ? "动作已执行: " + motionName : "动作触发失败，请检查模型组名";
+        },
+
+        navigate(path) {
+            window.location.href = path;
+            return "正在跳转...";
+        },
+
+        readCurrentPage() {
+            // Butterfly theme uses #article-container usually
+            const article = document.getElementById('article-container') || 
+                            document.querySelector('.post-content') || 
+                            document.querySelector('article') ||
+                            document.body;
+            
+            if (!article) return "无法读取当前页面内容。";
+            
+            // Clean up text (remove scripts, styles)
+            const clone = article.cloneNode(true);
+            const scripts = clone.querySelectorAll('script, style, noscript');
+            scripts.forEach(n => n.remove());
+            
+            let text = clone.innerText || "";
+            // Truncate if too long (e.g. > 5000 chars) to save tokens, or trust V3
+            return text.substring(0, 5000) + (text.length > 5000 ? "...(内容太长，已截断)" : "");
+        },
+
+        async compressHistory() {
+            if (chatHistory.length <= 32) return;
+            console.log("Compressing history...");
+            
+            const toSummarize = chatHistory.slice(0, chatHistory.length - 10);
+            const keep = chatHistory.slice(-10);
+            
+            try {
+                 const summaryRes = await fetch("https://api.deepseek.com/chat/completions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + API_KEY },
+                    body: JSON.stringify({
+                        model: "deepseek-chat",
+                        messages: [
+                            { role: "system", content: "Summarize the following conversation briefly in Chinese." },
+                            ...toSummarize
+                        ],
+                        stream: false
+                    })
+                });
+                const data = await summaryRes.json();
+                const summary = data.choices[0].message.content;
+                
+                chatHistory = [
+                    { role: "system", content: "Previous Summary: " + summary },
+                    ...keep
+                ];
+                localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                console.log("History compressed.");
+            } catch(e) { console.error("Compression failed", e); }
+        }
+    };
+
+    // --- LLM SERVICE ---
+    const LLM = {
+        async chat(userMessage, callbacks) {
+            stopIdleLoop();
+            callbacks.onLoading(true);
+
+            try {
+                // System Prompt (Nene Persona)
+                // Use space concatenation to avoid syntax errors
+                const systemContent = "你叫宁宁（Nene），全名绫地宁宁，是《魔女的夜宴》中的角色，现在兼职 llbzow 博客的看板娘。 " +
+                        "你的主人 llbzow 既是开发者也是工地施工员（打灰人）。 " +
+                        "【性格设定】 " +
+                        "1. 性格温柔体贴，有些纯真和天然呆，非常容易害羞（动不动就脸红）。 " +
+                        "2. 做事非常认真，但偶尔会因为太紧张而出错。 " +
+                        "3. 称呼用户为“前辈”或者“主人”。 " +
+                        "4. 说话语气要软萌、有礼貌。 " +
+                        "5. 面对奇怪的问题会变得慌乱，不知所措。 " +
+                        "【能力】 " +
+                        "请使用工具（function calling）来搜索博客、触发动作或读取当前页面内容。 " +
+                        "当用户问“这篇文章讲了什么”时，调用 read_current_page。 " +
+                        "【双通道回复】" +
+                        "请务必在回答开头加入一句犀利或可爱的吐槽（10字以内），必须用 {{ 和 }} 包裹。这部分内容会显示在Live2D气泡中。" +
+                        "吐槽内容要结合：当前时间、对话上下文、用户的问题（如是否重复、是否愚蠢）。例如：{{大半夜的问这个...}} {{这已经是第三次问了哦...}} {{笨蛋前辈...}}" +
+                        "动作对应：Tap身体=开心/普通，Tap头顶=害羞/抱歉，Tap裙子=生气/拒绝，Tap呆毛=卖萌/唱歌，Tap左胸=亲近。 " +
+                        "当前时间：" + new Date().toLocaleString() + "。";
+
+                const messages = [
+                    { role: "system", content: systemContent },
+                    ...chatHistory, // Use full history (managed by compression)
+                    { role: "user", content: userMessage }
+                ];
+
+                // Tool Definitions
+                const tools = [
+                    {
+                        type: "function",
+                        function: {
+                            name: "search_blog",
+                            description: "Search blog posts when user asks about technical topics or blog content.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    query: { type: "string", description: "Keywords to search" }
+                                },
+                                required: ["query"]
+                            }
+                        }
+                    },
+                    {
+                        type: "function",
+                        function: {
+                            name: "react_motion",
+                            description: "Trigger a Live2D motion based on emotion.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    motion: { 
+                                        type: "string", 
+                                        description: "Motion group name", 
+                                        enum: ["Tap身体", "Tap头顶", "Tap脸", "Tap裙子", "Tap左胸", "Tap呆毛"] 
+                                    }
+                                },
+                                required: ["motion"]
+                            }
+                        }
+                    },
+                    {
+                        type: "function",
+                        function: {
+                            name: "navigate",
+                            description: "Navigate to a specific path/URL.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    path: { type: "string", description: "URL or path (e.g. /about/)" }
+                                },
+                                required: ["path"]
+                            }
+                        }
+                    },
+                    {
+                        type: "function",
+                        function: {
+                            name: "read_current_page",
+                            description: "Read the text content of the current page. Use this when user asks about 'this article' or 'current page'.",
+                            parameters: {
+                                type: "object",
+                                properties: {},
+                                required: []
+                            }
+                        }
+                    }
+                ];
+
+                const API_URL = "https://api.deepseek.com/chat/completions";
+
+                // First Call
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + API_KEY
+                    },
+                    body: JSON.stringify({
+                        model: "deepseek-chat", // Use V3 for speed & tools
+                        messages: messages,
+                        tools: tools,
+                        stream: false
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+
+                const choice = data.choices[0];
+                const message = choice.message;
+
+                // Handle Tool Calls
+                if (message.tool_calls) {
+                    messages.push(message); // Add assistant's thought/tool_call
+
+                    for (const toolCall of message.tool_calls) {
+                        const fnName = toolCall.function.name;
+                        const args = JSON.parse(toolCall.function.arguments);
+                        
+                        let toolResult = "";
+                        if (fnName === 'search_blog') {
+                            toolResult = await Tools.searchBlog(args.query);
+                        } else if (fnName === 'react_motion') {
+                            toolResult = Tools.triggerMotion(args.motion);
+                        } else if (fnName === 'navigate') {
+                            toolResult = Tools.navigate(args.path);
+                        } else if (fnName === 'read_current_page') {
+                            toolResult = Tools.readCurrentPage();
+                        }
+
+                        messages.push({
+                            role: "tool",
+                            tool_call_id: toolCall.id,
+                            content: toolResult
+                        });
+                    }
+
+                    // Second Call (Streamed)
+                    const secondResponse = await fetch(API_URL, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": "Bearer " + API_KEY
+                        },
+                        body: JSON.stringify({
+                            model: "deepseek-chat",
+                            messages: messages,
+                            tools: tools,
+                            stream: true
+                        })
+                    });
+                    
+                    const reader = secondResponse.body.getReader();
+                    const decoder = new TextDecoder("utf-8");
+                    let finalMsg = "";
+                    let buffer = "";
+                    let streamBuffer = "";
+                    let pendingReaction = true;
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop();
+
+                        for (const line of lines) {
+                            if (line.trim().startsWith('data: ')) {
+                                const dataStr = line.trim().substring(6);
+                                if (dataStr === '[DONE]') continue;
+                                try {
+                                    const json = JSON.parse(dataStr);
+                                    const content = json.choices[0].delta.content;
+                                    if (content) {
+                                        if (pendingReaction) {
+                                            streamBuffer += content;
+                                            if (streamBuffer.trimStart().startsWith('{{')) {
+                                                const closeIdx = streamBuffer.indexOf('}}');
+                                                if (closeIdx !== -1) {
+                                                    const reaction = streamBuffer.substring(streamBuffer.indexOf('{{') + 2, closeIdx);
+                                                    const duration = 3000 + reaction.length * 30;
+                                                    if (oml2dInstance) oml2dInstance.tips.notification(reaction, duration);
+                                                    
+                                                    const rest = streamBuffer.substring(closeIdx + 2);
+                                                    finalMsg += rest;
+                                                    callbacks.onMessage(finalMsg);
+                                                    
+                                                    pendingReaction = false;
+                                                    streamBuffer = "";
+                                                }
+                                            } else if (streamBuffer.length > 10) {
+                                                finalMsg += streamBuffer;
+                                                callbacks.onMessage(finalMsg);
+                                                pendingReaction = false;
+                                                streamBuffer = "";
+                                            }
+                                        } else {
+                                            finalMsg += content;
+                                            callbacks.onMessage(finalMsg);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error("Stream parse error", e);
+                                }
+                            }
+                        }
+                    }
+                    if (pendingReaction && streamBuffer) {
+                         finalMsg += streamBuffer;
+                         callbacks.onMessage(finalMsg);
+                    }
+
+                    // Save History & Compress
+                    chatHistory.push({ role: "user", content: userMessage });
+                    chatHistory.push({ role: "assistant", content: finalMsg });
+                    localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                    
+                    const replyArea = document.getElementById('oml2d-reply-area');
+                    if (replyArea && finalMsg) {
+                        const autoHideDuration = 3000 + finalMsg.length * 30;
+                        autoHideTimer = setTimeout(() => replyArea.classList.remove('visible'), autoHideDuration);
+                    }
+                    Tools.compressHistory();
+
+                } else {
+                    let content = message.content;
+                    // Dual Channel Check for non-stream response
+                    if (content.trim().startsWith('{{')) {
+                         const closeIdx = content.indexOf('}}');
+                         if (closeIdx !== -1) {
+                             const reaction = content.substring(content.indexOf('{{') + 2, closeIdx);
+                             const duration = 3000 + reaction.length * 30;
+                             if (oml2dInstance) oml2dInstance.tips.notification(reaction, duration);
+                             content = content.substring(closeIdx + 2);
+                         }
+                    }
+                    callbacks.onMessage(content);
+
+                    // Save History & Compress
+                    chatHistory.push({ role: "user", content: userMessage });
+                    chatHistory.push({ role: "assistant", content: content });
+                    localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                    
+                    const replyArea = document.getElementById('oml2d-reply-area');
+                    if (replyArea && content) {
+                        const autoHideDuration = 3000 + content.length * 30;
+                        autoHideTimer = setTimeout(() => replyArea.classList.remove('visible'), autoHideDuration);
+                    }
+                    Tools.compressHistory();
+                }
+
+            } catch (error) {
+                console.error("LLM Error:", error);
+                callbacks.onMessage("宁宁有点晕... 😵 (网络错误)");
+            } finally {
+                callbacks.onLoading(false);
+                startIdleLoop();
+            }
+        }
+    };
+
+    // 5. UI & INIT
+    try {
+        const toggleBtn = document.getElementById('oml2d-toggle-btn');
+        const inputArea = document.getElementById('oml2d-input-area');
+        const chatInput = document.getElementById('oml2d-chat-input');
+        const sendBtn = document.getElementById('oml2d-send-btn-inner');
+        const replyArea = document.getElementById('oml2d-reply-area');
+
+        if (replyArea) {
+            replyArea.addEventListener('click', () => {
+                replyArea.classList.remove('visible');
+            });
+        }
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isHidden = inputArea.classList.contains('hidden');
+                if (isHidden) {
+                    inputArea.classList.remove('hidden');
+                    setTimeout(() => chatInput.focus(), 100);
+                    toggleBtn.innerHTML = '×';
+                } else {
+                    inputArea.classList.add('hidden');
+                    replyArea.classList.remove('visible'); // Hide reply too
+                    toggleBtn.innerHTML = '💬';
+                }
+            });
+        }
+
+        const sendMessage = () => {
+            const text = chatInput.value.trim();
+            if (!text) return;
+            
+            chatInput.value = '';
+            if (autoHideTimer) clearTimeout(autoHideTimer);
+            
+            // Show loading in reply area
+            if (replyArea) {
+                replyArea.innerText = "思考中... 🧠";
+                replyArea.classList.add('visible');
+            }
+
+            LLM.chat(text, {
+                onLoading: (isLoading) => {
+                     // Handled locally above for instant feedback
+                },
+                onMessage: (msg) => {
+                    if (replyArea && msg) {
+                        replyArea.innerText = msg;
+                        replyArea.classList.add('visible');
+                        // Auto scroll to bottom
+                        replyArea.scrollTop = replyArea.scrollHeight;
+                    } 
+                    // Fallback to alert if something is wrong (shouldn't happen)
+                    else if (msg) {
+                        alert("宁宁: " + msg);
+                    }
+                }
+            });
+        };
+
+        if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+        if (chatInput) chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        if (window.innerWidth >= 768) {
+            // Safe Load Logic
+            try {
+                const res = loadOml2d(CONFIG);
+                const setupModel = (inst) => {
+                    oml2dInstance = inst;
+                    // Monkey Patch Focus to allow motion override
+                    if (inst.models && inst.models[0]) {
+                        const model = inst.models[0];
+                        if (typeof model.focus === 'function') {
+                            const originalFocus = model.focus;
+                            model.focus = function(x, y) {
+                                if (this._lockFocus) return;
+                                originalFocus.apply(this, arguments);
+                            };
+                            console.log("OML2D: Focus controller patched");
+                        }
+                    }
+                };
+
+                if (res && typeof res.then === 'function') {
+                    res.then(inst => {
+                        setupModel(inst);
+                        console.log('OML2D: Async Loaded');
+                        startIdleLoop();
+                    }).catch(e => console.error('OML2D Async Error:', e));
+                } else {
+                    setupModel(res);
+                    console.log('OML2D: Sync Loaded');
+                    startIdleLoop();
+                }
+            } catch(e) {
+                console.error('OML2D Load Error:', e);
+            }
+        }
+    } catch (e) {
+        console.error('UI Init Failed:', e);
+    }
+  </script>
+<!-- hexo injector body_end end --></body></html>
