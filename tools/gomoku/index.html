@@ -688,134 +688,6 @@ initBoard();
     }
   })
 })()</script><script async="" data-pjax="" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><!-- hexo injector body_end start -->
-<div id="dev-sidebar">
-    <div id="dev-toggle">💻</div>
-    <div id="dev-list">
-        <div class="dev-header">开发专栏</div>
-        <a href="/tools/sort/" class="dev-item">📊 排序算法演示</a>
-        <a href="/tools/webgpu-gravity/" class="dev-item">🌌 WebGPU 万有引力粒子</a>
-        <a href="/tools/yolo-detect/" class="dev-item">👁️ YOLO 实时目标检测</a>
-        <a href="/tools/fire-creation/" class="dev-item">🔥 火之创造 (元素沙盒)</a>
-    </div>
-</div>
-
-<style>
-    #dev-sidebar {
-        position: fixed;
-        right: -150px; /* Width of the list */
-        top: calc(30vh + 80px); /* Positioned below game-sidebar */
-        z-index: 9999;
-        display: flex;
-        align-items: flex-start;
-        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-    }
-
-    /* Hover area to keep it open */
-    #dev-sidebar:hover {
-        right: 0;
-    }
-
-    #dev-toggle {
-        width: 40px;
-        height: 40px;
-        background: #52c41a; /* Green color for dev theme */
-        color: white;
-        text-align: center;
-        line-height: 40px;
-        border-radius: 8px 0 0 8px;
-        cursor: pointer;
-        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
-        font-size: 20px;
-        position: absolute;
-        left: -40px;
-        top: 0;
-    }
-
-    #dev-list {
-        width: 150px; /* Width for text */
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border-radius: 0 0 0 8px; /* Bottom left rounded */
-        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-        max-height: 50vh;
-        overflow-y: auto;
-    }
-    
-    /* 自定义滚动条样式 */
-    #dev-list::-webkit-scrollbar {
-        width: 4px;
-    }
-    #dev-list::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    #dev-list::-webkit-scrollbar-thumb {
-        background: rgba(82, 196, 26, 0.3);
-        border-radius: 4px;
-    }
-    #dev-list::-webkit-scrollbar-thumb:hover {
-        background: rgba(82, 196, 26, 0.6);
-    }
-    
-    .dev-header {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        padding: 10px;
-        background: #f6ffed;
-        color: #52c41a;
-        font-weight: bold;
-        font-size: 14px;
-        text-align: center;
-        border-bottom: 1px solid #eee;
-    }
-
-    .dev-item {
-        display: block;
-        padding: 12px 15px;
-        color: #4c4948;
-        text-decoration: none !important;
-        font-size: 13px;
-        transition: all 0.2s;
-        border-bottom: 1px solid #f0f0f0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        flex-shrink: 0;
-    }
-
-    .dev-item:last-child {
-        border-bottom: none;
-    }
-
-    .dev-item:hover {
-        background: #52c41a;
-        color: white !important;
-    }
-</style>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var toolSidebar = document.getElementById('tool-sidebar');
-        var gameSidebar = document.getElementById('game-sidebar');
-        var devSidebar = document.getElementById('dev-sidebar');
-        
-        if(devSidebar) {
-            devSidebar.addEventListener('mouseenter', function() {
-                if(toolSidebar) toolSidebar.style.right = '-220px'; // 180px + 40px(按钮宽度)
-                if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
-            });
-            devSidebar.addEventListener('mouseleave', function() {
-                if(toolSidebar) toolSidebar.style.right = ''; 
-                if(gameSidebar) gameSidebar.style.right = ''; 
-            });
-        }
-    });
-</script>
-
 <div id="game-sidebar">
     <div id="game-toggle">🎮</div>
     <div id="game-list">
@@ -947,30 +819,22 @@ initBoard();
     });
 </script>
 
-<div id="tool-sidebar">
-    <div id="tool-toggle">🛠️</div>
-    <div id="tool-list">
-        <div class="tool-header">博客工具</div>
-        <a href="/tools/time" class="tool-item">📅 时间戳与地理时间</a>
-        <a href="/tools/base64-img" class="tool-item">🖼️ 图片↔Base64</a>
-        <a href="/tools/hash" class="tool-item">🔐 MD5/SHA256 计算</a>
-        <a href="/tools/geojson" class="tool-item">🌍 GeoJSON 查询</a>
-        <a href="/tools/remove-bg" class="tool-item">✂️ 快速抠图</a>
-        <a href="/tools/watermark" class="tool-item">💧 水印生成与检测</a>
-        <a href="/tools/gif" class="tool-item">🎬 GIF 生成</a>
-        <a href="/tools/mirage-tank" class="tool-item">👻 幻影坦克制作</a>
-        <a href="/tools/converter" class="tool-item">🔄 文件全能转换</a>
-        <a href="/tools/qrcode" class="tool-item">📱 二维码生成/解析</a>
-        <a href="/tools/unit-converter" class="tool-item">📏 工程单位换算</a>
-        <a href="/tools/color" class="tool-item">🎨 颜色转换与调色</a>
+<div id="dev-sidebar">
+    <div id="dev-toggle">💻</div>
+    <div id="dev-list">
+        <div class="dev-header">开发专栏</div>
+        <a href="/tools/sort/" class="dev-item">📊 排序算法演示</a>
+        <a href="/tools/webgpu-gravity/" class="dev-item">🌌 WebGPU 万有引力粒子</a>
+        <a href="/tools/yolo-detect/" class="dev-item">👁️ YOLO 实时目标检测</a>
+        <a href="/tools/fire-creation/" class="dev-item">🔥 火之创造 (元素沙盒)</a>
     </div>
 </div>
 
 <style>
-    #tool-sidebar {
+    #dev-sidebar {
         position: fixed;
-        right: -180px; /* Width of the list */
-        top: 30vh;
+        right: -150px; /* Width of the list */
+        top: calc(30vh + 80px); /* Positioned below game-sidebar */
         z-index: 9999;
         display: flex;
         align-items: flex-start;
@@ -979,14 +843,14 @@ initBoard();
     }
 
     /* Hover area to keep it open */
-    #tool-sidebar:hover {
+    #dev-sidebar:hover {
         right: 0;
     }
 
-    #tool-toggle {
+    #dev-toggle {
         width: 40px;
         height: 40px;
-        background: #49b1f5;
+        background: #52c41a; /* Green color for dev theme */
         color: white;
         text-align: center;
         line-height: 40px;
@@ -995,12 +859,12 @@ initBoard();
         box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
         font-size: 20px;
         position: absolute;
-        left: -40px; /* Hangs off the left of the sidebar container */
+        left: -40px;
         top: 0;
     }
 
-    #tool-list {
-        width: 180px; /* Width for text */
+    #dev-list {
+        width: 150px; /* Width for text */
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
@@ -1008,39 +872,39 @@ initBoard();
         box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
         display: flex;
         flex-direction: column;
-        max-height: 50vh; /* 限制最大高度以便能滚动 */
-        overflow-y: auto; /* 允许纵向滚动 */
+        max-height: 50vh;
+        overflow-y: auto;
     }
     
-    /* 自定义滚动条样式，使其不那么突兀 */
-    #tool-list::-webkit-scrollbar {
+    /* 自定义滚动条样式 */
+    #dev-list::-webkit-scrollbar {
         width: 4px;
     }
-    #tool-list::-webkit-scrollbar-track {
+    #dev-list::-webkit-scrollbar-track {
         background: transparent;
     }
-    #tool-list::-webkit-scrollbar-thumb {
-        background: rgba(73, 177, 245, 0.3);
+    #dev-list::-webkit-scrollbar-thumb {
+        background: rgba(82, 196, 26, 0.3);
         border-radius: 4px;
     }
-    #tool-list::-webkit-scrollbar-thumb:hover {
-        background: rgba(73, 177, 245, 0.6);
+    #dev-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(82, 196, 26, 0.6);
     }
-
-    .tool-header {
+    
+    .dev-header {
         position: sticky;
         top: 0;
         z-index: 10;
         padding: 10px;
-        background: #f7f9fe;
-        color: #49b1f5;
+        background: #f6ffed;
+        color: #52c41a;
         font-weight: bold;
         font-size: 14px;
         text-align: center;
         border-bottom: 1px solid #eee;
     }
 
-    .tool-item {
+    .dev-item {
         display: block;
         padding: 12px 15px;
         color: #4c4948;
@@ -1051,15 +915,15 @@ initBoard();
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        flex-shrink: 0; /* 防止由于 max-height 导致内容被挤压 */
+        flex-shrink: 0;
     }
 
-    .tool-item:last-child {
+    .dev-item:last-child {
         border-bottom: none;
     }
 
-    .tool-item:hover {
-        background: #49b1f5;
+    .dev-item:hover {
+        background: #52c41a;
         color: white !important;
     }
 </style>
@@ -1070,14 +934,14 @@ initBoard();
         var gameSidebar = document.getElementById('game-sidebar');
         var devSidebar = document.getElementById('dev-sidebar');
         
-        if(toolSidebar) {
-            toolSidebar.addEventListener('mouseenter', function() {
+        if(devSidebar) {
+            devSidebar.addEventListener('mouseenter', function() {
+                if(toolSidebar) toolSidebar.style.right = '-220px'; // 180px + 40px(按钮宽度)
                 if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
-                if(devSidebar) devSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
             });
-            toolSidebar.addEventListener('mouseleave', function() {
-                if(gameSidebar) gameSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
-                if(devSidebar) devSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
+            devSidebar.addEventListener('mouseleave', function() {
+                if(toolSidebar) toolSidebar.style.right = ''; 
+                if(gameSidebar) gameSidebar.style.right = ''; 
             });
         }
     });
@@ -1871,4 +1735,140 @@ initBoard();
         console.error('UI Init Failed:', e);
     }
   </script>
+
+<div id="tool-sidebar">
+    <div id="tool-toggle">🛠️</div>
+    <div id="tool-list">
+        <div class="tool-header">博客工具</div>
+        <a href="/tools/time" class="tool-item">📅 时间戳与地理时间</a>
+        <a href="/tools/base64-img" class="tool-item">🖼️ 图片↔Base64</a>
+        <a href="/tools/hash" class="tool-item">🔐 MD5/SHA256 计算</a>
+        <a href="/tools/geojson" class="tool-item">🌍 GeoJSON 查询</a>
+        <a href="/tools/remove-bg" class="tool-item">✂️ 快速抠图</a>
+        <a href="/tools/watermark" class="tool-item">💧 水印生成与检测</a>
+        <a href="/tools/gif" class="tool-item">🎬 GIF 生成</a>
+        <a href="/tools/mirage-tank" class="tool-item">👻 幻影坦克制作</a>
+        <a href="/tools/converter" class="tool-item">🔄 文件全能转换</a>
+        <a href="/tools/qrcode" class="tool-item">📱 二维码生成/解析</a>
+        <a href="/tools/unit-converter" class="tool-item">📏 工程单位换算</a>
+        <a href="/tools/color" class="tool-item">🎨 颜色转换与调色</a>
+    </div>
+</div>
+
+<style>
+    #tool-sidebar {
+        position: fixed;
+        right: -180px; /* Width of the list */
+        top: 30vh;
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    /* Hover area to keep it open */
+    #tool-sidebar:hover {
+        right: 0;
+    }
+
+    #tool-toggle {
+        width: 40px;
+        height: 40px;
+        background: #49b1f5;
+        color: white;
+        text-align: center;
+        line-height: 40px;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+        font-size: 20px;
+        position: absolute;
+        left: -40px; /* Hangs off the left of the sidebar container */
+        top: 0;
+    }
+
+    #tool-list {
+        width: 180px; /* Width for text */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 0 8px; /* Bottom left rounded */
+        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        max-height: 50vh; /* 限制最大高度以便能滚动 */
+        overflow-y: auto; /* 允许纵向滚动 */
+    }
+    
+    /* 自定义滚动条样式，使其不那么突兀 */
+    #tool-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    #tool-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #tool-list::-webkit-scrollbar-thumb {
+        background: rgba(73, 177, 245, 0.3);
+        border-radius: 4px;
+    }
+    #tool-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(73, 177, 245, 0.6);
+    }
+
+    .tool-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 10px;
+        background: #f7f9fe;
+        color: #49b1f5;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .tool-item {
+        display: block;
+        padding: 12px 15px;
+        color: #4c4948;
+        text-decoration: none !important;
+        font-size: 13px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0; /* 防止由于 max-height 导致内容被挤压 */
+    }
+
+    .tool-item:last-child {
+        border-bottom: none;
+    }
+
+    .tool-item:hover {
+        background: #49b1f5;
+        color: white !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var toolSidebar = document.getElementById('tool-sidebar');
+        var gameSidebar = document.getElementById('game-sidebar');
+        var devSidebar = document.getElementById('dev-sidebar');
+        
+        if(toolSidebar) {
+            toolSidebar.addEventListener('mouseenter', function() {
+                if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+                if(devSidebar) devSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+            });
+            toolSidebar.addEventListener('mouseleave', function() {
+                if(gameSidebar) gameSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
+                if(devSidebar) devSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
+            });
+        }
+    });
+</script>
 <!-- hexo injector body_end end --></body></html>

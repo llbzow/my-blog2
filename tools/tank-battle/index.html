@@ -7,7 +7,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://yourblog.com/img/cute_cat.svg">
 <meta property="article:published_time" content="2026-03-16T02:00:00.000Z">
-<meta property="article:modified_time" content="2026-03-16T08:09:07.999Z">
+<meta property="article:modified_time" content="2026-03-19T05:43:53.734Z">
 <meta property="article:author" content="llbzow">
 <meta property="article:tag" content="技术, 生活, 博客, 分享">
 <meta name="twitter:card" content="summary">
@@ -369,12 +369,16 @@ const BASE_HALF = 8; // 基地 16x16
 
 const MAX_HP = 120;
 const FIRE_CD = 28;
-const RESPAWN_T = 180;
+const RESPAWN_T = 300;
 const BASE_HP = 1800;
 
-const BULLET_SPEED = 1.35;
-const BULLET_RANGE = 60;
+const BULLET_SPEED = 3.2;
+const BULLET_RANGE = 100;
 const BULLET_DAMAGE = 20;
+const BULLET_AOE_RADIUS = 4;
+const BARRAGE_COUNT = 5;
+const BARRAGE_SPREAD = 0.52;
+const BARRAGE_SCATTER = 0.08;
 const BASE_DAMAGE = 28;
 const BASE_HIT_SCORE = 15;
 const BASE_DESTROY_SCORE = 2200;
@@ -420,12 +424,15 @@ let navGrid = [];
 let frameNo = 0;
 let aiCursor = 0;
 let teamFocus = {};
+let teamRespawnState = {};
 const pathCache = new Map();
 let zoom = 1;
 let followMode = 'auto';
 let dragging = false;
 let lastDrag = null;
 let teamTactic = {};
+let roadNodes = [];
+let roadAdj = [];
 let webgpu = {
   supported: false,
   ready: false,
@@ -449,7 +456,11 @@ const metrics = {
   evade: 0,
   riverBlocked: 0,
   riverWaypoints: 0,
-  bridgeCross: 0
+  bridgeCross: 0,
+  jpsHits: 0,
+  jpsMiss: 0,
+  hierPath: 0,
+  riverDetour: 0
 };
 
 // ==================== Helpers ====================
@@ -511,7 +522,8 @@ function costByTerrain(t) {
   return 1.0;
 }
 
-function refineLocalMove(x, y, vx, vy) {
+function refineLocalMove(tank, vx, vy) {
+  const x = tank.x, y = tank.y;
   const len = Math.hypot(vx, vy) || 1;
   const dx = vx / len, dy = vy / len;
   const candidates = [
@@ -530,12 +542,37 @@ function refineLocalMove(x, y, vx, vy) {
     const blocked = !isTerrainPassable(t);
     let s = ux * dx + uy * dy;
     s -= costByTerrain(t) * 0.35;
-    if (t === TERRAIN.ROAD || t === TERRAIN.BRIDGE) s += 0.8;
+    if (t === TERRAIN.ROAD || t === TERRAIN.BRIDGE) s += 0.35;
     if (t === TERRAIN.RIVER) s -= 4;
+    if (tank.ctrlDir) s += (ux * tank.ctrlDir.x + uy * tank.ctrlDir.y) * 0.45;
     if (blocked) s -= 8;
     if (s > best.score) best = {x: ux, y: uy, score: s};
   }
   return {x: best.x, y: best.y};
+}
+
+function stabilizeMoveVector(tank, vx, vy) {
+  const len = Math.hypot(vx, vy) || 1;
+  let tx = vx / len, ty = vy / len;
+  const prev = tank.ctrlDir || {x: 0, y: 0};
+  const prevLen = Math.hypot(prev.x, prev.y);
+
+  if (prevLen > 0.01) {
+    const dot = prev.x * tx + prev.y * ty;
+    if (dot < 0.15) tank.turnHold = 3;
+  }
+  if ((tank.turnHold || 0) > 0 && prevLen > 0.01) {
+    tx = prev.x * 0.75 + tx * 0.25;
+    ty = prev.y * 0.75 + ty * 0.25;
+    tank.turnHold = (tank.turnHold || 0) - 1;
+  } else {
+    tx = prev.x * 0.62 + tx * 0.38;
+    ty = prev.y * 0.62 + ty * 0.38;
+  }
+
+  const outLen = Math.hypot(tx, ty) || 1;
+  tank.ctrlDir = {x: tx / outLen, y: ty / outLen};
+  return tank.ctrlDir;
 }
 
 function rectHitBlocked(x, y, half) {
@@ -550,6 +587,119 @@ function rectHitBlocked(x, y, half) {
     if (!isTerrainPassable(t)) return true;
   }
   return false;
+}
+
+function isRoadLike(t) {
+  return t === TERRAIN.ROAD || t === TERRAIN.BRIDGE;
+}
+
+function buildRoadBridgeGraph() {
+  roadNodes = [];
+  roadAdj = [];
+  const nodeMap = new Map();
+  const stride = 18;
+
+  function addNode(x, y) {
+    const k = `${x},${y}`;
+    if (nodeMap.has(k)) return nodeMap.get(k);
+    const id = roadNodes.length;
+    roadNodes.push({id, x, y});
+    roadAdj.push([]);
+    nodeMap.set(k, id);
+    return id;
+  }
+
+  // 取桥面与道路交叉点为节点，避免“断桥不可用”
+  for (let y = 4; y < WORLD - 4; y++) {
+    for (let x = 4; x < WORLD - 4; x++) {
+      const t = terrain[y][x];
+      if (!isRoadLike(t)) continue;
+      const isBridge = t === TERRAIN.BRIDGE;
+      const cross = isRoadLike(terrain[y - 1][x]) && isRoadLike(terrain[y + 1][x]) && isRoadLike(terrain[y][x - 1]) && isRoadLike(terrain[y][x + 1]);
+      const sampled = (x % stride === 0 && y % stride === 0);
+      if (isBridge || cross || sampled) addNode(x, y);
+    }
+  }
+
+  function roadLineClear(x0, y0, x1, y1) {
+    const dx = x1 - x0, dy = y1 - y0;
+    const st = Math.max(Math.abs(dx), Math.abs(dy));
+    for (let i = 0; i <= st; i++) {
+      const t = i / Math.max(1, st);
+      const x = Math.round(x0 + dx * t), y = Math.round(y0 + dy * t);
+      if (!isRoadLike(terrainAt(x, y))) return false;
+    }
+    return true;
+  }
+
+  // 四向连边（同 x 或同 y 的最近节点）
+  const bucketsX = new Map();
+  const bucketsY = new Map();
+  for (const n of roadNodes) {
+    if (!bucketsX.has(n.x)) bucketsX.set(n.x, []);
+    if (!bucketsY.has(n.y)) bucketsY.set(n.y, []);
+    bucketsX.get(n.x).push(n);
+    bucketsY.get(n.y).push(n);
+  }
+
+  function linkLine(list, horizontal) {
+    list.sort((a, b) => horizontal ? a.x - b.x : a.y - b.y);
+    for (let i = 0; i < list.length - 1; i++) {
+      const a = list[i], b = list[i + 1];
+      const gap = horizontal ? Math.abs(b.x - a.x) : Math.abs(b.y - a.y);
+      if (gap > 120) continue;
+      if (!roadLineClear(a.x, a.y, b.x, b.y)) continue;
+      const w = Math.hypot(b.x - a.x, b.y - a.y);
+      roadAdj[a.id].push({to: b.id, w});
+      roadAdj[b.id].push({to: a.id, w});
+    }
+  }
+
+  for (const [, list] of bucketsX) linkLine(list, false);
+  for (const [, list] of bucketsY) linkLine(list, true);
+}
+
+function nearestRoadNode(x, y, maxR = 90) {
+  let best = -1, bestD = Infinity;
+  for (const n of roadNodes) {
+    const d = Math.hypot(n.x - x, n.y - y);
+    if (d < bestD && d <= maxR) { bestD = d; best = n.id; }
+  }
+  return best;
+}
+
+function findRoadPath(startId, goalId) {
+  if (startId < 0 || goalId < 0) return null;
+  if (startId === goalId) return [roadNodes[startId]];
+  const dist = new Float32Array(roadNodes.length);
+  dist.fill(Infinity);
+  const prev = new Int32Array(roadNodes.length);
+  prev.fill(-1);
+  const used = new Uint8Array(roadNodes.length);
+  dist[startId] = 0;
+
+  for (let iter = 0; iter < roadNodes.length; iter++) {
+    let u = -1, best = Infinity;
+    for (let i = 0; i < roadNodes.length; i++) {
+      if (!used[i] && dist[i] < best) { best = dist[i]; u = i; }
+    }
+    if (u < 0) break;
+    if (u === goalId) break;
+    used[u] = 1;
+    for (const e of roadAdj[u]) {
+      const nd = dist[u] + e.w;
+      if (nd < dist[e.to]) { dist[e.to] = nd; prev[e.to] = u; }
+    }
+  }
+  if (prev[goalId] < 0) return null;
+  const path = [];
+  let cur = goalId;
+  while (cur >= 0) {
+    path.push(roadNodes[cur]);
+    cur = prev[cur];
+  }
+  path.reverse();
+  return path;
 }
 
 async function initWebGPUAI() {
@@ -707,8 +857,9 @@ function applyWebGPUAIActions() {
     const vx = webgpu.outData[o + 0] || 0;
     const vy = webgpu.outData[o + 1] || 0;
     const fire = webgpu.outData[o + 2] || 0;
-    const refined = refineLocalMove(t.x, t.y, vx, vy);
-    t.move(refined.x, refined.y);
+    const refined = refineLocalMove(t, vx, vy);
+    const stable = stabilizeMoveVector(t, refined.x, refined.y);
+    t.move(stable.x, stable.y);
     if (fire > 0.5) {
       const tx = t.x + t.dir.x * 20;
       const ty = t.y + t.dir.y * 20;
@@ -745,83 +896,43 @@ function makeTerrain() {
     }
   }
 
-  // 公路网
-  for (let y = 72; y < WORLD - 72; y += 96) lineDraw(12, y, WORLD - 12, y, 2, TERRAIN.ROAD);
-  for (let x = 72; x < WORLD - 72; x += 96) lineDraw(x, 12, x, WORLD - 12, 2, TERRAIN.ROAD);
+  // 公路/河流/桥系统暂时禁用（后续逐步恢复）
 
-  // 河流（不可通行）
-  for (let x = 6; x < WORLD - 6; x++) {
-    const y1 = Math.floor(WORLD * 0.32 + Math.sin(x * 0.02) * 28);
-    const y2 = Math.floor(WORLD * 0.67 + Math.cos(x * 0.018) * 24);
-    for (let w = -3; w <= 3; w++) {
-      if (y1 + w > 0 && y1 + w < WORLD) terrain[y1 + w][x] = TERRAIN.RIVER;
-      if (y2 + w > 0 && y2 + w < WORLD) terrain[y2 + w][x] = TERRAIN.RIVER;
-    }
-  }
+  // 障碍块已禁用
+  // for (let i = 0; i < 180; i++) {
+  //   const cx = Math.floor(rand(30, WORLD - 30));
+  //   const cy = Math.floor(rand(30, WORLD - 30));
+  //   const r = Math.floor(rand(3, 8));
+  //   for (let y = -r; y <= r; y++) {
+  //     for (let x = -r; x <= r; x++) {
+  //       const nx = cx + x, ny = cy + y;
+  //       if (nx < 4 || ny < 4 || nx >= WORLD - 4 || ny >= WORLD - 4) continue;
+  //       if (Math.hypot(x, y) <= r && Math.random() > 0.25) {
+  //         if (terrain[ny][nx] !== TERRAIN.RIVER && terrain[ny][nx] !== TERRAIN.BRIDGE) terrain[ny][nx] = TERRAIN.WALL;
+  //       }
+  //     }
+  //   }
+  // }
 
-  // 桥（连续桥带）：按竖向公路与河流交点生成，避免断桥
-  function carveBridgeAt(xc, yc) {
-    let yTop = yc, yBottom = yc;
-    while (yTop > 2 && terrain[yTop][xc] === TERRAIN.RIVER) yTop--;
-    while (yBottom < WORLD - 3 && terrain[yBottom][xc] === TERRAIN.RIVER) yBottom++;
-    yTop = Math.max(2, yTop - 8);
-    yBottom = Math.min(WORLD - 3, yBottom + 8);
-    for (let y = yTop; y <= yBottom; y++) {
-      for (let ox = -6; ox <= 6; ox++) {
-        const nx = xc + ox;
-        if (nx <= 1 || nx >= WORLD - 1) continue;
-        terrain[y][nx] = TERRAIN.BRIDGE;
-      }
-    }
-    for (let y = yTop - 8; y <= yBottom + 8; y++) {
-      if (y <= 1 || y >= WORLD - 1) continue;
-      for (let ox = -7; ox <= 7; ox++) {
-        const nx = xc + ox;
-        if (nx <= 1 || nx >= WORLD - 1) continue;
-        if (terrain[y][nx] === TERRAIN.WALL || terrain[y][nx] === TERRAIN.SWAMP) terrain[y][nx] = TERRAIN.ROAD;
-      }
-    }
-  }
-  for (let xRoad = 72; xRoad < WORLD - 72; xRoad += 96) {
-    const y1 = Math.floor(WORLD * 0.32 + Math.sin(xRoad * 0.02) * 28);
-    const y2 = Math.floor(WORLD * 0.67 + Math.cos(xRoad * 0.018) * 24);
-    carveBridgeAt(xRoad, y1);
-    carveBridgeAt(xRoad, y2);
-  }
-
-  // 障碍块
-  for (let i = 0; i < 180; i++) {
-    const cx = Math.floor(rand(30, WORLD - 30));
-    const cy = Math.floor(rand(30, WORLD - 30));
-    const r = Math.floor(rand(3, 8));
-    for (let y = -r; y <= r; y++) {
-      for (let x = -r; x <= r; x++) {
-        const nx = cx + x, ny = cy + y;
-        if (nx < 4 || ny < 4 || nx >= WORLD - 4 || ny >= WORLD - 4) continue;
-        if (Math.hypot(x, y) <= r && Math.random() > 0.25) {
-          if (terrain[ny][nx] !== TERRAIN.RIVER && terrain[ny][nx] !== TERRAIN.BRIDGE) terrain[ny][nx] = TERRAIN.WALL;
-        }
-      }
-    }
-  }
-
-  // 沼泽区（随机分布）
-  for (let i = 0; i < 80; i++) {
-    const cx = Math.floor(rand(20, WORLD - 20));
-    const cy = Math.floor(rand(20, WORLD - 20));
-    const rx = Math.floor(rand(6, 16));
-    const ry = Math.floor(rand(6, 14));
-    for (let y = -ry; y <= ry; y++) {
-      for (let x = -rx; x <= rx; x++) {
-        const nx = cx + x, ny = cy + y;
-        if (nx < 4 || ny < 4 || nx >= WORLD - 4 || ny >= WORLD - 4) continue;
-        const inEllipse = (x * x) / (rx * rx) + (y * y) / (ry * ry) <= 1;
-        if (!inEllipse) continue;
-        if (terrain[ny][nx] === TERRAIN.PLAIN && Math.random() > 0.12) terrain[ny][nx] = TERRAIN.SWAMP;
-      }
-    }
-  }
+  // 沼泽区已禁用
+  // for (let i = 0; i < 80; i++) {
+  //   const cx = Math.floor(rand(20, WORLD - 20));
+  //   const cy = Math.floor(rand(20, WORLD - 20));
+  //   const rx = Math.floor(rand(6, 16));
+  //   const ry = Math.floor(rand(6, 14));
+  //   for (let y = -ry; y <= ry; y++) {
+  //     for (let x = -rx; x <= rx; x++) {
+  //       const nx = cx + x, ny = cy + y;
+  //       if (nx < 4 || ny < 4 || nx >= WORLD - 4 || ny >= WORLD - 4) continue;
+  //       const inEllipse = (x * x) / (rx * rx) + (y * y) / (ry * ry) <= 1;
+  //       if (!inEllipse) continue;
+  //       if (terrain[ny][nx] === TERRAIN.PLAIN && Math.random() > 0.12) terrain[ny][nx] = TERRAIN.SWAMP;
+  //     }
+  //   }
+  // }
 }
+
+console.log('[makeTerrain] terrain initialized, size:', terrain.length, 'x', (terrain[0] ? terrain[0].length : 0));
 
 function paintBaseArea(base) {
   for (let y = Math.floor(base.y - BASE_HALF); y <= Math.floor(base.y + BASE_HALF); y++) {
@@ -870,9 +981,259 @@ function nearestFreeCell(cell, maxR = 8) {
   return null;
 }
 
+function getRespawnState(team) {
+  if (!teamRespawnState[team]) {
+    teamRespawnState[team] = { cooldown: 0, pressure: 0, recentDeaths: 0 };
+  }
+  return teamRespawnState[team];
+}
+
+function calcRespawnTime(team, tank) {
+  const st = getRespawnState(team);
+  const alive = tanks.filter(x => x.alive && x.team === team).length;
+  const deadCount = Math.max(0, perTeam - alive);
+  const t = RESPAWN_T + 180 + (tank?.respawnExtra || 0)
+    + st.cooldown * 1.35
+    + st.pressure * 260
+    + deadCount * 52;
+  return Math.floor(clamp(t, 420, 12000));
+}
+
+function onTeamDeathPenalty(team) {
+  const st = getRespawnState(team);
+  st.recentDeaths += 1;
+  st.pressure = clamp(st.pressure + 2.8, 0, 60);
+  st.cooldown = clamp(st.cooldown + 55 + st.recentDeaths * 14, 0, 3200);
+}
+
 function octile(a, b) {
   const dx = Math.abs(a.x - b.x), dy = Math.abs(a.y - b.y);
   return dx + dy + (Math.SQRT2 - 2) * Math.min(dx, dy);
+}
+
+// ==================== Jump Point Search (JPS) ====================
+
+const JPS_DIRS_4 = [[1,0],[-1,0],[0,1],[0,-1]];
+const JPS_DIRS_DIAG = [[1,1],[1,-1],[-1,1],[-1,-1]];
+const JPS_DIRS_8 = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+
+function jpsCanPass(x, y) {
+  return y >= 0 && y < navGrid.length && x >= 0 && x < navGrid[0].length && !navGrid[y][x];
+}
+
+function jpsCanMoveStraight(x, y, dx, dy) {
+  const nx = x + dx, ny = y + dy;
+  if (dx !== 0 && dy !== 0) {
+    return jpsCanPass(nx, y) && jpsCanPass(x, ny);
+  }
+  return jpsCanPass(nx, ny);
+}
+
+function jpsJump(x, y, dx, dy, goal, maxJump) {
+  let px = x - dx, py = y - dy;
+  let steps = 0;
+  const isDiag = dx !== 0 && dy !== 0;
+  const stepCost = isDiag ? 1.414 : 1.0;
+
+  while (steps < maxJump) {
+    steps++;
+    const nx = x + dx * steps;
+    const ny = y + dy * steps;
+
+    if (!jpsCanPass(nx, ny)) return [];
+
+    if (nx === goal.x && ny === goal.y) {
+      return [{ x: nx, y: ny, g: steps * stepCost }];
+    }
+
+    if (isDiag) {
+      if (!jpsCanPass(nx - dx, ny) && jpsCanPass(nx - dx, ny - dy)) return [{ x: nx, y: ny, g: steps * stepCost }];
+      if (!jpsCanPass(nx, ny - dy) && jpsCanPass(nx - dx, ny - dy)) return [{ x: nx, y: ny, g: steps * stepCost }];
+    } else {
+      if (dx !== 0 && !jpsCanPass(nx, ny - 1) && jpsCanPass(nx, ny + 1)) return [{ x: nx, y: ny, g: steps * stepCost }];
+      if (dy !== 0 && !jpsCanPass(nx - 1, ny) && jpsCanPass(nx + 1, ny)) return [{ x: nx, y: ny, g: steps * stepCost }];
+    }
+
+    if (isDiag) {
+      const hx = nx, hy = ny - dy;
+      const vx = nx - dx, vy = ny;
+      if (!jpsCanPass(hx, hy) || !jpsCanPass(vx, vy)) return [];
+    }
+  }
+  return [];
+}
+
+function jpsGetNeighbors(x, y, pdx, pdy) {
+  const nb = [];
+  const isDiag = pdx !== 0 && pdy !== 0;
+
+  if (pdx === 0 && pdy === 0) {
+    for (const [dx, dy] of JPS_DIRS_8) {
+      if (jpsCanMoveStraight(x, y, dx, dy)) nb.push({ x: x + dx, y: y + dy, dx, dy });
+    }
+  } else if (isDiag) {
+    for (const [dx, dy] of JPS_DIRS_4) {
+      if (jpsCanMoveStraight(x, y, dx, dy)) nb.push({ x: x + dx, y: y + dy, dx, dy });
+    }
+    if (jpsCanMoveStraight(x, y, pdx, pdy)) nb.push({ x: x + pdx, y: y + pdy, dx: pdx, dy: pdy });
+  } else {
+    if (jpsCanMoveStraight(x, y, pdx, pdy)) nb.push({ x: x + pdx, y: y + pdy, dx: pdx, dy: pdy });
+    const fdx = -pdy, fdy = pdx;
+    if (jpsCanMoveStraight(x, y, fdx, fdy)) nb.push({ x: x + fdx, y: y + fdy, dx: fdx, dy: fdy });
+    if (jpsCanMoveStraight(x, y, -fdx, -fdy)) nb.push({ x: x - fdx, y: y - fdy, dx: -fdx, dy: -fdy });
+    if (jpsCanMoveStraight(x, y, pdx + fdx, pdy + fdy)) nb.push({ x: x + pdx + fdx, y: y + pdy + fdy, dx: pdx + fdx, dy: pdy + fdy });
+  }
+  return nb;
+}
+
+const jpsCache = new Map();
+const JPS_MAX_JUMP = 4000;
+
+function jpsFindPath(start, goal) {
+  // 使用优化的 A* 代替复杂 JPS，保持兼容性
+  if (!start || !goal || !jpsCanPass(start.x, start.y) || !jpsCanPass(goal.x, goal.y)) return null;
+  const sK = keyOf(start.x, start.y), gK = keyOf(goal.x, goal.y);
+  if (sK === gK) return [{ x: start.x, y: start.y }];
+
+  const open = new MinHeap();
+  const gScore = new Map([[sK, 0]]);
+  const parent = new Map();
+  const used = new Set();
+
+  open.push({ x: start.x, y: start.y, f: octile(start, goal), g: 0 });
+
+  let iterations = 0;
+  const maxIter = 3000;
+
+  while (open.size > 0 && iterations < maxIter) {
+    iterations++;
+    const cur = open.pop();
+    const ck = keyOf(cur.x, cur.y);
+    if (used.has(ck)) continue;
+    used.add(ck);
+
+    if (ck === gK) {
+      const path = [{ x: cur.x, y: cur.y }];
+      let k = ck;
+      while (parent.has(k)) {
+        k = parent.get(k);
+        if (k === null || k === undefined) break;
+        const [px, py] = k.split(',').map(Number);
+        path.unshift({ x: px, y: py });
+      }
+      return path;
+    }
+
+    for (const [dx, dy] of DIRS) {
+      const nx = cur.x + dx, ny = cur.y + dy;
+      if (!jpsCanPass(nx, ny)) continue;
+      if (dx !== 0 && dy !== 0) {
+        if (!jpsCanPass(cur.x + dx, cur.y) || !jpsCanPass(cur.x, cur.y + dy)) continue;
+      }
+      const nk = keyOf(nx, ny);
+      if (used.has(nk)) continue;
+      const stepCost = (dx !== 0 && dy !== 0) ? 1.414 : 1;
+      const ng = (gScore.get(ck) ?? Infinity) + stepCost;
+      if (ng < (gScore.get(nk) ?? Infinity)) {
+        gScore.set(nk, ng);
+        parent.set(nk, ck);
+        open.push({ x: nx, y: ny, f: ng + octile({ x: nx, y: ny }, goal), g: ng });
+      }
+    }
+  }
+  return null;
+}
+
+function getJPSPathCached(start, goal) {
+  const k = `${start.x},${start.y}->${goal.x},${goal.y}`;
+  const cached = jpsCache.get(k);
+  if (cached && frameNo - cached.t < 180) {
+    cached.t = frameNo;
+    metrics.jpsHits++;
+    return cached.p;
+  }
+  metrics.jpsMiss++;
+  let p = jpsFindPath(start, goal);
+  if (!p) return null;
+  p = smoothPath(p).map(n => ({ x: n.x * NAV + NAV / 2, y: n.y * NAV + NAV / 2 }));
+  jpsCache.set(k, { p, t: frameNo });
+  if (jpsCache.size > 800) {
+    let oldK = null, oldT = Infinity;
+    for (const [kk, vv] of jpsCache) if (vv.t < oldT) { oldT = vv.t; oldK = kk; }
+    if (oldK) jpsCache.delete(oldK);
+  }
+  return p;
+}
+
+function lineIntersectsRiver(ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const d = Math.hypot(dx, dy);
+  if (d < 1) return false;
+  const steps = Math.max(1, Math.floor(d));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const x = Math.floor(ax + dx * t), y = Math.floor(ay + dy * t);
+    if (terrainAt(x, y) === TERRAIN.RIVER) return true;
+  }
+  return false;
+}
+
+function validatePathAvoidRiver(path) {
+  if (!path || path.length < 2) return path;
+  const clean = [path[0]];
+  for (let i = 1; i < path.length; i++) {
+    const prev = clean[clean.length - 1];
+    const curr = path[i];
+    if (lineIntersectsRiver(prev.x, prev.y, curr.x, curr.y)) {
+      metrics.riverDetour++;
+      const midX = (prev.x + curr.x) / 2, midY = (prev.y + curr.y) / 2;
+      let found = false;
+      for (let r = 1; r < 30 && !found; r++) {
+        for (const [ox, oy] of [[r,0],[-r,0],[0,r],[0,-r],[r,r],[-r,r],[r,-r],[-r,-r]]) {
+          const tx = Math.floor(midX + ox), ty = Math.floor(midY + oy);
+          if (terrainAt(tx, ty) === TERRAIN.BRIDGE) {
+            clean.push({ x: tx, y: ty });
+            clean.push(curr);
+            found = true;
+            break;
+          }
+        }
+      }
+      if (!found) break;
+    } else {
+      clean.push(curr);
+    }
+  }
+  return clean;
+}
+
+function getHierarchicalPath(start, goal) {
+  const sc = worldToCell(start.x, start.y);
+  const gc = worldToCell(goal.x, goal.y);
+  const d = octile(sc, gc) * NAV;
+  if (d < 200) {
+    let p = getJPSPathCached(sc, gc);
+    return p ? validatePathAvoidRiver(p) : null;
+  }
+  metrics.hierPath++;
+  const sId = nearestRoadNode(start.x, start.y);
+  const gId = nearestRoadNode(goal.x, goal.y);
+  if (sId < 0 || gId < 0) {
+    let p = getJPSPathCached(sc, gc);
+    return p ? validatePathAvoidRiver(p) : null;
+  }
+  const roadPath = findRoadPath(sId, gId);
+  if (!roadPath || !roadPath.length) {
+    let p = getJPSPathCached(sc, gc);
+    return p ? validatePathAvoidRiver(p) : null;
+  }
+  const merged = [];
+  const startJP = getJPSPathCached(sc, { x: roadPath[0].x / NAV | 0, y: roadPath[0].y / NAV | 0 });
+  if (startJP) merged.push(...startJP);
+  merged.push(...roadPath.map(n => ({ x: n.x, y: n.y })));
+  const endJP = getJPSPathCached({ x: roadPath[roadPath.length - 1].x / NAV | 0, y: roadPath[roadPath.length - 1].y / NAV | 0 }, gc);
+  if (endJP) merged.push(...endJP);
+  return validatePathAvoidRiver(smoothPath(merged));
 }
 
 class MinHeap {
@@ -1019,6 +1380,36 @@ function lineOfFire(ax, ay, bx, by, maxD = BULLET_RANGE) {
   return true;
 }
 
+function predictAimPoint(shooter, target, bulletSpeed = BULLET_SPEED) {
+  const tx = target.x - shooter.x;
+  const ty = target.y - shooter.y;
+  const tvx = (target.dir?.x || 0) * 0.55;
+  const tvy = (target.dir?.y || 0) * 0.55;
+
+  const a = tvx * tvx + tvy * tvy - bulletSpeed * bulletSpeed;
+  const b = 2 * (tx * tvx + ty * tvy);
+  const c = tx * tx + ty * ty;
+
+  let t = 0;
+  if (Math.abs(a) < 1e-6) {
+    t = (Math.abs(b) < 1e-6) ? 0 : -c / b;
+  } else {
+    const disc = b * b - 4 * a * c;
+    if (disc >= 0) {
+      const t1 = (-b - Math.sqrt(disc)) / (2 * a);
+      const t2 = (-b + Math.sqrt(disc)) / (2 * a);
+      t = Math.min(t1 > 0 ? t1 : Infinity, t2 > 0 ? t2 : Infinity);
+      if (!isFinite(t)) t = 0;
+    }
+  }
+
+  t = clamp(t, 0, 20);
+  return {
+    x: clamp(target.x + tvx * t, 2, WORLD - 2),
+    y: clamp(target.y + tvy * t, 2, WORLD - 2)
+  };
+}
+
 // ==================== Entities ====================
 class Base {
   constructor(team, x, y) {
@@ -1056,8 +1447,13 @@ class Tank {
     this.replanCd = 0;
     this.evadeT = 0;
     this.role = role;
+    this.respawnExtra = Math.floor(rand(0, 120));
     this.aiStride = 1;
     this.aiOffset = id % 4;
+    this.ctrlDir = {x: 0, y: 0};
+    this.turnHold = 0;
+    this.roadPath = null;
+    this.roadIdx = 0;
   }
   update() {
     if (!this.alive) {
@@ -1079,7 +1475,7 @@ class Tank {
     }
     const p = spawnNearBase(this.team);
     if (!p) {
-      this.respawnT = 60;
+      this.respawnT = 120;
       return;
     }
     this.x = p.x; this.y = p.y;
@@ -1089,6 +1485,10 @@ class Tank {
     this.pathIdx = 0;
     this.evadeT = 0;
     this.dir = {x: 0, y: -1};
+    this.ctrlDir = {x: 0, y: 0};
+    this.turnHold = 0;
+    this.roadPath = null;
+    this.roadIdx = 0;
   }
   move(vx, vy) {
     if (!this.alive) return;
@@ -1121,23 +1521,38 @@ class Tank {
     if (!rectHitBlocked(nx, this.y, TANK_HALF)) { this.x = nx; return; }
     if (!rectHitBlocked(this.x, ny, TANK_HALF)) { this.y = ny; return; }
   }
-  fire(tx, ty) {
+  fire(tx, ty, opts = null) {
     if (!this.alive || this.cd > 0) return;
     const dx = tx - this.x, dy = ty - this.y;
     const len = Math.hypot(dx, dy) || 1;
-    const ux = dx / len, uy = dy / len;
-    this.dir = {x: Math.sign(ux), y: Math.sign(uy)};
-    bullets.push({
-      x: this.x + ux * 1.3,
-      y: this.y + uy * 1.3,
-      dx: ux,
-      dy: uy,
-      team: this.team,
-      from: this.id,
-      travel: 0,
-      maxTravel: BULLET_RANGE
-    });
-    this.cd = FIRE_CD;
+    const baseUx = dx / len, baseUy = dy / len;
+    this.dir = {x: Math.sign(baseUx), y: Math.sign(baseUy)};
+
+    const barrage = opts && opts.count > 1;
+    const count = barrage ? opts.count : 1;
+    const spread = barrage ? (opts.spread ?? BARRAGE_SPREAD) : 0;
+    const scatter = barrage ? (opts.scatter ?? BARRAGE_SCATTER) : 0;
+    const half = (count - 1) * 0.5;
+    const baseAng = Math.atan2(baseUy, baseUx);
+
+    for (let i = 0; i < count; i++) {
+      const rel = (i - half) / Math.max(1, half);
+      const ang = baseAng + rel * spread + rand(-scatter, scatter);
+      const ux = Math.cos(ang), uy = Math.sin(ang);
+      bullets.push({
+        x: this.x + ux * 1.3,
+        y: this.y + uy * 1.3,
+        dx: ux,
+        dy: uy,
+        team: this.team,
+        from: this.id,
+        travel: 0,
+        maxTravel: BULLET_RANGE
+      });
+    }
+
+    const cdMul = barrage ? (opts.cdMul ?? 1.45) : 1;
+    this.cd = Math.floor(FIRE_CD * cdMul);
   }
 }
 
@@ -1168,11 +1583,16 @@ function spawnNearBase(team) {
   return null;
 }
 
-function roleFor(idx) {
-  if (idx % 5 === 0) return 'defender';
-  if (idx % 3 === 0) return 'support';
-  if (idx % 2 === 0) return 'assault';
-  return 'scout';
+function roleFor(idx, total) {
+  const hardBackdoor = clamp(Math.floor(total * 0.35), 3, 4);
+  const roamerCount = Math.max(1, Math.floor(total * 0.2));
+  const attackerCount = Math.max(1, Math.floor(total * 0.2));
+  if (idx < hardBackdoor) return 'backdoor';
+  if (idx < hardBackdoor + roamerCount) return 'roamer';
+  if (idx < hardBackdoor + roamerCount + attackerCount) return 'attacker';
+  if (idx % 3 === 0) return 'strike';
+  if (idx % 2 === 0) return 'eliminate';
+  return 'line-defend';
 }
 
 function initWorld() {
@@ -1184,6 +1604,7 @@ function initWorld() {
     bases.push(b);
     paintBaseArea(b);
   }
+  buildRoadBridgeGraph();
   buildNavGrid();
 }
 
@@ -1191,6 +1612,7 @@ function spawnAll() {
   tanks = [];
   bullets = [];
   stats = {};
+  teamRespawnState = {};
   pathCache.clear();
   frameNo = 0;
   aiCursor = 0;
@@ -1198,7 +1620,7 @@ function spawnAll() {
     stats[t] = { alive: 0, kills: 0, score: 0, baseAlive: true };
     for (let i = 0; i < perTeam; i++) {
       const p = spawnNearBase(t) || basePos(t);
-      tanks.push(new Tank(t * perTeam + i, t, p.x, p.y, roleFor(i)));
+      tanks.push(new Tank(t * perTeam + i, t, p.x, p.y, roleFor(i, perTeam)));
     }
   }
   camera.x = WORLD / 2; camera.y = WORLD / 2;
@@ -1282,13 +1704,14 @@ function chooseEnemyTarget(tank) {
 }
 
 function aiMoveTo(tank, tx, ty) {
+  // 使用分层寻路：JPS + 道路网 + 河流绕行
   const sc = nearestFreeCell(worldToCell(tank.x, tank.y));
   const gc = nearestFreeCell(worldToCell(tx, ty));
-  if (!sc || !gc) return {x:0, y:0};
+  if (!sc || !gc) return {x: 0, y: 0};
 
   tank.replanCd--;
   if (!tank.path.length || tank.pathIdx >= tank.path.length || tank.replanCd <= 0 || tank.stuck > 14) {
-    const p = getPathCached(sc, gc);
+    const p = getHierarchicalPath({x: tank.x, y: tank.y}, {x: tx, y: ty});
     if (p && p.length) { tank.path = p; tank.pathIdx = 0; }
     tank.replanCd = 14 + Math.floor(Math.random() * 10);
   }
@@ -1296,21 +1719,9 @@ function aiMoveTo(tank, tx, ty) {
   let gx = tx, gy = ty;
   if (tank.path.length && tank.pathIdx < tank.path.length) {
     const wp = tank.path[tank.pathIdx];
-    const wpt = terrainAt(wp.x, wp.y);
-    if (wpt === TERRAIN.RIVER) {
-      metrics.riverWaypoints++;
-      if (metrics.riverWaypoints % 60 === 0) {
-        console.warn('[AI-DEBUG] river waypoint detected', {
-          id: tank.id,
-          team: tank.team,
-          wpX: wp.x.toFixed(1),
-          wpY: wp.y.toFixed(1),
-          pathIdx: tank.pathIdx,
-          pathLen: tank.path.length
-        });
-      }
-    }
-    if (Math.hypot(wp.x - tank.x, wp.y - tank.y) < 2.3) tank.pathIdx++;
+    const terrainSpeed = speedByTerrain(terrainAt(tank.x, tank.y));
+    const reach = clamp(2.1 + terrainSpeed * 1.0, 2.3, 4.8);
+    if (Math.hypot(wp.x - tank.x, wp.y - tank.y) < reach) tank.pathIdx++;
     if (tank.pathIdx < tank.path.length) {
       gx = tank.path[tank.pathIdx].x;
       gy = tank.path[tank.pathIdx].y;
@@ -1323,121 +1734,121 @@ function aiMoveTo(tank, tx, ty) {
 }
 
 function doAi(tank) {
+  // 角色化AI：偷袭 / 打击 / 歼灭 / 偷塔 / 填线防守
   if (!tank.alive || tank === controlledTank) return;
-
   const home = bases[tank.team];
   if (!home || !home.alive) return;
 
-  const tactic = teamTactic[tank.team] || 'strike';
-  // 战术层：先判断防守态势
-  const intruder = nearestEnemyToBase(tank.team);
-  let objective = null;
-  let mode = 'attack';
-
-  if (tactic === 'defense' || tank.role === 'defender' || intruder) {
-    mode = 'defend';
-    // 只有真入侵或专职防守才贴基地；否则去前沿防区，避免全员基地抽搐
-    if (intruder || tank.role === 'defender') objective = intruder || home;
-    else objective = teamForwardPoint(tank.team);
-  } else {
-    if (tactic === 'ambush') {
-      const eb = weakestEnemyBase(tank.team);
-      if (eb) {
-        objective = {x: eb.x + ((tank.id % 2 === 0) ? -24 : 24), y: eb.y + ((tank.id % 3 === 0) ? -20 : 20)};
-      }
-    }
-    objective = objective || weakestEnemyBase(tank.team) || chooseEnemyTarget(tank) || home;
-  }
-
+  const primaryBase = weakestEnemyBase(tank.team) || home;
   const enemy = chooseEnemyTarget(tank);
-  const threat = incomingThreat(tank);
-  if (threat) { tank.evadeT = 8; metrics.evade++; }
+  let targetX = primaryBase.x;
+  let targetY = primaryBase.y;
 
-  let vx = 0, vy = 0;
-  if (tank.evadeT > 0 && enemy) {
-    const ex = enemy.x - tank.x, ey = enemy.y - tank.y;
-    const l = Math.hypot(ex, ey) || 1;
-    // 横移规避
-    vx = -ey / l;
-    vy = ex / l;
-    if ((tank.id + frameNo) % 2 === 0) { vx = -vx; vy = -vy; }
-    tank.evadeT--;
-  } else {
-    const tx = objective.x ?? home.x;
-    const ty = objective.y ?? home.y;
-    const mv = aiMoveTo(tank, tx, ty);
-    vx = mv.x; vy = mv.y;
-  }
-
-  // 基地脱困：若长期在己方基地附近且无防守压力，强制外推
-  const dHome = Math.hypot(tank.x - home.x, tank.y - home.y);
-  if (!intruder && dHome < 24) {
-    let outX = tank.x - home.x;
-    let outY = tank.y - home.y;
-    const ol = Math.hypot(outX, outY) || 1;
-    outX /= ol; outY /= ol;
-    vx = vx * 0.35 + outX * 0.65;
-    vy = vy * 0.35 + outY * 0.65;
-    // 如果径向太小，给一个切向分量避免原地打转
-    if (Math.abs(outX) + Math.abs(outY) < 0.25) {
-      vx += ((tank.id % 2) ? 0.45 : -0.45);
-      vy += ((tank.id % 3) ? -0.35 : 0.35);
+  if (tank.role === 'backdoor') {
+    const laneSlot = (tank.id % 4);
+    const angBase = [-2.2, -1.0, 1.0, 2.2][laneSlot];
+    const ang = angBase + Math.sin(frameNo * 0.004 + tank.id) * 0.25;
+    const ring = 10 + (tank.id % 4) * 3;
+    targetX = clamp(primaryBase.x + Math.cos(ang) * ring, 6, WORLD - 6);
+    targetY = clamp(primaryBase.y + Math.sin(ang) * ring, 6, WORLD - 6);
+  } else if (tank.role === 'roamer') {
+    const roamX = WORLD * (0.3 + ((tank.id % 5) * 0.1));
+    const roamY = WORLD * (0.25 + (((tank.id + 2) % 5) * 0.1));
+    if (enemy && Math.hypot(enemy.x - tank.x, enemy.y - tank.y) < 80) {
+      targetX = enemy.x;
+      targetY = enemy.y;
+    } else {
+      targetX = clamp(roamX, 6, WORLD - 6);
+      targetY = clamp(roamY, 6, WORLD - 6);
+    }
+  } else if (tank.role === 'attacker') {
+    const guardX = primaryBase.x + ((tank.id % 2) ? 16 : -16);
+    const guardY = primaryBase.y + ((tank.id % 3) - 1) * 16;
+    targetX = clamp(guardX, 6, WORLD - 6);
+    targetY = clamp(guardY, 6, WORLD - 6);
+  } else if (tank.role === 'strike') {
+    if (enemy) {
+      targetX = enemy.x;
+      targetY = enemy.y;
+    }
+  } else if (tank.role === 'eliminate') {
+    if (enemy) {
+      const pullX = primaryBase.x - enemy.x;
+      const pullY = primaryBase.y - enemy.y;
+      const pl = Math.hypot(pullX, pullY) || 1;
+      targetX = enemy.x + (pullX / pl) * 6;
+      targetY = enemy.y + (pullY / pl) * 6;
+    }
+  } else if (tank.role === 'line-defend') {
+    const intruder = nearestEnemyToBase(tank.team);
+    if (intruder) {
+      targetX = intruder.x;
+      targetY = intruder.y;
+    } else {
+      targetX = clamp((home.x + WORLD / 2) * 0.5, 6, WORLD - 6);
+      targetY = clamp((home.y + WORLD / 2) * 0.5, 6, WORLD - 6);
     }
   }
 
-  // 作战小组：按 id 分组（偷袭/防守/打击/歼灭）
-  const squad = tank.id % 4;
-  if (squad === 0 && mode === 'attack') {
-    vx += ((tank.id % 2 === 0) ? 0.35 : -0.35);
-  } else if (squad === 1 && mode === 'defend') {
-    const hb = bases[tank.team];
-    if (hb) {
-      const hx = hb.x - tank.x, hy = hb.y - tank.y;
-      const hl = Math.hypot(hx, hy) || 1;
-      vx = vx * 0.55 + (hx / hl) * 0.45;
-      vy = vy * 0.55 + (hy / hl) * 0.45;
+  const mv = aiMoveTo(tank, targetX, targetY);
+  let vx = mv.x, vy = mv.y;
+
+  // AOE 环境下强分散：半径内强制排斥，防止越走越近
+  let sepX = 0, sepY = 0;
+  let nearestMate = Infinity;
+  for (const mate of tanks) {
+    if (!mate.alive || mate.team !== tank.team || mate.id === tank.id) continue;
+    const dx = tank.x - mate.x;
+    const dy = tank.y - mate.y;
+    const d = Math.hypot(dx, dy);
+    if (d > 0.01) nearestMate = Math.min(nearestMate, d);
+    if (d > 0.01 && d < 24) {
+      const w = ((24 - d) / 24) ** 1.5;
+      sepX += (dx / d) * w;
+      sepY += (dy / d) * w;
+    }
+  }
+  vx = vx * 0.2 + sepX * 0.8;
+  vy = vy * 0.2 + sepY * 0.8;
+  if (nearestMate < 8) {
+    vx += sepX * 0.9;
+    vy += sepY * 0.9;
+  }
+
+  // 仅轻量规避：不允许规避行为压过偷塔主目标
+  if (incomingThreat(tank)) {
+    if (enemy) {
+      const ex = enemy.x - tank.x, ey = enemy.y - tank.y;
+      const l = Math.hypot(ex, ey) || 1;
+      vx = vx * 0.75 + (-ey / l) * 0.25;
+      vy = vy * 0.75 + (ex / l) * 0.25;
     }
   }
 
-  // 协作：支援位尽量靠近友军前排
-  if (tank.role === 'support') {
-    let mate = null, dBest = Infinity;
-    for (const m of tanks) {
-      if (!m.alive || m.team !== tank.team || m.id === tank.id) continue;
-      const d = Math.hypot(m.x - tank.x, m.y - tank.y);
-      if (d < dBest) { dBest = d; mate = m; }
-    }
-    if (mate && dBest > 14) {
-      const dmx = mate.x - tank.x, dmy = mate.y - tank.y;
-      const dl = Math.hypot(dmx, dmy) || 1;
-      vx = vx * 0.5 + (dmx / dl) * 0.5;
-      vy = vy * 0.5 + (dmy / dl) * 0.5;
-    }
-  }
+  const refined = refineLocalMove(tank, vx, vy);
+  const stable = stabilizeMoveVector(tank, refined.x, refined.y);
+  tank.move(stable.x, stable.y);
 
-  const refined = refineLocalMove(tank.x, tank.y, vx, vy);
-  tank.move(refined.x, refined.y);
-
-  // 射击：优先敌方坦克，其次敌方基地
+  // 射击优先级：偷塔/攻击位一律基地优先
   if (tank.cd <= 0) {
+    const mateCount = tanks.filter(m => m.alive && m.team === tank.team && m.id !== tank.id && Math.hypot(m.x - tank.x, m.y - tank.y) < 72).length;
+    const suppressive = mateCount >= 2 || tank.role === 'backdoor' || tank.role === 'attacker';
+    const fireOpts = suppressive ? { count: BARRAGE_COUNT, spread: BARRAGE_SPREAD, scatter: BARRAGE_SCATTER, cdMul: 1.55 } : null;
+
+    const baseDist = Math.hypot(primaryBase.x - tank.x, primaryBase.y - tank.y);
+    if ((tank.role === 'backdoor' || tank.role === 'attacker' || tank.role === 'roamer')
+      && primaryBase && primaryBase.alive && baseDist <= BULLET_RANGE
+      && lineOfFire(tank.x, tank.y, primaryBase.x, primaryBase.y)) {
+      tank.fire(primaryBase.x, primaryBase.y, fireOpts);
+      return;
+    }
+
     if (enemy) {
       const d = Math.hypot(enemy.x - tank.x, enemy.y - tank.y);
-      const fk = `${tank.team}:${enemy.id}`;
-      const focused = teamFocus[fk] || 0;
-      const chance = focused > FOCUS_LIMIT ? 0.04 : 0.08;
-      if (d <= BULLET_RANGE && lineOfFire(tank.x, tank.y, enemy.x, enemy.y) && Math.random() < chance) {
-        // 预瞄一点，体现飞行时间
-        const lead = d / BULLET_SPEED;
-        const tx = enemy.x + enemy.dir.x * lead * 0.03;
-        const ty = enemy.y + enemy.dir.y * lead * 0.03;
-        tank.fire(tx, ty);
-      }
-    }
-    const targetBase = weakestEnemyBase(tank.team);
-    if (targetBase && mode === 'attack') {
-      const d = Math.hypot(targetBase.x - tank.x, targetBase.y - tank.y);
-      if (d <= BULLET_RANGE && lineOfFire(tank.x, tank.y, targetBase.x, targetBase.y) && Math.random() < 0.06) {
-        tank.fire(targetBase.x, targetBase.y);
+      if (d <= BULLET_RANGE && lineOfFire(tank.x, tank.y, enemy.x, enemy.y)) {
+        const lead = predictAimPoint(tank, enemy, BULLET_SPEED);
+        if (lineOfFire(tank.x, tank.y, lead.x, lead.y)) tank.fire(lead.x, lead.y, fireOpts);
+        else tank.fire(enemy.x, enemy.y, fireOpts);
       }
     }
   }
@@ -1537,25 +1948,31 @@ function update() {
       if (Math.abs(b.x - base.x) <= BASE_HALF && Math.abs(b.y - base.y) <= BASE_HALF) {
         const wasAlive = base.alive;
         base.hit(BASE_DAMAGE);
-        stats[b.team].score += BASE_HIT_SCORE;
-        if (wasAlive && !base.alive) {
-          // 推塔高额奖励：强化 AI 对基地目标的价值感知
-          stats[b.team].score += BASE_DESTROY_SCORE;
-        }
+        // 战术奖励已注释: stats[b.team].score += BASE_HIT_SCORE;
+        // 战术奖励已注释: if (wasAlive && !base.alive) {
+        // 战术奖励已注释:   stats[b.team].score += BASE_DESTROY_SCORE;
+        // 战术奖励已注释: }
         return false;
       }
     }
 
-    // 打坦克
+    // 打坦克（命中后 4 格 AOE）
     for (const t of tanks) {
       if (!t.alive || t.team === b.team) continue;
       if (Math.abs(b.x - t.x) <= TANK_HALF && Math.abs(b.y - t.y) <= TANK_HALF) {
-        t.hp -= BULLET_DAMAGE;
-        if (t.hp <= 0) {
-          t.alive = false;
-          t.respawnT = RESPAWN_T;
-          stats[b.team].kills++;
-          stats[b.team].score += 30;
+        for (const aoeTarget of tanks) {
+          if (!aoeTarget.alive || aoeTarget.team === b.team) continue;
+          const ad = Math.hypot(aoeTarget.x - b.x, aoeTarget.y - b.y);
+          if (ad <= BULLET_AOE_RADIUS) {
+            aoeTarget.hp -= BULLET_DAMAGE;
+            if (aoeTarget.hp <= 0) {
+              aoeTarget.alive = false;
+              onTeamDeathPenalty(aoeTarget.team);
+              aoeTarget.respawnT = calcRespawnTime(aoeTarget.team, aoeTarget);
+              stats[b.team].kills++;
+              // 战术奖励已注释: stats[b.team].score += 30;
+            }
+          }
         }
         return false;
       }
@@ -1593,6 +2010,14 @@ function update() {
   }
   camera.x = clamp(camera.x, 0, WORLD);
   camera.y = clamp(camera.y, 0, WORLD);
+
+  // 基地复活CD与死亡惩罚衰减
+  for (let t = 0; t < factions; t++) {
+    const st = getRespawnState(t);
+    st.cooldown = Math.max(0, st.cooldown - 0.9);
+    st.pressure = Math.max(0, st.pressure - 0.02);
+    st.recentDeaths = Math.max(0, st.recentDeaths - 0.05);
+  }
 
   for (let t = 0; t < factions; t++) {
     stats[t].alive = tanks.filter(x => x.team === t && x.alive).length;
@@ -1760,10 +2185,21 @@ function updateStats(winner) {
   for (let i = 0; i < factions; i++) {
     const s = stats[i] || {alive:0,kills:0,baseAlive:false};
     const b = bases[i];
+    const rs = getRespawnState(i);
+    const cdPct = clamp((rs.cooldown / 1200) * 100, 0, 100);
     html += `<div class="tank-faction-row">
       <span class="tank-faction-dot" style="background:${TEAM_COLORS[i]}"></span>
-      <span class="tank-faction-name">${TEAM_NAMES[i]}方 基地:${b?.alive ? Math.floor(b.hp) : '已毁'}</span>
+      <span class="tank-faction-name">${TEAM_NAMES[i]}方 基地:${b?.alive ? Math.floor(b.hp) : '已毁'} 压力:${rs.pressure.toFixed(1)}</span>
       <span class="tank-faction-stat">${s.alive}/${perTeam}</span>
+    </div>
+    <div class="tank-faction-row" style="padding-top:2px;padding-bottom:8px;">
+      <span class="tank-faction-name" style="font-size:10px;color:var(--text2);">基地复活CD</span>
+      <span class="tank-faction-stat" style="min-width:110px;display:inline-block;">
+        <span style="display:inline-block;width:88px;height:6px;background:#2d333b;border-radius:3px;overflow:hidden;vertical-align:middle;">
+          <span style="display:block;height:6px;background:${TEAM_COLORS[i]};width:${cdPct}%;"></span>
+        </span>
+        <span style="font-size:10px;color:var(--text2);margin-left:6px;">${Math.floor(rs.cooldown)}</span>
+      </span>
     </div>`;
   }
   if (winner !== null) {
@@ -1786,9 +2222,17 @@ function updateStats(winner) {
     <div class="tank-engine-row"><span>河道阻塞</span><span>${metrics.riverBlocked}</span></div>
     <div class="tank-engine-row"><span>河道路点</span><span>${metrics.riverWaypoints}</span></div>
     <div class="tank-engine-row"><span>过桥计数</span><span>${metrics.bridgeCross}</span></div>
+    <div class="tank-engine-row"><span>JPS命中</span><span>${metrics.jpsHits}</span></div>
+    <div class="tank-engine-row"><span>JPS未中</span><span>${metrics.jpsMiss}</span></div>
+    <div class="tank-engine-row"><span>分层路径</span><span>${metrics.hierPath}</span></div>
+    <div class="tank-engine-row"><span>河流绕行</span><span>${metrics.riverDetour}</span></div>
   `;
   metrics.replan = 0;
   metrics.evade = 0;
+  metrics.jpsHits = 0;
+  metrics.jpsMiss = 0;
+  metrics.hierPath = 0;
+  metrics.riverDetour = 0;
 }
 
 // ==================== Input ====================
@@ -1923,134 +2367,6 @@ updateStats(null);
     }
   })
 })()</script><script async="" data-pjax="" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><!-- hexo injector body_end start -->
-<div id="dev-sidebar">
-    <div id="dev-toggle">💻</div>
-    <div id="dev-list">
-        <div class="dev-header">开发专栏</div>
-        <a href="/tools/sort/" class="dev-item">📊 排序算法演示</a>
-        <a href="/tools/webgpu-gravity/" class="dev-item">🌌 WebGPU 万有引力粒子</a>
-        <a href="/tools/yolo-detect/" class="dev-item">👁️ YOLO 实时目标检测</a>
-        <a href="/tools/fire-creation/" class="dev-item">🔥 火之创造 (元素沙盒)</a>
-    </div>
-</div>
-
-<style>
-    #dev-sidebar {
-        position: fixed;
-        right: -150px; /* Width of the list */
-        top: calc(30vh + 80px); /* Positioned below game-sidebar */
-        z-index: 9999;
-        display: flex;
-        align-items: flex-start;
-        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-    }
-
-    /* Hover area to keep it open */
-    #dev-sidebar:hover {
-        right: 0;
-    }
-
-    #dev-toggle {
-        width: 40px;
-        height: 40px;
-        background: #52c41a; /* Green color for dev theme */
-        color: white;
-        text-align: center;
-        line-height: 40px;
-        border-radius: 8px 0 0 8px;
-        cursor: pointer;
-        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
-        font-size: 20px;
-        position: absolute;
-        left: -40px;
-        top: 0;
-    }
-
-    #dev-list {
-        width: 150px; /* Width for text */
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border-radius: 0 0 0 8px; /* Bottom left rounded */
-        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-        max-height: 50vh;
-        overflow-y: auto;
-    }
-    
-    /* 自定义滚动条样式 */
-    #dev-list::-webkit-scrollbar {
-        width: 4px;
-    }
-    #dev-list::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    #dev-list::-webkit-scrollbar-thumb {
-        background: rgba(82, 196, 26, 0.3);
-        border-radius: 4px;
-    }
-    #dev-list::-webkit-scrollbar-thumb:hover {
-        background: rgba(82, 196, 26, 0.6);
-    }
-    
-    .dev-header {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        padding: 10px;
-        background: #f6ffed;
-        color: #52c41a;
-        font-weight: bold;
-        font-size: 14px;
-        text-align: center;
-        border-bottom: 1px solid #eee;
-    }
-
-    .dev-item {
-        display: block;
-        padding: 12px 15px;
-        color: #4c4948;
-        text-decoration: none !important;
-        font-size: 13px;
-        transition: all 0.2s;
-        border-bottom: 1px solid #f0f0f0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        flex-shrink: 0;
-    }
-
-    .dev-item:last-child {
-        border-bottom: none;
-    }
-
-    .dev-item:hover {
-        background: #52c41a;
-        color: white !important;
-    }
-</style>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var toolSidebar = document.getElementById('tool-sidebar');
-        var gameSidebar = document.getElementById('game-sidebar');
-        var devSidebar = document.getElementById('dev-sidebar');
-        
-        if(devSidebar) {
-            devSidebar.addEventListener('mouseenter', function() {
-                if(toolSidebar) toolSidebar.style.right = '-220px'; // 180px + 40px(按钮宽度)
-                if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
-            });
-            devSidebar.addEventListener('mouseleave', function() {
-                if(toolSidebar) toolSidebar.style.right = ''; 
-                if(gameSidebar) gameSidebar.style.right = ''; 
-            });
-        }
-    });
-</script>
-
 <div id="game-sidebar">
     <div id="game-toggle">🎮</div>
     <div id="game-list">
@@ -2182,30 +2498,22 @@ updateStats(null);
     });
 </script>
 
-<div id="tool-sidebar">
-    <div id="tool-toggle">🛠️</div>
-    <div id="tool-list">
-        <div class="tool-header">博客工具</div>
-        <a href="/tools/time" class="tool-item">📅 时间戳与地理时间</a>
-        <a href="/tools/base64-img" class="tool-item">🖼️ 图片↔Base64</a>
-        <a href="/tools/hash" class="tool-item">🔐 MD5/SHA256 计算</a>
-        <a href="/tools/geojson" class="tool-item">🌍 GeoJSON 查询</a>
-        <a href="/tools/remove-bg" class="tool-item">✂️ 快速抠图</a>
-        <a href="/tools/watermark" class="tool-item">💧 水印生成与检测</a>
-        <a href="/tools/gif" class="tool-item">🎬 GIF 生成</a>
-        <a href="/tools/mirage-tank" class="tool-item">👻 幻影坦克制作</a>
-        <a href="/tools/converter" class="tool-item">🔄 文件全能转换</a>
-        <a href="/tools/qrcode" class="tool-item">📱 二维码生成/解析</a>
-        <a href="/tools/unit-converter" class="tool-item">📏 工程单位换算</a>
-        <a href="/tools/color" class="tool-item">🎨 颜色转换与调色</a>
+<div id="dev-sidebar">
+    <div id="dev-toggle">💻</div>
+    <div id="dev-list">
+        <div class="dev-header">开发专栏</div>
+        <a href="/tools/sort/" class="dev-item">📊 排序算法演示</a>
+        <a href="/tools/webgpu-gravity/" class="dev-item">🌌 WebGPU 万有引力粒子</a>
+        <a href="/tools/yolo-detect/" class="dev-item">👁️ YOLO 实时目标检测</a>
+        <a href="/tools/fire-creation/" class="dev-item">🔥 火之创造 (元素沙盒)</a>
     </div>
 </div>
 
 <style>
-    #tool-sidebar {
+    #dev-sidebar {
         position: fixed;
-        right: -180px; /* Width of the list */
-        top: 30vh;
+        right: -150px; /* Width of the list */
+        top: calc(30vh + 80px); /* Positioned below game-sidebar */
         z-index: 9999;
         display: flex;
         align-items: flex-start;
@@ -2214,14 +2522,14 @@ updateStats(null);
     }
 
     /* Hover area to keep it open */
-    #tool-sidebar:hover {
+    #dev-sidebar:hover {
         right: 0;
     }
 
-    #tool-toggle {
+    #dev-toggle {
         width: 40px;
         height: 40px;
-        background: #49b1f5;
+        background: #52c41a; /* Green color for dev theme */
         color: white;
         text-align: center;
         line-height: 40px;
@@ -2230,12 +2538,12 @@ updateStats(null);
         box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
         font-size: 20px;
         position: absolute;
-        left: -40px; /* Hangs off the left of the sidebar container */
+        left: -40px;
         top: 0;
     }
 
-    #tool-list {
-        width: 180px; /* Width for text */
+    #dev-list {
+        width: 150px; /* Width for text */
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
@@ -2243,39 +2551,39 @@ updateStats(null);
         box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
         display: flex;
         flex-direction: column;
-        max-height: 50vh; /* 限制最大高度以便能滚动 */
-        overflow-y: auto; /* 允许纵向滚动 */
+        max-height: 50vh;
+        overflow-y: auto;
     }
     
-    /* 自定义滚动条样式，使其不那么突兀 */
-    #tool-list::-webkit-scrollbar {
+    /* 自定义滚动条样式 */
+    #dev-list::-webkit-scrollbar {
         width: 4px;
     }
-    #tool-list::-webkit-scrollbar-track {
+    #dev-list::-webkit-scrollbar-track {
         background: transparent;
     }
-    #tool-list::-webkit-scrollbar-thumb {
-        background: rgba(73, 177, 245, 0.3);
+    #dev-list::-webkit-scrollbar-thumb {
+        background: rgba(82, 196, 26, 0.3);
         border-radius: 4px;
     }
-    #tool-list::-webkit-scrollbar-thumb:hover {
-        background: rgba(73, 177, 245, 0.6);
+    #dev-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(82, 196, 26, 0.6);
     }
-
-    .tool-header {
+    
+    .dev-header {
         position: sticky;
         top: 0;
         z-index: 10;
         padding: 10px;
-        background: #f7f9fe;
-        color: #49b1f5;
+        background: #f6ffed;
+        color: #52c41a;
         font-weight: bold;
         font-size: 14px;
         text-align: center;
         border-bottom: 1px solid #eee;
     }
 
-    .tool-item {
+    .dev-item {
         display: block;
         padding: 12px 15px;
         color: #4c4948;
@@ -2286,15 +2594,15 @@ updateStats(null);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        flex-shrink: 0; /* 防止由于 max-height 导致内容被挤压 */
+        flex-shrink: 0;
     }
 
-    .tool-item:last-child {
+    .dev-item:last-child {
         border-bottom: none;
     }
 
-    .tool-item:hover {
-        background: #49b1f5;
+    .dev-item:hover {
+        background: #52c41a;
         color: white !important;
     }
 </style>
@@ -2305,14 +2613,14 @@ updateStats(null);
         var gameSidebar = document.getElementById('game-sidebar');
         var devSidebar = document.getElementById('dev-sidebar');
         
-        if(toolSidebar) {
-            toolSidebar.addEventListener('mouseenter', function() {
+        if(devSidebar) {
+            devSidebar.addEventListener('mouseenter', function() {
+                if(toolSidebar) toolSidebar.style.right = '-220px'; // 180px + 40px(按钮宽度)
                 if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
-                if(devSidebar) devSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
             });
-            toolSidebar.addEventListener('mouseleave', function() {
-                if(gameSidebar) gameSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
-                if(devSidebar) devSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
+            devSidebar.addEventListener('mouseleave', function() {
+                if(toolSidebar) toolSidebar.style.right = ''; 
+                if(gameSidebar) gameSidebar.style.right = ''; 
             });
         }
     });
@@ -3106,4 +3414,140 @@ updateStats(null);
         console.error('UI Init Failed:', e);
     }
   </script>
+
+<div id="tool-sidebar">
+    <div id="tool-toggle">🛠️</div>
+    <div id="tool-list">
+        <div class="tool-header">博客工具</div>
+        <a href="/tools/time" class="tool-item">📅 时间戳与地理时间</a>
+        <a href="/tools/base64-img" class="tool-item">🖼️ 图片↔Base64</a>
+        <a href="/tools/hash" class="tool-item">🔐 MD5/SHA256 计算</a>
+        <a href="/tools/geojson" class="tool-item">🌍 GeoJSON 查询</a>
+        <a href="/tools/remove-bg" class="tool-item">✂️ 快速抠图</a>
+        <a href="/tools/watermark" class="tool-item">💧 水印生成与检测</a>
+        <a href="/tools/gif" class="tool-item">🎬 GIF 生成</a>
+        <a href="/tools/mirage-tank" class="tool-item">👻 幻影坦克制作</a>
+        <a href="/tools/converter" class="tool-item">🔄 文件全能转换</a>
+        <a href="/tools/qrcode" class="tool-item">📱 二维码生成/解析</a>
+        <a href="/tools/unit-converter" class="tool-item">📏 工程单位换算</a>
+        <a href="/tools/color" class="tool-item">🎨 颜色转换与调色</a>
+    </div>
+</div>
+
+<style>
+    #tool-sidebar {
+        position: fixed;
+        right: -180px; /* Width of the list */
+        top: 30vh;
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    /* Hover area to keep it open */
+    #tool-sidebar:hover {
+        right: 0;
+    }
+
+    #tool-toggle {
+        width: 40px;
+        height: 40px;
+        background: #49b1f5;
+        color: white;
+        text-align: center;
+        line-height: 40px;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+        font-size: 20px;
+        position: absolute;
+        left: -40px; /* Hangs off the left of the sidebar container */
+        top: 0;
+    }
+
+    #tool-list {
+        width: 180px; /* Width for text */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 0 8px; /* Bottom left rounded */
+        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        max-height: 50vh; /* 限制最大高度以便能滚动 */
+        overflow-y: auto; /* 允许纵向滚动 */
+    }
+    
+    /* 自定义滚动条样式，使其不那么突兀 */
+    #tool-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    #tool-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #tool-list::-webkit-scrollbar-thumb {
+        background: rgba(73, 177, 245, 0.3);
+        border-radius: 4px;
+    }
+    #tool-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(73, 177, 245, 0.6);
+    }
+
+    .tool-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 10px;
+        background: #f7f9fe;
+        color: #49b1f5;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .tool-item {
+        display: block;
+        padding: 12px 15px;
+        color: #4c4948;
+        text-decoration: none !important;
+        font-size: 13px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0; /* 防止由于 max-height 导致内容被挤压 */
+    }
+
+    .tool-item:last-child {
+        border-bottom: none;
+    }
+
+    .tool-item:hover {
+        background: #49b1f5;
+        color: white !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var toolSidebar = document.getElementById('tool-sidebar');
+        var gameSidebar = document.getElementById('game-sidebar');
+        var devSidebar = document.getElementById('dev-sidebar');
+        
+        if(toolSidebar) {
+            toolSidebar.addEventListener('mouseenter', function() {
+                if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+                if(devSidebar) devSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+            });
+            toolSidebar.addEventListener('mouseleave', function() {
+                if(gameSidebar) gameSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
+                if(devSidebar) devSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
+            });
+        }
+    });
+</script>
 <!-- hexo injector body_end end --></body></html>
