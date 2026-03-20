@@ -1,476 +1,605 @@
-(function() {
-    let selectedFile = null;
-    let targetFormat = null;
-    let queue = [];
-    const { jsPDF } = window.jspdf;
-    
-    // Internal fallback key
-    const DEFAULT_API_KEY = "sk-9a9f51b5638c4df79e53debf3aa12182";
+(function () {
+  const DEFAULT_BASE_URL = 'https://doc.luozili.work';
+  const DEFAULT_API_KEY = '8731cca342588026f6d62570de37d556';
+  const POLL_INTERVAL_MS = 3000;
+  const MAX_POLL_ROUNDS = 120;
+  const MAX_CONCURRENCY = 2;
+  const DEBUG_PREFIX = '[ConvertX-Debug]';
+  const DEBUG_LOG_LIMIT = 200;
+  const ASSET_STORAGE_KEY = 'convertx_asset_center_v1';
 
-    function initConverterTool() {
-        const container = document.getElementById('tool-converter-container');
-        if (!container) return;
+  const FALLBACK_CONVERTER_MAP = {
+    jpg: 'imagemagick', png: 'imagemagick', webp: 'imagemagick',
+    pdf: 'libreoffice', docx: 'libreoffice', csv: 'dasel',
+    xlsx: 'libreoffice', md: 'markitDown', txt: 'pandoc',
+    gif: 'ffmpeg', mp4: 'ffmpeg', mp3: 'ffmpeg'
+  };
 
-        container.addEventListener('click', (e) => e.stopPropagation());
+  const Bus = {
+    listeners: {},
+    on(event, handler) {
+      if (!this.listeners[event]) this.listeners[event] = [];
+      this.listeners[event].push(handler);
+    },
+    emit(event, payload) {
+      (this.listeners[event] || []).forEach((fn) => {
+        try { fn(payload); } catch (e) { console.warn(e); }
+      });
+    }
+  };
 
-        const fileInput = document.getElementById('file-input');
-        fileInput.addEventListener('change', handleFileSelect);
+  const Store = {
+    state: {
+      files: [],
+      targetFormat: null,
+      tasks: {},
+      running: 0,
+      converterCapabilities: {}
+    },
+    setFiles(files) {
+      this.state.files = files;
+      Bus.emit('files:changed', files);
+    },
+    setTargetFormat(fmt) {
+      this.state.targetFormat = fmt;
+      Bus.emit('target:changed', fmt);
+    },
+    upsertTask(task) {
+      this.state.tasks[task.id] = { ...(this.state.tasks[task.id] || {}), ...task };
+      Bus.emit('task:updated', this.state.tasks[task.id]);
+    },
+    getTask(id) {
+      return this.state.tasks[id] || null;
+    },
+    getTasks() {
+      return Object.values(this.state.tasks).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    },
+    clearTasks() {
+      this.state.tasks = {};
+      Bus.emit('queue:reset');
+    }
+  };
 
-        const dropZone = document.querySelector('.drop-zone');
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = '#eff6ff'; });
-        dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.background = 'white'; });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.style.background = 'white';
-            if (e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                handleFileSelect({ target: fileInput });
-            }
+  const Api = {
+    getBaseUrl() {
+      const val = (document.getElementById('convertx-base-url')?.value || '').trim();
+      return (val || DEFAULT_BASE_URL).replace(/\/+$/, '');
+    },
+    getApiKey() {
+      const val = (document.getElementById('api-key')?.value || '').trim();
+      return val || DEFAULT_API_KEY;
+    },
+    getAuthMode(apiKey) {
+      return apiKey ? 'X-API-Key + Cookie' : 'Cookie';
+    },
+    async request(path, options = {}) {
+      const baseUrl = this.getBaseUrl();
+      const apiKey = this.getApiKey();
+      const url = `${baseUrl}${path}`;
+      const pageOrigin = window.location.origin;
+      let credentialsMode = 'include';
+      let sameOrigin = true;
+      try {
+        sameOrigin = new URL(url, window.location.href).origin === window.location.origin;
+        credentialsMode = sameOrigin ? 'include' : 'omit';
+      } catch (_) {
+        credentialsMode = 'include';
+        sameOrigin = true;
+      }
+      const traceId = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+      const headers = { ...(options.headers || {}) };
+      const useApiKey = options.useApiKey !== false;
+      if (useApiKey && apiKey) headers['X-API-Key'] = apiKey;
+      const debugMeta = options.debugMeta || null;
+
+      const parseResponse = async (res, traceIdForLog, requestUrl) => {
+        const text = await res.text();
+        debugLog('api.response', { traceId: traceIdForLog, status: res.status, url: requestUrl, body_preview: (text || '').slice(0, 300) });
+        let data = null;
+        try { data = text ? JSON.parse(text) : null; } catch (_) { data = null; }
+        return { ok: res.ok, status: res.status, text, data, headers: res.headers, traceId: traceIdForLog };
+      };
+
+      debugLog('api.request', {
+        traceId,
+        url,
+        method: options.method || 'GET',
+        auth: this.getAuthMode(useApiKey ? apiKey : ''),
+        page_origin: pageOrigin,
+        online: navigator.onLine,
+        has_custom_headers: Object.keys(headers).length > 0,
+        use_api_key: useApiKey,
+        credentials_mode: credentialsMode,
+        same_origin: sameOrigin,
+        debug_meta: debugMeta
+      });
+
+      let res;
+      try {
+        res = await fetch(url, { ...options, headers, credentials: credentialsMode });
+      } catch (err) {
+        debugLog('api.network_error', {
+          traceId,
+          url,
+          page_origin: pageOrigin,
+          error_name: err?.name || 'UnknownError',
+          error_message: err?.message || 'Failed to fetch',
+          online: navigator.onLine,
+          protocol_mode: (document.getElementById('protocol-mode')?.value || 'auto'),
+          credentials_mode: credentialsMode,
+          same_origin: sameOrigin,
+          debug_meta: debugMeta,
+          curl_probe: {
+            options: `curl -i -X OPTIONS "${url}" -H "Origin: ${pageOrigin}" -H "Access-Control-Request-Method: ${options.method || 'POST'}" -H "Access-Control-Request-Headers: x-api-key,content-type"`,
+            post_no_key: `curl -i -X ${(options.method || 'POST').toUpperCase()} "${url}" -H "Origin: ${pageOrigin}"`,
+            post_with_key: `curl -i -X ${(options.method || 'POST').toUpperCase()} "${url}" -H "Origin: ${pageOrigin}" -H "X-API-Key: <api_key>"`
+          }
         });
+        if (url.includes('/convert')) {
+          throw new Error('网络层失败：浏览器未拿到可用的跨域响应（非业务 4xx/5xx）。请检查 POST /convert 是否返回 Access-Control-Allow-Origin，以及 OPTIONS/POST 的 CORS 头是否一致，并确认放行 X-API-Key');
+        }
+        throw new Error('网络层失败（可能是 CSP connect-src / 跨域预检 / 浏览器安全策略），请检查浏览器 Network 与响应头');
+      }
 
-        window.filterFormats = function(type) {
-            document.querySelectorAll('.format-tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            document.querySelectorAll('.format-item').forEach(item => {
-                if (type === 'all' || item.dataset.type === type) item.style.display = 'flex';
-                else item.style.display = 'none';
-            });
-        };
+      return await parseResponse(res, traceId, url);
     }
+  };
 
-    function handleFileSelect(e) {
-        if (!e.target.files.length) return;
-        selectedFile = e.target.files[0];
-        document.getElementById('selected-file-name').innerText = selectedFile.name;
-        document.querySelector('.upload-section h3').innerText = "已选择: " + selectedFile.name;
-        targetFormat = null;
-        document.getElementById('action-bar').style.display = 'none';
-        document.querySelectorAll('.format-item').forEach(el => el.classList.remove('selected'));
+  function createTaskFromFile(file) {
+    const id = Date.now() + Math.floor(Math.random() * 100000);
+    const manualConverter = (document.getElementById('converter-name')?.value || '').trim();
+    const converter = manualConverter || getRecommendedConverter(Store.state.targetFormat) || FALLBACK_CONVERTER_MAP[Store.state.targetFormat] || '';
+    return {
+      id,
+      createdAt: Date.now(),
+      file,
+      filename: file.name,
+      targetFormat: Store.state.targetFormat,
+      converter,
+      status: 'pending',
+      attempts: 0,
+      message: '等待中...'
+    };
+  }
+
+  async function runScheduler() {
+    const pending = Store.getTasks().filter((t) => t.status === 'pending');
+    if (!pending.length) return;
+
+    while (Store.state.running < MAX_CONCURRENCY && pending.length) {
+      const task = pending.shift();
+      Store.state.running += 1;
+      processTask(task.id).finally(() => {
+        Store.state.running -= 1;
+        runScheduler();
+      });
     }
+  }
 
-    window.selectFormat = function(fmt) {
-        if (!selectedFile) { alert('请先选择文件'); return; }
-        targetFormat = fmt;
-        document.getElementById('target-format-name').innerText = fmt.toUpperCase();
-        document.getElementById('action-bar').style.display = 'block';
-        document.querySelectorAll('.format-item').forEach(el => el.classList.remove('selected'));
-        event.currentTarget.classList.add('selected');
-        const aiPanel = document.getElementById('ai-settings-panel');
-        aiPanel.style.display = (fmt === 'ocr-md') ? 'block' : 'none';
+  async function processTask(taskId) {
+    const task = Store.getTask(taskId);
+    if (!task) return;
+
+    Store.upsertTask({ id: taskId, status: 'running', message: '准备提交任务...', attempts: (task.attempts || 0) + 1 });
+
+    try {
+      const formData = new FormData();
+      formData.append('file', task.file);
+      formData.append('target_format', task.targetFormat);
+      if (task.converter) formData.append('converter', task.converter);
+
+      debugLog('task.submit.meta', {
+        taskId,
+        filename: task.filename,
+        file_size: task.file?.size || 0,
+        file_size_bucket: (function () {
+          const size = task.file?.size || 0;
+          if (size < 100 * 1024) return '<100KB';
+          if (size < 1024 * 1024) return '100KB-1MB';
+          if (size < 10 * 1024 * 1024) return '1MB-10MB';
+          return '>=10MB';
+        })(),
+        target_format: task.targetFormat,
+        converter: task.converter || null,
+        protocol_mode: (document.getElementById('protocol-mode')?.value || 'auto')
+      });
+
+      let submit;
+      try {
+        submit = await Api.request('/convert', {
+          method: 'POST',
+          body: formData,
+          useApiKey: true,
+          debugMeta: { filename: task.filename, file_size: task.file?.size || 0, target_format: task.targetFormat }
+        });
+      } catch (firstErr) {
+        const msg = String(firstErr?.message || firstErr || '');
+        const looksLikeCors = /Failed to fetch|CORS|预检|跨域|X-API-Key/i.test(msg);
+        if (!looksLikeCors) throw firstErr;
+
+        debugLog('task.submit.fallback_without_api_key', {
+          taskId,
+          reason: msg,
+          hint: '首次带 X-API-Key 网络失败，降级为不带自定义头重试一次'
+        });
+        submit = await Api.request('/convert', {
+          method: 'POST',
+          body: formData,
+          useApiKey: false,
+          debugMeta: { filename: task.filename, file_size: task.file?.size || 0, target_format: task.targetFormat, retry_without_api_key: true }
+        });
+      }
+      if (!submit.ok) throw new Error(`提交失败(${submit.status}): ${(submit.text || '').slice(0, 200)}`);
+
+      const protocolMode = (document.getElementById('protocol-mode')?.value || 'auto').toLowerCase();
+
+      const isSyncPayload = Boolean(submit.data && (submit.data.status === 'completed' || Array.isArray(submit.data.files)));
+      if (protocolMode !== 'async' && isSyncPayload) {
+        persistAsset(task, submit.data, null);
+        Store.upsertTask({
+          id: taskId,
+          status: 'done',
+          message: '同步模式完成',
+          submitData: submit.data,
+          statusData: submit.data,
+          downloadData: { kind: 'json', data: submit.data }
+        });
+        return;
+      }
+
+      const jobId = submit.data?.job_id || submit.data?.jobId;
+      if (protocolMode === 'sync' && !isSyncPayload) {
+        throw new Error('当前协议模式为仅同步，但后端返回非同步结构');
+      }
+      if (!jobId) throw new Error('后端返回成功但无 job_id / files');
+      Store.upsertTask({ id: taskId, jobId, submitData: submit.data, message: `任务已提交: ${jobId}` });
+
+      for (let round = 1; round <= MAX_POLL_ROUNDS; round++) {
+        const st = await Api.request(`/job/${encodeURIComponent(jobId)}/status`, { method: 'GET' });
+        if (!st.ok) throw new Error(`状态查询失败(${st.status}): ${(st.text || '').slice(0, 160)}`);
+
+        if (st.data && st.data.success === false && /unauthorized/i.test(st.data.message || '')) {
+          throw new Error('状态接口鉴权失败（Unauthorized）');
+        }
+
+        const status = st.data?.status || 'processing';
+        Store.upsertTask({ id: taskId, statusData: st.data, message: `状态: ${status} (${round}/${MAX_POLL_ROUNDS})` });
+
+        if (status === 'completed') {
+          const dl = await fetchDownloadPayload(jobId);
+          persistAsset(Store.getTask(taskId) || task, st.data, dl);
+          Store.upsertTask({ id: taskId, status: 'done', message: '转换完成', downloadData: dl });
+          return;
+        }
+
+        if (status === 'failed' || status === 'timeout') throw new Error(`任务结束状态: ${status}`);
+        await wait(POLL_INTERVAL_MS);
+      }
+
+      throw new Error('轮询超时，请稍后重试');
+    } catch (err) {
+      Store.upsertTask({ id: taskId, status: 'error', message: err.message || '未知错误' });
+    }
+  }
+
+  async function fetchDownloadPayload(jobId) {
+    const res = await Api.request(`/job/${encodeURIComponent(jobId)}/download`, { method: 'GET' });
+    if (!res.ok) throw new Error(`下载接口失败(${res.status})`);
+    if (res.data) return { kind: 'json', data: res.data };
+    const blob = new Blob([res.text || ''], { type: 'text/plain' });
+    return { kind: 'blob', blob, filename: `convertx-${jobId}.txt` };
+  }
+
+  function initConverterTool() {
+    const container = document.getElementById('tool-converter-container');
+    if (!container) return;
+
+    const fileInput = document.getElementById('file-input');
+    const dropZone = container.querySelector('.drop-zone');
+    const baseUrlEl = document.getElementById('convertx-base-url');
+    const apiKeyEl = document.getElementById('api-key');
+    if (baseUrlEl && !baseUrlEl.value) baseUrlEl.value = DEFAULT_BASE_URL;
+    if (apiKeyEl && !apiKeyEl.value) apiKeyEl.value = DEFAULT_API_KEY;
+
+    fileInput.addEventListener('change', (e) => handleFileSelect(e.target.files));
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.background = '#eff6ff';
+    });
+    dropZone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dropZone.style.background = 'white';
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.background = 'white';
+      if (!e.dataTransfer.files.length) return;
+      fileInput.files = e.dataTransfer.files;
+      handleFileSelect(e.dataTransfer.files);
+    });
+
+    window.filterFormats = function (type) {
+      document.querySelectorAll('.format-tab').forEach((t) => t.classList.remove('active'));
+      if (window.event?.target) window.event.target.classList.add('active');
+      document.querySelectorAll('.format-item').forEach((item) => {
+        item.style.display = (type === 'all' || item.dataset.type === type) ? 'flex' : 'none';
+      });
     };
 
-    window.startConversion = async function() {
-        if (!selectedFile || !targetFormat) return;
-        const id = Date.now();
-        addToQueue(id, selectedFile.name, targetFormat);
-        updateQueueStatus(id, 'processing');
-        try {
-            await processConversion(selectedFile, targetFormat, id);
-            updateQueueStatus(id, 'done');
-        } catch (err) {
-            console.error("Conversion Error:", err);
-            updateQueueStatus(id, 'error', err.message);
-        }
+    window.selectFormat = function (fmt) {
+      if (!Store.state.files.length) {
+        alert('请先选择文件');
+        return;
+      }
+      Store.setTargetFormat(fmt);
+      document.getElementById('target-format-name').innerText = fmt.toUpperCase();
+      document.getElementById('action-bar').style.display = 'block';
+      suggestConverterForTarget(fmt);
+      document.querySelectorAll('.format-item').forEach((el) => el.classList.remove('selected'));
+      if (window.event?.currentTarget) window.event.currentTarget.classList.add('selected');
     };
 
-    function addToQueue(id, filename, format) {
-        const q = document.getElementById('conversion-queue');
-        if (q.children[0] && q.children[0].innerText.includes('暂无任务')) q.innerHTML = '';
-        const div = document.createElement('div');
-        div.className = 'queue-item';
-        div.id = 'task-' + id;
-        div.innerHTML = `<div><strong>${filename}</strong> <span style="color:#999">→ ${format.toUpperCase()}</span></div><div class="queue-status status-pending">等待中...</div>`;
-        q.prepend(div);
+    window.startConversion = startBatchConversion;
+    window.startBatchConversion = startBatchConversion;
+    window.retryFailedTasks = retryFailedTasks;
+    window.clearTaskQueue = clearTaskQueue;
+    window.downloadResult = downloadResult;
+    window.filterTaskView = renderAllTasks;
+    window.exportDiagnostics = exportDiagnostics;
+    window.clearDebugLogs = clearDebugLogs;
+    window.refreshAssetCenter = renderAssetCenter;
+    window.clearAssetCenter = clearAssetCenter;
+    window.checkBackendConnectivity = refreshBackendMeta;
+
+    Bus.on('task:updated', renderTaskRow);
+    Bus.on('queue:reset', renderQueueEmpty);
+
+    setBackendStatus('未检测后端（点击“手动检测后端”）', 'warn');
+    renderAssetCenter();
+  }
+
+  function handleFileSelect(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    Store.setFiles(files);
+
+    const selectedFileName = document.getElementById('selected-file-name');
+    const uploadTitle = document.querySelector('.upload-section h3');
+    if (selectedFileName) selectedFileName.innerText = files[0].name;
+    if (uploadTitle) {
+      uploadTitle.innerText = files.length === 1
+        ? `已选择: ${files[0].name}`
+        : `已选择 ${files.length} 个文件（首个: ${files[0].name}）`;
+    }
+  }
+
+  async function startBatchConversion() {
+    if (!Store.state.files.length || !Store.state.targetFormat) return;
+    Store.state.files.forEach((file) => {
+      const task = createTaskFromFile(file);
+      Store.upsertTask(task);
+    });
+    runScheduler();
+  }
+
+  function retryFailedTasks() {
+    Store.getTasks().filter((t) => t.status === 'error').forEach((t) => {
+      Store.upsertTask({ id: t.id, status: 'pending', message: '重试排队中...' });
+    });
+    runScheduler();
+  }
+
+  function clearTaskQueue() {
+    Store.clearTasks();
+  }
+
+  async function downloadResult(id) {
+    const task = Store.getTask(id);
+    if (!task) return;
+    try {
+      const payload = task.downloadData || (task.jobId ? await fetchDownloadPayload(task.jobId) : { kind: 'json', data: task.submitData || {} });
+      if (payload.kind === 'blob') {
+        saveAs(payload.blob, payload.filename || `result-${id}.bin`);
+      } else {
+        const blob = new Blob([JSON.stringify(payload.data || {}, null, 2)], { type: 'application/json' });
+        saveAs(blob, `convertx-${id}-result.json`);
+      }
+    } catch (err) {
+      alert(`下载失败: ${err.message || err}`);
+    }
+  }
+
+  function renderTaskRow(task) {
+    const filter = (document.getElementById('task-filter')?.value || 'all');
+
+    const q = document.getElementById('conversion-queue');
+    if (!q) return;
+    if (q.children[0] && q.children[0].innerText.includes('暂无任务')) q.innerHTML = '';
+
+    let row = document.getElementById(`task-${task.id}`);
+    if (!row) {
+      row = document.createElement('div');
+      row.className = 'queue-item';
+      row.id = `task-${task.id}`;
+      q.prepend(row);
     }
 
-    function updateQueueStatus(id, status, msg) {
-        const el = document.getElementById('task-' + id).querySelector('.queue-status');
-        if (status === 'processing') {
-            el.className = 'queue-status status-processing';
-            el.innerText = msg || '转换中...';
-        } else if (status === 'done') {
-            el.className = 'queue-status status-done';
-            el.innerHTML = '完成 <a href="#" onclick="downloadResult(' + id + ')">下载</a>';
-        } else if (status === 'error') {
-            el.className = 'queue-status status-error';
-            el.innerText = '失败: ' + (msg || '未知错误');
-        }
+    if (filter !== 'all' && task.status !== filter) {
+      row.style.display = 'none';
+      return;
     }
+    row.style.display = 'flex';
 
-    // --- Core Conversion Logic ---
-    let resultBlobs = {};
+    const statusClass = task.status === 'done' ? 'status-done'
+      : task.status === 'error' ? 'status-error'
+        : task.status === 'running' ? 'status-processing'
+          : 'status-pending';
 
-    async function processConversion(file, format, id) {
-        const ext = file.name.split('.').pop().toLowerCase();
-        let blob, filename;
+    const action = task.status === 'done'
+      ? `完成 <a href="#" onclick="downloadResult(${task.id});return false;">下载</a>`
+      : task.status === 'error'
+        ? `失败: ${task.message || '未知错误'}`
+        : (task.message || '处理中...');
 
-        // --- 1. AI OCR (PDF/Image -> OCR -> LLM -> Markdown) ---
-        if (format === 'ocr-md') {
-            const userKey = document.getElementById('api-key').value.trim();
-            const apiKey = userKey || DEFAULT_API_KEY;
+    row.innerHTML = `<div><strong>${task.filename}</strong> <span style="color:#999">→ ${(task.targetFormat || '').toUpperCase()}</span> <span style="font-size:11px;color:#bbb">#${task.attempts || 0}</span></div><div class="queue-status ${statusClass}">${action}</div>`;
+  }
 
-            let fullText = "";
-            let worker = null;
+  function renderAllTasks() {
+    const q = document.getElementById('conversion-queue');
+    if (!q) return;
+    q.innerHTML = '<div class="queue-item" style="color:#999; justify-content:center;">暂无任务</div>';
+    Store.getTasks().forEach((task) => renderTaskRow(task));
+  }
 
-            try {
-                // Initialize Tesseract Worker ONCE
-                updateQueueStatus(id, 'processing', '初始化 OCR 引擎...');
-                worker = Tesseract.createWorker({ logger: m => console.log(m) });
-                await worker.load();
-                await worker.loadLanguage('eng+chi_sim');
-                await worker.initialize('eng+chi_sim');
+  function renderQueueEmpty() {
+    const q = document.getElementById('conversion-queue');
+    if (!q) return;
+    q.innerHTML = '<div class="queue-item" style="color:#999; justify-content:center;">暂无任务</div>';
+  }
 
-                if (ext === 'pdf') {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const loadingTask = pdfjsLib.getDocument(arrayBuffer);
-                    const pdf = await loadingTask.promise;
-                    
-                    // Iterate ALL pages
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        updateQueueStatus(id, 'processing', `正在识别第 ${i}/${pdf.numPages} 页...`);
-                        const page = await pdf.getPage(i);
-                        const viewport = page.getViewport({scale: 2.0});
-                        const cvs = document.createElement('canvas');
-                        cvs.width = viewport.width; cvs.height = viewport.height;
-                        await page.render({canvasContext: cvs.getContext('2d'), viewport}).promise;
-                        const imgData = cvs.toDataURL('image/jpeg');
-                        
-                        const result = await worker.recognize(imgData);
-                        fullText += `\n\n## Page ${i}\n\n` + result.data.text;
-                    }
-                } else {
-                    // Image
-                    updateQueueStatus(id, 'processing', '正在识别图片...');
-                    const imgData = await readFileAsDataURL(file);
-                    const result = await worker.recognize(imgData);
-                    fullText = result.data.text;
-                }
-                
-                await worker.terminate();
-            } catch (e) {
-                if(worker) await worker.terminate();
-                throw new Error("OCR 识别失败: " + e.message);
-            }
+  async function refreshBackendMeta() {
+    try {
+      const health = await Api.request('/health', { method: 'GET', useApiKey: false });
+      if (!health.ok) throw new Error(`health ${health.status}`);
 
-            if (!fullText.trim()) throw new Error('OCR 未识别到有效文字');
-
-            // LLM Processing
-            updateQueueStatus(id, 'processing', 'AI 正在排版整理...');
-            // Chunking if too large (DeepSeek limit approx 32k chars, safe limit 10k per chunk)
-            // For now, simple truncate or send all if small
-            const MAX_CHARS = 15000;
-            const textToSend = fullText.length > MAX_CHARS ? fullText.substring(0, MAX_CHARS) + "\n\n(Text truncated due to length limit)..." : fullText;
-
-            try {
-                const response = await fetch("https://api.deepseek.com/chat/completions", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
-                    body: JSON.stringify({
-                        model: "deepseek-chat",
-                        messages: [
-                            { role: "system", content: "你是一个文档排版助手。请将用户提供的 OCR 识别文本整理成格式优美的 Markdown 文档。修复识别错误，还原标题、列表等结构，保留原始内容，不要包含其他对话。" },
-                            { role: "user", content: textToSend }
-                        ],
-                        stream: false
-                    })
-                });
-                
-                if (!response.ok) throw new Error(`API 调用失败: ${response.status}`);
-                const data = await response.json();
-                if (!data.choices) throw new Error("API 返回格式异常");
-                
-                blob = new Blob([data.choices[0].message.content], { type: 'text/markdown' });
-                filename = file.name + '.md';
-            } catch(e) {
-                throw new Error("AI 处理失败: " + e.message);
-            }
-        }
-
-        // --- 1.5 Cloud Backend (Testing Node.js Server) ---
-        else if (format === 'server-mock') {
-            updateQueueStatus(id, 'processing', '正在上传至 Node.js 服务器...');
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            try {
-                const response = await fetch('http://localhost:3000/api/convert', {
-                    method: 'POST',
-                    body: formData
-                });
-                if (!response.ok) throw new Error('服务器响应异常: ' + response.status);
-                const data = await response.json();
-                
-                // 根据后端的真实返回数据生成供用户下载的日志结果
-                const resultText = `【云端转换处理完毕】\n\n- 原始文件名: ${data.originalName}\n- 后端模拟地址: ${data.mockUrl}\n- 实际状态: ${data.message}\n- 处理大小: ${data.fileSize} 字节\n\n(此文件由服务端接口返回生成)`;
-                blob = new Blob([resultText], { type: 'text/plain' });
-                filename = `server-result-${file.name}.txt`;
-            } catch(e) {
-                throw new Error("云端请求失败: " + e.message + " (请确认后端服务器 localhost:3000 是否已启动)");
-            }
-        }
-
-        // --- 2. Smart TXT Extraction (OCR fallback) ---
-        else if (format === 'txt') {
-            if (ext === 'pdf') {
-                updateQueueStatus(id, 'processing', '正在提取文本...');
-                const arrayBuffer = await file.arrayBuffer();
-                const loadingTask = pdfjsLib.getDocument(arrayBuffer);
-                const pdf = await loadingTask.promise;
-                
-                let fullText = '';
-                let needsOCR = false;
-
-                // Try normal extraction first
-                for(let i=1; i<=pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    const pageText = textContent.items.map(item => item.str).join(' ');
-                    if (pageText.length < 50) needsOCR = true; // Heuristic: Scanned PDF has little text
-                    fullText += pageText + '\n\n';
-                }
-
-                // If text is too short, assume scanned PDF and use OCR
-                if (needsOCR || fullText.trim().length < 20) {
-                    console.log("Detecting scanned PDF, switching to OCR mode...");
-                    updateQueueStatus(id, 'processing', '检测到扫描件，启用 OCR...');
-                    fullText = ""; // Reset
-                    
-                    const worker = Tesseract.createWorker();
-                    await worker.load();
-                    await worker.loadLanguage('eng+chi_sim');
-                    await worker.initialize('eng+chi_sim');
-
-                    for(let i=1; i<=pdf.numPages; i++) {
-                        updateQueueStatus(id, 'processing', `OCR 识别中 ${i}/${pdf.numPages}...`);
-                        const page = await pdf.getPage(i);
-                        const viewport = page.getViewport({scale: 1.5});
-                        const cvs = document.createElement('canvas');
-                        cvs.width = viewport.width; cvs.height = viewport.height;
-                        await page.render({canvasContext: cvs.getContext('2d'), viewport}).promise;
-                        const result = await worker.recognize(cvs.toDataURL('image/jpeg'));
-                        fullText += result.data.text + '\n\n';
-                    }
-                    await worker.terminate();
-                }
-                
-                blob = new Blob([fullText], { type: 'text/plain' });
-                filename = file.name + '.txt';
-            } else if (['jpg','png','jpeg'].includes(ext)) {
-                // Image -> Text (Always OCR)
-                updateQueueStatus(id, 'processing', 'OCR 识别中...');
-                const worker = Tesseract.createWorker();
-                await worker.load();
-                await worker.loadLanguage('eng+chi_sim');
-                await worker.initialize('eng+chi_sim');
-                const imgData = await readFileAsDataURL(file);
-                const result = await worker.recognize(imgData);
-                await worker.terminate();
-                
-                blob = new Blob([result.data.text], { type: 'text/plain' });
-                filename = file.name + '.txt';
-            } else if (ext === 'md') {
-                const text = await file.text();
-                // Strip HTML
-                const temp = document.createElement("div");
-                temp.innerHTML = marked.parse(text);
-                blob = new Blob([temp.innerText], { type: 'text/plain' });
-                filename = file.name + '.txt';
-            }
-        }
-
-        // --- 3. MD -> HTML/PDF ---
-        else if (ext === 'md') {
-            const text = await file.text();
-            if (format === 'html') {
-                const html = marked.parse(text);
-                blob = new Blob([html], { type: 'text/html' });
-                filename = file.name + '.html';
-            } else if (format === 'pdf') {
-                const html = marked.parse(text);
-                const container = createHiddenContainer(html);
-                document.body.appendChild(container);
-                const canvas = await html2canvas(container);
-                const pdf = new jsPDF();
-                const imgData = canvas.toDataURL('image/jpeg');
-                addImageToPDF(pdf, imgData);
-                blob = pdf.output('blob');
-                filename = file.name + '.pdf';
-                document.body.removeChild(container);
-            }
-        }
-
-        // --- 4. Excel/Data ---
-        else if (['xlsx', 'xls', 'csv'].includes(ext)) {
-            const ab = await file.arrayBuffer();
-            const wb = XLSX.read(ab, {type: 'array'});
-            const ws = wb.Sheets[wb.SheetNames[0]];
-            
-            if (format === 'csv') {
-                const csv = XLSX.utils.sheet_to_csv(ws);
-                blob = new Blob([csv], {type: 'text/csv'});
-                filename = file.name + '.csv';
-            } else if (format === 'json') {
-                const json = JSON.stringify(XLSX.utils.sheet_to_json(ws), null, 2);
-                blob = new Blob([json], {type: 'application/json'});
-                filename = file.name + '.json';
-            } else if (format === 'xlsx' && ext === 'csv') {
-                 const newWb = XLSX.utils.book_new();
-                 XLSX.utils.book_append_sheet(newWb, ws, "Sheet1");
-                 const wbout = XLSX.write(newWb, {bookType:'xlsx', type:'array'});
-                 blob = new Blob([wbout], {type:"application/octet-stream"});
-                 filename = file.name + '.xlsx';
-            }
-        }
-
-        // --- 5. Docx -> PDF ---
-        else if (ext === 'docx' && format === 'pdf') {
-            const arrayBuffer = await file.arrayBuffer();
-            const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
-            const container = createHiddenContainer(result.value);
-            document.body.appendChild(container);
-            const canvas = await html2canvas(container);
-            const pdf = new jsPDF();
-            const imgData = canvas.toDataURL('image/jpeg');
-            addImageToPDF(pdf, imgData);
-            blob = pdf.output('blob');
-            filename = file.name.replace('.docx', '.pdf');
-            document.body.removeChild(container);
-        }
-
-        // --- 6. Image -> PDF/JPG/PNG ---
-        else if (['jpg', 'png', 'jpeg', 'webp', 'bmp'].includes(ext)) {
-            const imgData = await readFileAsDataURL(file);
-            if (format === 'pdf') {
-                const pdf = new jsPDF();
-                addImageToPDF(pdf, imgData);
-                blob = pdf.output('blob');
-                filename = file.name + '.pdf';
-            } else if (['jpg', 'png'].includes(format)) {
-                 const img = await loadImage(imgData);
-                 const cvs = document.createElement('canvas');
-                 cvs.width = img.width; cvs.height = img.height;
-                 cvs.getContext('2d').drawImage(img, 0, 0);
-                 const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
-                 const newData = cvs.toDataURL(mime);
-                 blob = dataURLtoBlob(newData);
-                 filename = file.name + '.' + format;
-            }
-        }
-
-        // --- 7. PDF -> Visual Docx / Images ---
-        else if (ext === 'pdf') {
-            const arrayBuffer = await file.arrayBuffer();
-            const loadingTask = pdfjsLib.getDocument(arrayBuffer);
-            const pdf = await loadingTask.promise;
-
-            if (format === 'pdf-img') {
-                const zip = new JSZip();
-                for(let i=1; i<=pdf.numPages; i++) {
-                    updateQueueStatus(id, 'processing', `导出图片 ${i}/${pdf.numPages}...`);
-                    const page = await pdf.getPage(i);
-                    const viewport = page.getViewport({scale: 1.5});
-                    const cvs = document.createElement('canvas');
-                    cvs.height = viewport.height;
-                    cvs.width = viewport.width;
-                    await page.render({canvasContext: cvs.getContext('2d'), viewport}).promise;
-                    const imgData = cvs.toDataURL('image/jpeg').split(',')[1];
-                    zip.file(`page-${i}.jpg`, imgData, {base64: true});
-                }
-                blob = await zip.generateAsync({type:"blob"});
-                filename = file.name + '-images.zip';
-            }
-            else if (format === 'docx') {
-                if (typeof docx === 'undefined') throw new Error('Docx library not loaded');
-                const docChildren = [];
-                for(let i=1; i<=pdf.numPages; i++) {
-                     updateQueueStatus(id, 'processing', `转换页面 ${i}/${pdf.numPages}...`);
-                     const page = await pdf.getPage(i);
-                     const viewport = page.getViewport({scale: 1.5}); 
-                     const cvs = document.createElement('canvas');
-                     cvs.height = viewport.height;
-                     cvs.width = viewport.width;
-                     await page.render({canvasContext: cvs.getContext('2d'), viewport}).promise;
-                     const dataUrl = cvs.toDataURL('image/jpeg', 0.85);
-                     const base64Data = dataUrl.split(',')[1];
-                     const binaryString = window.atob(base64Data);
-                     const bytes = new Uint8Array(binaryString.length);
-                     for (let j = 0; j < binaryString.length; j++) { bytes[j] = binaryString.charCodeAt(j); }
-                     const imageRun = new docx.ImageRun({
-                         data: bytes,
-                         transformation: { width: 600, height: (viewport.height / viewport.width) * 600 },
-                     });
-                     docChildren.push(new docx.Paragraph({ children: [imageRun] }));
-                }
-                const doc = new docx.Document({ sections: [{ children: docChildren }] });
-                blob = await docx.Packer.toBlob(doc);
-                filename = file.name.replace('.pdf', '.docx');
-            }
-        }
-        
-        if (!blob) throw new Error(`暂不支持 ${ext} -> ${format} 转换`);
-        resultBlobs[id] = { blob: blob, filename: filename };
+      const converters = await Api.request('/converters', { method: 'GET', useApiKey: false });
+      if (converters.ok && converters.data) {
+        Store.state.converterCapabilities = converters.data || {};
+        const names = Object.keys(converters.data || {});
+        setBackendStatus(`后端在线，已加载 ${names.length} 个转换器`, 'ok');
+      } else {
+        setBackendStatus('初始化告警：转换器列表不可用，仍可尝试手动转换', 'warn');
+      }
+    } catch (err) {
+      setBackendStatus(`初始化告警: ${err.message || err}（不阻断，可继续尝试转换）`, 'warn');
+      debugLog('init.non_blocking_warning', {
+        reason: String(err?.message || err),
+        hint: '请检查 CSP connect-src / CORS / 代理策略'
+      });
     }
+  }
 
-    // Helpers (createHiddenContainer, addImageToPDF, loadImage, readFileAsDataURL, dataURLtoBlob, downloadResult) omitted for brevity but assumed present if unchanged...
-    // WAIT, I must include helpers or the code will break. Re-including them.
-    function createHiddenContainer(html) {
-        const div = document.createElement('div');
-        div.style.position = 'absolute';
-        div.style.left = '-9999px';
-        div.style.width = '790px'; 
-        div.style.background = 'white';
-        div.style.padding = '40px';
-        div.style.color = '#000';
-        div.innerHTML = html;
-        return div;
+  function getRecommendedConverter(targetFormat) {
+    const caps = Store.state.converterCapabilities || {};
+    const names = Object.keys(caps);
+    for (const name of names) {
+      const targets = caps[name]?.targets || [];
+      if (targets.includes(targetFormat)) return name;
     }
+    return '';
+  }
 
-    function addImageToPDF(pdf, imgData) {
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        if (pdfHeight > pdf.internal.pageSize.getHeight()) {
-             pdf.internal.pageSize.setHeight(pdfHeight);
-        }
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+  function suggestConverterForTarget(targetFormat) {
+    const input = document.getElementById('converter-name');
+    if (!input || input.value.trim()) return;
+    const rec = getRecommendedConverter(targetFormat);
+    if (rec) input.value = rec;
+  }
+
+  function getAssetList() {
+    try {
+      return JSON.parse(localStorage.getItem(ASSET_STORAGE_KEY) || '[]');
+    } catch (_) {
+      return [];
     }
+  }
 
-    function loadImage(src) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-            img.src = src;
-        });
-    }
+  function setAssetList(list) {
+    localStorage.setItem(ASSET_STORAGE_KEY, JSON.stringify(list));
+  }
 
-    function readFileAsDataURL(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-    }
-
-    function dataURLtoBlob(dataurl) {
-        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-        while(n--){
-            u8arr[n] = bstr.charCodeAt(n);
-        }
-        return new Blob([u8arr], {type:mime});
-    }
-
-    window.downloadResult = function(id) {
-        const res = resultBlobs[id];
-        if (!res) return;
-        saveAs(res.blob, res.filename); 
+  function persistAsset(task, statusData, downloadData) {
+    const list = getAssetList();
+    const item = {
+      id: task.id,
+      filename: task.filename,
+      targetFormat: task.targetFormat,
+      converter: task.converter,
+      jobId: task.jobId || null,
+      createdAt: Date.now(),
+      statusData: statusData || null,
+      hasDownloadBlob: Boolean(downloadData && downloadData.kind === 'blob')
     };
+    list.unshift(item);
+    setAssetList(list.slice(0, 500));
+    renderAssetCenter();
+  }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initConverterTool);
-    } else {
-        initConverterTool();
+  function renderAssetCenter() {
+    const el = document.getElementById('asset-center-list');
+    if (!el) return;
+    const list = getAssetList();
+    if (!list.length) {
+      el.innerHTML = '暂无本地资产';
+      return;
     }
+    el.innerHTML = list.slice(0, 50).map((x) => {
+      const t = new Date(x.createdAt || Date.now()).toLocaleString();
+      return `<div style="padding:6px 0; border-bottom:1px dashed #eee;"><strong>${x.filename}</strong> → ${String(x.targetFormat || '').toUpperCase()} <span style="color:#999; font-size:12px;">${t}</span></div>`;
+    }).join('');
+  }
+
+  function clearAssetCenter() {
+    localStorage.removeItem(ASSET_STORAGE_KEY);
+    renderAssetCenter();
+  }
+
+  function exportDiagnostics() {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      baseUrl: Api.getBaseUrl(),
+      taskCount: Store.getTasks().length,
+      tasks: Store.getTasks(),
+      assets: getAssetList(),
+      logs: window.__convertxDebugLogs || []
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    saveAs(blob, `convertx-diagnostics-${Date.now()}.json`);
+  }
+
+  function clearDebugLogs() {
+    window.__convertxDebugLogs = [];
+    const panel = document.getElementById('debug-log-panel');
+    if (panel) panel.innerHTML = '<div style="color:#6b7280;">暂无日志</div>';
+  }
+
+  function setBackendStatus(text, type) {
+    const el = document.getElementById('backend-status');
+    if (!el) return;
+    const color = type === 'ok' ? '#16a34a' : type === 'warn' ? '#d97706' : '#ef4444';
+    el.style.color = color;
+    el.innerText = text;
+  }
+
+  function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function debugLog(event, payload) {
+    try {
+      const entry = { ts: new Date().toISOString(), event, payload: payload || {} };
+      window.__convertxDebugLogs = window.__convertxDebugLogs || [];
+      window.__convertxDebugLogs.push(entry);
+      if (window.__convertxDebugLogs.length > DEBUG_LOG_LIMIT) window.__convertxDebugLogs.shift();
+
+      const panel = document.getElementById('debug-log-panel');
+      if (panel) {
+        if (panel.innerText.includes('暂无日志')) panel.innerHTML = '';
+        const line = document.createElement('div');
+        line.textContent = `[${entry.ts}] ${event} ${JSON.stringify(entry.payload)}`;
+        panel.appendChild(line);
+        panel.scrollTop = panel.scrollHeight;
+      }
+      console.log(`${DEBUG_PREFIX} ${event}`, payload || {});
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initConverterTool);
+  } else {
+    initConverterTool();
+  }
 })();

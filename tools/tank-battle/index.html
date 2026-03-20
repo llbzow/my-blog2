@@ -7,7 +7,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://yourblog.com/img/cute_cat.svg">
 <meta property="article:published_time" content="2026-03-16T02:00:00.000Z">
-<meta property="article:modified_time" content="2026-03-19T05:43:53.734Z">
+<meta property="article:modified_time" content="2026-03-19T08:11:22.612Z">
 <meta property="article:author" content="llbzow">
 <meta property="article:tag" content="技术, 生活, 博客, 分享">
 <meta name="twitter:card" content="summary">
@@ -379,6 +379,13 @@ const BULLET_AOE_RADIUS = 4;
 const BARRAGE_COUNT = 5;
 const BARRAGE_SPREAD = 0.52;
 const BARRAGE_SCATTER = 0.08;
+const FORCE_RATIO = { tank: 0.6, artillery: 0.2, bomber: 0.2 };
+
+const UNIT_CFG = {
+  tank: { hp: MAX_HP, speedMul: 1.0, range: BULLET_RANGE, projectileSpeed: BULLET_SPEED, damage: BULLET_DAMAGE, aoe: BULLET_AOE_RADIUS, canFire: true },
+  artillery: { hp: 5, speedMul: 0.5, range: 200, projectileSpeed: BULLET_SPEED * 0.5, damage: 26, aoe: 10, canFire: true },
+  bomber: { hp: 3, speedMul: 2.25, range: 34, projectileSpeed: BULLET_SPEED, damage: 42, aoe: 20, canFire: false }
+};
 const BASE_DAMAGE = 28;
 const BASE_HIT_SCORE = 15;
 const BASE_DESTROY_SCORE = 2200;
@@ -1383,8 +1390,8 @@ function lineOfFire(ax, ay, bx, by, maxD = BULLET_RANGE) {
 function predictAimPoint(shooter, target, bulletSpeed = BULLET_SPEED) {
   const tx = target.x - shooter.x;
   const ty = target.y - shooter.y;
-  const tvx = (target.dir?.x || 0) * 0.55;
-  const tvy = (target.dir?.y || 0) * 0.55;
+  const tvx = (target.x - (target.lastX ?? target.x));
+  const tvy = (target.y - (target.lastY ?? target.y));
 
   const a = tvx * tvx + tvy * tvy - bulletSpeed * bulletSpeed;
   const b = 2 * (tx * tvx + ty * tvy);
@@ -1431,12 +1438,15 @@ class Base {
 }
 
 class Tank {
-  constructor(id, team, x, y, role) {
+  constructor(id, team, x, y, role, unitType = 'tank') {
     this.id = id;
     this.team = team;
     this.x = x; this.y = y;
     this.dir = {x: 0, y: -1};
-    this.hp = MAX_HP;
+    this.unitType = unitType;
+    this.cfg = UNIT_CFG[unitType] || UNIT_CFG.tank;
+    this.maxHp = this.cfg.hp;
+    this.hp = this.maxHp;
     this.alive = true;
     this.cd = 0;
     this.respawnT = 0;
@@ -1448,12 +1458,24 @@ class Tank {
     this.evadeT = 0;
     this.role = role;
     this.respawnExtra = Math.floor(rand(0, 120));
+    this.behaviorState = 'base-rush';
+    this.stateTimer = 0;
+    this.switchCd = 0;
+    this.orbitScore = 0;
+    this.lastBaseTeam = -1;
+    this.breakOrbitT = 0;
     this.aiStride = 1;
     this.aiOffset = id % 4;
     this.ctrlDir = {x: 0, y: 0};
     this.turnHold = 0;
     this.roadPath = null;
     this.roadIdx = 0;
+    this.stateTimer = 0;
+    this.switchCd = 0;
+    this.orbitScore = 0;
+    this.behaviorState = 'base-rush';
+    this.lastBaseTeam = -1;
+    this.breakOrbitT = 0;
   }
   update() {
     if (!this.alive) {
@@ -1479,7 +1501,7 @@ class Tank {
       return;
     }
     this.x = p.x; this.y = p.y;
-    this.hp = MAX_HP;
+    this.hp = this.maxHp;
     this.alive = true;
     this.path = [];
     this.pathIdx = 0;
@@ -1495,12 +1517,12 @@ class Tank {
     const n = Math.hypot(vx, vy) || 1;
     vx /= n; vy /= n;
     const t = terrainAt(this.x, this.y);
-    const s = 0.48 * speedByTerrain(t);
+    const s = 0.48 * speedByTerrain(t) * (this.cfg.speedMul || 1);
     const nx = this.x + vx * s;
     const ny = this.y + vy * s;
     const nt = terrainAt(nx, ny);
     if (nt === TERRAIN.BRIDGE) metrics.bridgeCross++;
-    if (vx || vy) this.dir = {x: Math.sign(vx), y: Math.sign(vy)};
+    if (vx || vy) this.dir = {x: vx, y: vy};
     // 尝试滑墙
     if (!rectHitBlocked(nx, ny, TANK_HALF)) { this.x = nx; this.y = ny; return; }
     if (nt === TERRAIN.RIVER || (this.stuck > 12 && nearBridge(this.x, this.y, 4))) {
@@ -1522,11 +1544,11 @@ class Tank {
     if (!rectHitBlocked(this.x, ny, TANK_HALF)) { this.y = ny; return; }
   }
   fire(tx, ty, opts = null) {
-    if (!this.alive || this.cd > 0) return;
+    if (!this.alive || this.cd > 0 || !this.cfg.canFire) return;
     const dx = tx - this.x, dy = ty - this.y;
     const len = Math.hypot(dx, dy) || 1;
     const baseUx = dx / len, baseUy = dy / len;
-    this.dir = {x: Math.sign(baseUx), y: Math.sign(baseUy)};
+    this.dir = {x: baseUx, y: baseUy};
 
     const barrage = opts && opts.count > 1;
     const count = barrage ? opts.count : 1;
@@ -1546,8 +1568,12 @@ class Tank {
         dy: uy,
         team: this.team,
         from: this.id,
+        unitType: this.unitType,
+        speed: this.cfg.projectileSpeed,
+        damage: this.cfg.damage,
+        aoe: this.cfg.aoe,
         travel: 0,
-        maxTravel: BULLET_RANGE
+        maxTravel: this.cfg.range
       });
     }
 
@@ -1586,13 +1612,47 @@ function spawnNearBase(team) {
 function roleFor(idx, total) {
   const hardBackdoor = clamp(Math.floor(total * 0.35), 3, 4);
   const roamerCount = Math.max(1, Math.floor(total * 0.2));
-  const attackerCount = Math.max(1, Math.floor(total * 0.2));
+  const attackerCount = Math.max(1, Math.floor(total * 0.18));
+  const sniperCount = Math.max(1, Math.floor(total * 0.1));
   if (idx < hardBackdoor) return 'backdoor';
   if (idx < hardBackdoor + roamerCount) return 'roamer';
   if (idx < hardBackdoor + roamerCount + attackerCount) return 'attacker';
+  if (idx < hardBackdoor + roamerCount + attackerCount + sniperCount) return 'sniper';
   if (idx % 3 === 0) return 'strike';
   if (idx % 2 === 0) return 'eliminate';
   return 'line-defend';
+}
+
+function unitTypeFor(idx, total) {
+  const tankCount = Math.max(1, Math.floor(total * FORCE_RATIO.tank));
+  const artilleryCount = Math.max(1, Math.floor(total * FORCE_RATIO.artillery));
+  if (idx < tankCount) return 'tank';
+  if (idx < tankCount + artilleryCount) return 'artillery';
+  return 'bomber';
+}
+
+function killUnit(unit, killerTeam = null) {
+  if (!unit || !unit.alive) return;
+  unit.alive = false;
+  onTeamDeathPenalty(unit.team);
+  unit.respawnT = calcRespawnTime(unit.team, unit);
+  if (killerTeam !== null && stats[killerTeam]) stats[killerTeam].kills++;
+}
+
+function applyExplosion(x, y, attackerTeam, radius, damage) {
+  for (const t of tanks) {
+    if (!t.alive || t.team === attackerTeam) continue;
+    if (Math.hypot(t.x - x, t.y - y) <= radius) {
+      t.hp -= damage;
+      if (t.hp <= 0) killUnit(t, attackerTeam);
+    }
+  }
+  for (const b of bases) {
+    if (!b.alive || b.team === attackerTeam) continue;
+    if (Math.hypot(b.x - x, b.y - y) <= radius + BASE_HALF) {
+      b.hit(Math.max(10, Math.floor(damage * 0.7)));
+    }
+  }
 }
 
 function initWorld() {
@@ -1620,7 +1680,8 @@ function spawnAll() {
     stats[t] = { alive: 0, kills: 0, score: 0, baseAlive: true };
     for (let i = 0; i < perTeam; i++) {
       const p = spawnNearBase(t) || basePos(t);
-      tanks.push(new Tank(t * perTeam + i, t, p.x, p.y, roleFor(i, perTeam)));
+      const unitType = unitTypeFor(i, perTeam);
+      tanks.push(new Tank(t * perTeam + i, t, p.x, p.y, roleFor(i, perTeam), unitType));
     }
   }
   camera.x = WORLD / 2; camera.y = WORLD / 2;
@@ -1733,54 +1794,92 @@ function aiMoveTo(tank, tx, ty) {
   return {x: dx / l, y: dy / l};
 }
 
-function doAi(tank) {
-  // 角色化AI：偷袭 / 打击 / 歼灭 / 偷塔 / 填线防守
+function doTankAI(tank) {
+  // 状态机AI：ambush / defense / base-rush / sniper
   if (!tank.alive || tank === controlledTank) return;
   const home = bases[tank.team];
   if (!home || !home.alive) return;
 
   const primaryBase = weakestEnemyBase(tank.team) || home;
   const enemy = chooseEnemyTarget(tank);
+  const intruder = nearestEnemyToBase(tank.team);
+  const hardRush = (tank.role === 'backdoor' || tank.role === 'attacker');
+
+  if (tank.switchCd > 0) tank.switchCd--;
+  if (tank.stateTimer > 0) tank.stateTimer--;
+
+  // 对转检测：在目标基地附近但径向推进不足，判定为环绕
+  const bx = primaryBase.x - tank.x;
+  const by = primaryBase.y - tank.y;
+  const bl = Math.hypot(bx, by) || 1;
+  const baseDir = {x: bx / bl, y: by / bl};
+  const mvDot = (tank.ctrlDir?.x || 0) * baseDir.x + (tank.ctrlDir?.y || 0) * baseDir.y;
+  if (bl < 80 && mvDot < 0.22) tank.orbitScore += 1.35;
+  else tank.orbitScore = Math.max(0, tank.orbitScore - 0.9);
+
+  if (tank.orbitScore > 28 && tank.switchCd <= 0) {
+    tank.behaviorState = 'base-rush';
+    tank.stateTimer = 120;
+    tank.switchCd = 90;
+    tank.orbitScore = 0;
+    tank.breakOrbitT = 90;
+  }
+
+  // 强制破环阶段：无条件直切基地，暂时无视大部分侧向行为
+  if (tank.breakOrbitT > 0) {
+    tank.breakOrbitT--;
+    const dx = primaryBase.x - tank.x;
+    const dy = primaryBase.y - tank.y;
+    const l = Math.hypot(dx, dy) || 1;
+    const ux = dx / l, uy = dy / l;
+    tank.move(ux, uy);
+
+    if (tank.cd <= 0 && l <= BULLET_RANGE && lineOfFire(tank.x, tank.y, primaryBase.x, primaryBase.y)) {
+      tank.fire(primaryBase.x, primaryBase.y, { count: BARRAGE_COUNT, spread: BARRAGE_SPREAD, scatter: BARRAGE_SCATTER, cdMul: 1.35 });
+    }
+    return;
+  }
+
+  // 状态选择（带驻留时间，避免抖动）
+  if (tank.stateTimer <= 0) {
+    if (hardRush) {
+      tank.behaviorState = 'base-rush';
+      tank.stateTimer = 180;
+    } else if (tank.role === 'sniper') {
+      tank.behaviorState = 'sniper';
+      tank.stateTimer = 160;
+    } else if (intruder && tank.role === 'line-defend') {
+      tank.behaviorState = 'defense';
+      tank.stateTimer = 120;
+    } else if (tank.role === 'roamer') {
+      tank.behaviorState = 'ambush';
+      tank.stateTimer = 120;
+    } else {
+      tank.behaviorState = 'base-rush';
+      tank.stateTimer = 140;
+    }
+  }
+
   let targetX = primaryBase.x;
   let targetY = primaryBase.y;
 
-  if (tank.role === 'backdoor') {
+  if (tank.behaviorState === 'base-rush') {
     const laneSlot = (tank.id % 4);
-    const angBase = [-2.2, -1.0, 1.0, 2.2][laneSlot];
-    const ang = angBase + Math.sin(frameNo * 0.004 + tank.id) * 0.25;
-    const ring = 10 + (tank.id % 4) * 3;
+    const angBase = [-2.3, -0.8, 0.8, 2.3][laneSlot];
+    const ang = angBase + Math.sin(frameNo * 0.003 + tank.id * 0.37) * 0.22;
+    const ring = hardRush ? 0.6 : (3 + (tank.id % 3));
     targetX = clamp(primaryBase.x + Math.cos(ang) * ring, 6, WORLD - 6);
     targetY = clamp(primaryBase.y + Math.sin(ang) * ring, 6, WORLD - 6);
-  } else if (tank.role === 'roamer') {
-    const roamX = WORLD * (0.3 + ((tank.id % 5) * 0.1));
-    const roamY = WORLD * (0.25 + (((tank.id + 2) % 5) * 0.1));
-    if (enemy && Math.hypot(enemy.x - tank.x, enemy.y - tank.y) < 80) {
-      targetX = enemy.x;
-      targetY = enemy.y;
-    } else {
-      targetX = clamp(roamX, 6, WORLD - 6);
-      targetY = clamp(roamY, 6, WORLD - 6);
+    if (bl > 36) {
+      targetX = primaryBase.x;
+      targetY = primaryBase.y;
     }
-  } else if (tank.role === 'attacker') {
-    const guardX = primaryBase.x + ((tank.id % 2) ? 16 : -16);
-    const guardY = primaryBase.y + ((tank.id % 3) - 1) * 16;
-    targetX = clamp(guardX, 6, WORLD - 6);
-    targetY = clamp(guardY, 6, WORLD - 6);
-  } else if (tank.role === 'strike') {
-    if (enemy) {
-      targetX = enemy.x;
-      targetY = enemy.y;
-    }
-  } else if (tank.role === 'eliminate') {
-    if (enemy) {
-      const pullX = primaryBase.x - enemy.x;
-      const pullY = primaryBase.y - enemy.y;
-      const pl = Math.hypot(pullX, pullY) || 1;
-      targetX = enemy.x + (pullX / pl) * 6;
-      targetY = enemy.y + (pullY / pl) * 6;
-    }
-  } else if (tank.role === 'line-defend') {
-    const intruder = nearestEnemyToBase(tank.team);
+  } else if (tank.behaviorState === 'ambush') {
+    const ambX = (home.x + primaryBase.x) * 0.5 + ((tank.id % 2) ? 22 : -22);
+    const ambY = (home.y + primaryBase.y) * 0.5 + ((tank.id % 3) - 1) * 24;
+    targetX = clamp(ambX, 6, WORLD - 6);
+    targetY = clamp(ambY, 6, WORLD - 6);
+  } else if (tank.behaviorState === 'defense') {
     if (intruder) {
       targetX = intruder.x;
       targetY = intruder.y;
@@ -1788,6 +1887,13 @@ function doAi(tank) {
       targetX = clamp((home.x + WORLD / 2) * 0.5, 6, WORLD - 6);
       targetY = clamp((home.y + WORLD / 2) * 0.5, 6, WORLD - 6);
     }
+  } else if (tank.behaviorState === 'sniper') {
+    const sx = primaryBase.x - home.x;
+    const sy = primaryBase.y - home.y;
+    const sl = Math.hypot(sx, sy) || 1;
+    const desired = BULLET_RANGE * 0.88;
+    targetX = clamp(primaryBase.x - (sx / sl) * desired + ((tank.id % 2) ? 10 : -10), 6, WORLD - 6);
+    targetY = clamp(primaryBase.y - (sy / sl) * desired + ((tank.id % 3) - 1) * 8, 6, WORLD - 6);
   }
 
   const mv = aiMoveTo(tank, targetX, targetY);
@@ -1815,8 +1921,40 @@ function doAi(tank) {
     vy += sepY * 0.9;
   }
 
-  // 仅轻量规避：不允许规避行为压过偷塔主目标
-  if (incomingThreat(tank)) {
+  // 强制偷塔位：始终给基地吸引，不允许被队形排斥完全拉走
+  if (hardRush && primaryBase && primaryBase.alive) {
+    const bx = primaryBase.x - tank.x;
+    const by = primaryBase.y - tank.y;
+    const bl = Math.hypot(bx, by) || 1;
+    const pux = bx / bl, puy = by / bl;
+    vx = vx * 0.45 + pux * 0.55;
+    vy = vy * 0.45 + puy * 0.55;
+  }
+
+  // 坦克保持中距离炮战：避免贴脸格斗
+  if (enemy) {
+    const ex = tank.x - enemy.x;
+    const ey = tank.y - enemy.y;
+    const ed = Math.hypot(ex, ey) || 1;
+    const desiredMin = 34;
+    const desiredMax = 72;
+
+    if (ed < desiredMin) {
+      // 太近：后撤拉距
+      vx = vx * 0.2 + (ex / ed) * 0.8;
+      vy = vy * 0.2 + (ey / ed) * 0.8;
+    } else if (ed <= desiredMax) {
+      // 在炮战距离内：沿切线机动找角度
+      const tx = -ey / ed;
+      const ty = ex / ed;
+      const sgn = (tank.id % 2 === 0) ? 1 : -1;
+      vx = vx * 0.55 + tx * 0.45 * sgn;
+      vy = vy * 0.55 + ty * 0.45 * sgn;
+    }
+  }
+
+  // 仅防守位保留规避，进攻态不因规避偏离推塔线
+  if (tank.role === 'line-defend' && incomingThreat(tank)) {
     if (enemy) {
       const ex = enemy.x - tank.x, ey = enemy.y - tank.y;
       const l = Math.hypot(ex, ey) || 1;
@@ -1832,26 +1970,114 @@ function doAi(tank) {
   // 射击优先级：偷塔/攻击位一律基地优先
   if (tank.cd <= 0) {
     const mateCount = tanks.filter(m => m.alive && m.team === tank.team && m.id !== tank.id && Math.hypot(m.x - tank.x, m.y - tank.y) < 72).length;
-    const suppressive = mateCount >= 2 || tank.role === 'backdoor' || tank.role === 'attacker';
+    const suppressive = tank.unitType === 'tank' && (mateCount >= 2 || tank.role === 'backdoor' || tank.role === 'attacker');
     const fireOpts = suppressive ? { count: BARRAGE_COUNT, spread: BARRAGE_SPREAD, scatter: BARRAGE_SCATTER, cdMul: 1.55 } : null;
 
     const baseDist = Math.hypot(primaryBase.x - tank.x, primaryBase.y - tank.y);
-    if ((tank.role === 'backdoor' || tank.role === 'attacker' || tank.role === 'roamer')
-      && primaryBase && primaryBase.alive && baseDist <= BULLET_RANGE
+    if (primaryBase && primaryBase.alive && baseDist <= BULLET_RANGE
       && lineOfFire(tank.x, tank.y, primaryBase.x, primaryBase.y)) {
-      tank.fire(primaryBase.x, primaryBase.y, fireOpts);
+      const aimX = primaryBase.x + rand(-BASE_HALF * 0.75, BASE_HALF * 0.75);
+      const aimY = primaryBase.y + rand(-BASE_HALF * 0.75, BASE_HALF * 0.75);
+      const shotOpts = (tank.behaviorState === 'sniper' || tank.unitType === 'artillery') ? null : fireOpts;
+      tank.fire(aimX, aimY, shotOpts);
       return;
     }
 
     if (enemy) {
       const d = Math.hypot(enemy.x - tank.x, enemy.y - tank.y);
-      if (d <= BULLET_RANGE && lineOfFire(tank.x, tank.y, enemy.x, enemy.y)) {
+      if (d >= 18 && d <= BULLET_RANGE && lineOfFire(tank.x, tank.y, enemy.x, enemy.y)) {
         const lead = predictAimPoint(tank, enemy, BULLET_SPEED);
         if (lineOfFire(tank.x, tank.y, lead.x, lead.y)) tank.fire(lead.x, lead.y, fireOpts);
         else tank.fire(enemy.x, enemy.y, fireOpts);
       }
     }
   }
+}
+
+function doArtilleryAI(tank) {
+  if (!tank.alive || tank === controlledTank) return;
+  const home = bases[tank.team];
+  if (!home || !home.alive) return;
+  const primaryBase = weakestEnemyBase(tank.team) || home;
+  const enemy = chooseEnemyTarget(tank);
+
+  // 1) 近敌先直线后撤（不走A*，避免对转）
+  if (enemy) {
+    const d = Math.hypot(enemy.x - tank.x, enemy.y - tank.y);
+    if (d < 135) {
+      const rx = tank.x - enemy.x;
+      const ry = tank.y - enemy.y;
+      const rl = Math.hypot(rx, ry) || 1;
+      tank.move(rx / rl, ry / rl);
+    }
+  }
+
+  // 2) 维持“基地外圈炮击环”
+  const lane = (tank.id % 4);
+  const laneAng = [-2.2, -0.7, 0.7, 2.2][lane];
+  const desiredR = 140;
+  const anchorX = clamp(primaryBase.x + Math.cos(laneAng) * desiredR, 6, WORLD - 6);
+  const anchorY = clamp(primaryBase.y + Math.sin(laneAng) * desiredR, 6, WORLD - 6);
+  const curR = Math.hypot(primaryBase.x - tank.x, primaryBase.y - tank.y);
+
+  if (curR < 110 || curR > 175) {
+    const mv = aiMoveTo(tank, anchorX, anchorY);
+    tank.move(mv.x, mv.y);
+  }
+
+  if (tank.cd <= 0) {
+    const baseDist = Math.hypot(primaryBase.x - tank.x, primaryBase.y - tank.y);
+    if (primaryBase.alive && baseDist >= 100 && baseDist <= tank.cfg.range && lineOfFire(tank.x, tank.y, primaryBase.x, primaryBase.y, tank.cfg.range)) {
+      tank.fire(primaryBase.x, primaryBase.y, null);
+      return;
+    }
+    if (enemy) {
+      const d = Math.hypot(enemy.x - tank.x, enemy.y - tank.y);
+      if (d >= 100 && d <= tank.cfg.range && lineOfFire(tank.x, tank.y, enemy.x, enemy.y, tank.cfg.range)) {
+        const lead = predictAimPoint(tank, enemy, tank.cfg.projectileSpeed);
+        tank.fire(lead.x, lead.y, null);
+      }
+    }
+  }
+}
+
+function doBomberAI(tank) {
+  if (!tank.alive || tank === controlledTank) return;
+  const home = bases[tank.team];
+  if (!home || !home.alive) return;
+  const primaryBase = weakestEnemyBase(tank.team) || home;
+  const enemy = chooseEnemyTarget(tank);
+  const flankAng = ((tank.id % 3) - 1) * 0.95 + Math.sin(frameNo * 0.025 + tank.id * 1.7) * 0.55;
+  const toBaseX = primaryBase.x - tank.x;
+  const toBaseY = primaryBase.y - tank.y;
+  const toBaseD = Math.hypot(toBaseX, toBaseY) || 1;
+
+  // 先绕侧翼找角度，再高速扎入
+  let targetX = primaryBase.x;
+  let targetY = primaryBase.y;
+  if (toBaseD > 34) {
+    const ang = Math.atan2(toBaseY, toBaseX) + flankAng;
+    const radius = 30 + (tank.id % 3) * 8;
+    targetX = clamp(primaryBase.x + Math.cos(ang) * radius, 6, WORLD - 6);
+    targetY = clamp(primaryBase.y + Math.sin(ang) * radius, 6, WORLD - 6);
+  }
+
+  const mv = aiMoveTo(tank, targetX, targetY);
+  tank.move(mv.x * 1.45, mv.y * 1.45);
+
+  const nearEnemy = enemy && Math.hypot(enemy.x - tank.x, enemy.y - tank.y) < 12;
+  const nearBase = Math.hypot(primaryBase.x - tank.x, primaryBase.y - tank.y) < 18;
+  if (nearEnemy || nearBase) {
+    applyExplosion(tank.x, tank.y, tank.team, UNIT_CFG.bomber.aoe, UNIT_CFG.bomber.damage);
+    killUnit(tank, null);
+  }
+}
+
+function doAi(tank) {
+  if (!tank || !tank.alive || tank === controlledTank) return;
+  if (tank.unitType === 'artillery') return doArtilleryAI(tank);
+  if (tank.unitType === 'bomber') return doBomberAI(tank);
+  return doTankAI(tank);
 }
 
 function updateTeamTactic() {
@@ -1934,9 +2160,12 @@ function update() {
 
   // 子弹更新（飞行时间+射程）
   bullets = bullets.filter(b => {
-    b.x += b.dx * BULLET_SPEED;
-    b.y += b.dy * BULLET_SPEED;
-    b.travel += BULLET_SPEED;
+    const sp = b.speed || BULLET_SPEED;
+    const dmg = b.damage || BULLET_DAMAGE;
+    const aoe = b.aoe || BULLET_AOE_RADIUS;
+    b.x += b.dx * sp;
+    b.y += b.dy * sp;
+    b.travel += sp;
     if (b.travel > b.maxTravel) return false;
 
     const tr = terrainAt(b.x, b.y);
@@ -1946,8 +2175,7 @@ function update() {
     for (const base of bases) {
       if (!base.alive || base.team === b.team) continue;
       if (Math.abs(b.x - base.x) <= BASE_HALF && Math.abs(b.y - base.y) <= BASE_HALF) {
-        const wasAlive = base.alive;
-        base.hit(BASE_DAMAGE);
+        applyExplosion(b.x, b.y, b.team, aoe, dmg);
         // 战术奖励已注释: stats[b.team].score += BASE_HIT_SCORE;
         // 战术奖励已注释: if (wasAlive && !base.alive) {
         // 战术奖励已注释:   stats[b.team].score += BASE_DESTROY_SCORE;
@@ -1960,20 +2188,7 @@ function update() {
     for (const t of tanks) {
       if (!t.alive || t.team === b.team) continue;
       if (Math.abs(b.x - t.x) <= TANK_HALF && Math.abs(b.y - t.y) <= TANK_HALF) {
-        for (const aoeTarget of tanks) {
-          if (!aoeTarget.alive || aoeTarget.team === b.team) continue;
-          const ad = Math.hypot(aoeTarget.x - b.x, aoeTarget.y - b.y);
-          if (ad <= BULLET_AOE_RADIUS) {
-            aoeTarget.hp -= BULLET_DAMAGE;
-            if (aoeTarget.hp <= 0) {
-              aoeTarget.alive = false;
-              onTeamDeathPenalty(aoeTarget.team);
-              aoeTarget.respawnT = calcRespawnTime(aoeTarget.team, aoeTarget);
-              stats[b.team].kills++;
-              // 战术奖励已注释: stats[b.team].score += 30;
-            }
-          }
-        }
+        applyExplosion(b.x, b.y, b.team, aoe, dmg);
         return false;
       }
     }
@@ -2165,7 +2380,7 @@ function renderTankList() {
     const hp = Math.max(0, t.hp / MAX_HP) * 100;
     html += `<div class="${cls}" data-id="${t.id}">
       <span class="tank-tankitem-dot" style="background:${TEAM_COLORS[t.team]}"></span>
-      <span class="tank-tankitem-name">T${t.id + 1} ${t.role}</span>
+      <span class="tank-tankitem-name">T${t.id + 1} ${t.role}/${t.unitType}</span>
       <div class="tank-tankitem-hp"><div class="tank-tankitem-hpfill" style="width:${hp}%"></div></div>
     </div>`;
   }
@@ -2493,134 +2708,6 @@ updateStats(null);
             gameSidebar.addEventListener('mouseleave', function() {
                 if(toolSidebar) toolSidebar.style.right = ''; 
                 if(devSidebar) devSidebar.style.right = ''; 
-            });
-        }
-    });
-</script>
-
-<div id="dev-sidebar">
-    <div id="dev-toggle">💻</div>
-    <div id="dev-list">
-        <div class="dev-header">开发专栏</div>
-        <a href="/tools/sort/" class="dev-item">📊 排序算法演示</a>
-        <a href="/tools/webgpu-gravity/" class="dev-item">🌌 WebGPU 万有引力粒子</a>
-        <a href="/tools/yolo-detect/" class="dev-item">👁️ YOLO 实时目标检测</a>
-        <a href="/tools/fire-creation/" class="dev-item">🔥 火之创造 (元素沙盒)</a>
-    </div>
-</div>
-
-<style>
-    #dev-sidebar {
-        position: fixed;
-        right: -150px; /* Width of the list */
-        top: calc(30vh + 80px); /* Positioned below game-sidebar */
-        z-index: 9999;
-        display: flex;
-        align-items: flex-start;
-        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-    }
-
-    /* Hover area to keep it open */
-    #dev-sidebar:hover {
-        right: 0;
-    }
-
-    #dev-toggle {
-        width: 40px;
-        height: 40px;
-        background: #52c41a; /* Green color for dev theme */
-        color: white;
-        text-align: center;
-        line-height: 40px;
-        border-radius: 8px 0 0 8px;
-        cursor: pointer;
-        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
-        font-size: 20px;
-        position: absolute;
-        left: -40px;
-        top: 0;
-    }
-
-    #dev-list {
-        width: 150px; /* Width for text */
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border-radius: 0 0 0 8px; /* Bottom left rounded */
-        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-        max-height: 50vh;
-        overflow-y: auto;
-    }
-    
-    /* 自定义滚动条样式 */
-    #dev-list::-webkit-scrollbar {
-        width: 4px;
-    }
-    #dev-list::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    #dev-list::-webkit-scrollbar-thumb {
-        background: rgba(82, 196, 26, 0.3);
-        border-radius: 4px;
-    }
-    #dev-list::-webkit-scrollbar-thumb:hover {
-        background: rgba(82, 196, 26, 0.6);
-    }
-    
-    .dev-header {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        padding: 10px;
-        background: #f6ffed;
-        color: #52c41a;
-        font-weight: bold;
-        font-size: 14px;
-        text-align: center;
-        border-bottom: 1px solid #eee;
-    }
-
-    .dev-item {
-        display: block;
-        padding: 12px 15px;
-        color: #4c4948;
-        text-decoration: none !important;
-        font-size: 13px;
-        transition: all 0.2s;
-        border-bottom: 1px solid #f0f0f0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        flex-shrink: 0;
-    }
-
-    .dev-item:last-child {
-        border-bottom: none;
-    }
-
-    .dev-item:hover {
-        background: #52c41a;
-        color: white !important;
-    }
-</style>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var toolSidebar = document.getElementById('tool-sidebar');
-        var gameSidebar = document.getElementById('game-sidebar');
-        var devSidebar = document.getElementById('dev-sidebar');
-        
-        if(devSidebar) {
-            devSidebar.addEventListener('mouseenter', function() {
-                if(toolSidebar) toolSidebar.style.right = '-220px'; // 180px + 40px(按钮宽度)
-                if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
-            });
-            devSidebar.addEventListener('mouseleave', function() {
-                if(toolSidebar) toolSidebar.style.right = ''; 
-                if(gameSidebar) gameSidebar.style.right = ''; 
             });
         }
     });
@@ -3414,6 +3501,134 @@ updateStats(null);
         console.error('UI Init Failed:', e);
     }
   </script>
+
+<div id="dev-sidebar">
+    <div id="dev-toggle">💻</div>
+    <div id="dev-list">
+        <div class="dev-header">开发专栏</div>
+        <a href="/tools/sort/" class="dev-item">📊 排序算法演示</a>
+        <a href="/tools/webgpu-gravity/" class="dev-item">🌌 WebGPU 万有引力粒子</a>
+        <a href="/tools/yolo-detect/" class="dev-item">👁️ YOLO 实时目标检测</a>
+        <a href="/tools/fire-creation/" class="dev-item">🔥 火之创造 (元素沙盒)</a>
+    </div>
+</div>
+
+<style>
+    #dev-sidebar {
+        position: fixed;
+        right: -150px; /* Width of the list */
+        top: calc(30vh + 80px); /* Positioned below game-sidebar */
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    /* Hover area to keep it open */
+    #dev-sidebar:hover {
+        right: 0;
+    }
+
+    #dev-toggle {
+        width: 40px;
+        height: 40px;
+        background: #52c41a; /* Green color for dev theme */
+        color: white;
+        text-align: center;
+        line-height: 40px;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+        font-size: 20px;
+        position: absolute;
+        left: -40px;
+        top: 0;
+    }
+
+    #dev-list {
+        width: 150px; /* Width for text */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 0 8px; /* Bottom left rounded */
+        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+    
+    /* 自定义滚动条样式 */
+    #dev-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    #dev-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #dev-list::-webkit-scrollbar-thumb {
+        background: rgba(82, 196, 26, 0.3);
+        border-radius: 4px;
+    }
+    #dev-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(82, 196, 26, 0.6);
+    }
+    
+    .dev-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 10px;
+        background: #f6ffed;
+        color: #52c41a;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .dev-item {
+        display: block;
+        padding: 12px 15px;
+        color: #4c4948;
+        text-decoration: none !important;
+        font-size: 13px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0;
+    }
+
+    .dev-item:last-child {
+        border-bottom: none;
+    }
+
+    .dev-item:hover {
+        background: #52c41a;
+        color: white !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var toolSidebar = document.getElementById('tool-sidebar');
+        var gameSidebar = document.getElementById('game-sidebar');
+        var devSidebar = document.getElementById('dev-sidebar');
+        
+        if(devSidebar) {
+            devSidebar.addEventListener('mouseenter', function() {
+                if(toolSidebar) toolSidebar.style.right = '-220px'; // 180px + 40px(按钮宽度)
+                if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+            });
+            devSidebar.addEventListener('mouseleave', function() {
+                if(toolSidebar) toolSidebar.style.right = ''; 
+                if(gameSidebar) gameSidebar.style.right = ''; 
+            });
+        }
+    });
+</script>
 
 <div id="tool-sidebar">
     <div id="tool-toggle">🛠️</div>
