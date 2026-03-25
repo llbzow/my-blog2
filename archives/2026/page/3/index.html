@@ -1,0 +1,1476 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>2026 | llbzow的摸鱼日记 (づ￣ 3￣)づ</title><meta name="author" content="llbzow"><meta name="copyright" content="llbzow"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="欢迎来到我的个人博客，这里分享技术、生活和思考，和我的工地生活">
+<meta property="og:type" content="website">
+<meta property="og:title" content="2026">
+<meta property="og:url" content="https://yourblog.com/archives/2026/page/3/index.html">
+<meta property="og:site_name" content="llbzow的摸鱼日记 (づ￣ 3￣)づ">
+<meta property="og:description" content="欢迎来到我的个人博客，这里分享技术、生活和思考，和我的工地生活">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://yourblog.com/img/cute_cat.svg">
+<meta property="article:author" content="llbzow">
+<meta property="article:tag" content="技术, 生活, 博客, 分享">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://yourblog.com/img/cute_cat.svg"><script type="application/ld+json"></script><link rel="shortcut icon" href="/img/cute_cat.svg"><link rel="canonical" href="https://yourblog.com/archives/2026/page/3/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: true,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '2026',
+  isHighlightShrink: false,
+  isToc: false,
+  pageType: 'archive'
+}</script><link rel="stylesheet" href="/css/custom.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      if ($loadingBox.classList.contains('loaded')) return
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+
+  if (document.readyState === 'complete') {
+    preloader.endLoading()
+  } else {
+    window.addEventListener('load', preloader.endLoading)
+    document.addEventListener('DOMContentLoaded', preloader.endLoading)
+    // Add timeout protection: force end after 7 seconds
+    setTimeout(preloader.endLoading, 7000)
+  }
+
+  if (true) {
+    btf.addGlobalFn('pjaxSend', preloader.initLoading, 'preloader_init')
+    btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
+  }
+})()</script><div id="web_bg" style="background-image: url(/img/bg_main.png);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/cute_cat.svg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">20</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">31</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="page" id="body-wrap"><header class="not-home-page" id="page-header" style="background-image: url(/img/bg_archive.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">llbzow的摸鱼日记 (づ￣ 3￣)づ</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="page-site-info"><h1 id="site-title">2026</h1></div></header><main class="layout" id="content-inner"><div id="archive"><div class="article-sort-title">全部文章 - 13</div><div class="article-sort"><div class="article-sort-item year">2026</div><div class="article-sort-item"><a class="article-sort-item-img" href="/2026/01/05/vue-learning-8/" title="Composition API：逻辑复用的快乐与痛苦"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/092.jpg" alt="Composition API：逻辑复用的快乐与痛苦" onerror="this.onerror=null;this.src='/img/049.png'"></a><div class="article-sort-item-info"><div class="article-sort-item-time"><i class="far fa-calendar-alt"></i><time class="post-meta-date-created" datetime="2026-01-04T16:00:00.000Z" title="发表于 2026-01-05 00:00:00">2026-01-05</time></div><a class="article-sort-item-title" href="/2026/01/05/vue-learning-8/" title="Composition API：逻辑复用的快乐与痛苦">Composition API：逻辑复用的快乐与痛苦</a></div></div></div><nav id="pagination"><div class="pagination"><a class="extend prev" rel="prev" href="/archives/2026/page/2/"><i class="fas fa-chevron-left fa-fw"></i></a><a class="page-number" href="/archives/2026/">1</a><a class="page-number" href="/archives/2026/page/2/">2</a><span class="page-number current">3</span></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/cute_cat.svg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">llbzow</div><div class="author-info-description">一个热爱技术、喜欢分享的开发者</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">20</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">31</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/llbzow"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/llbzow" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:mail@luozili.work" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a><a class="social-icon" href="/vpn/" target="_blank" title="VPN 订阅"><i class="fas fa-lock" style="color: #FFA500;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到llbzow的博客，这里分享技术、生活和思考，还有我的工地生活</div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/03/25/ai%E5%8E%82%E5%95%86%E5%AF%B9%E6%AF%94%E5%88%86%E6%9E%90/" title="2026 AI 编程与开发工具深度对比：从 Cursor 到 Gemini CLI"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/cover_1.png" onerror="this.onerror=null;this.src='/img/049.png'" alt="2026 AI 编程与开发工具深度对比：从 Cursor 到 Gemini CLI"/></a><div class="content"><a class="title" href="/2026/03/25/ai%E5%8E%82%E5%95%86%E5%AF%B9%E6%AF%94%E5%88%86%E6%9E%90/" title="2026 AI 编程与开发工具深度对比：从 Cursor 到 Gemini CLI">2026 AI 编程与开发工具深度对比：从 Cursor 到 Gemini CLI</a><time datetime="2026-03-25T02:30:00.000Z" title="发表于 2026-03-25 10:30:00">2026-03-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/03/25/ai%E5%8E%82%E5%95%86%E4%BB%8B%E7%BB%8D/" title="2026 全球主流 AI 厂商百科全书：Agent 与推理觉醒时代"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="/img/cover_3.png" onerror="this.onerror=null;this.src='/img/049.png'" alt="2026 全球主流 AI 厂商百科全书：Agent 与推理觉醒时代"/></a><div class="content"><a class="title" href="/2026/03/25/ai%E5%8E%82%E5%95%86%E4%BB%8B%E7%BB%8D/" title="2026 全球主流 AI 厂商百科全书：Agent 与推理觉醒时代">2026 全球主流 AI 厂商百科全书：Agent 与推理觉醒时代</a><time datetime="2026-03-25T02:00:00.000Z" title="发表于 2026-03-25 10:00:00">2026-03-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/03/09/arch-linux-part3/" title="Arch Linux 日常：从“折腾”到“生产力”的进化之旅"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&amp;fit=crop&amp;q=80&amp;w=1000" onerror="this.onerror=null;this.src='/img/049.png'" alt="Arch Linux 日常：从“折腾”到“生产力”的进化之旅"/></a><div class="content"><a class="title" href="/2026/03/09/arch-linux-part3/" title="Arch Linux 日常：从“折腾”到“生产力”的进化之旅">Arch Linux 日常：从“折腾”到“生产力”的进化之旅</a><time datetime="2026-03-09T08:30:00.000Z" title="发表于 2026-03-09 16:30:00">2026-03-09</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/03/02/arch-linux-part2/" title="孩子们，我不做 Windows 人啦！"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://images.unsplash.com/photo-1542831371-29b0f74f9713?auto=format&amp;fit=crop&amp;q=80&amp;w=1000" onerror="this.onerror=null;this.src='/img/049.png'" alt="孩子们，我不做 Windows 人啦！"/></a><div class="content"><a class="title" href="/2026/03/02/arch-linux-part2/" title="孩子们，我不做 Windows 人啦！">孩子们，我不做 Windows 人啦！</a><time datetime="2026-03-02T13:15:00.000Z" title="发表于 2026-03-02 21:15:00">2026-03-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/02/25/arch-linux-part1/" title="Arch Linux 试毒：初探邪教的诱惑"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-lazy-src="https://images.unsplash.com/photo-1629654297299-c8506221ca97?auto=format&amp;fit=crop&amp;q=80&amp;w=1000" onerror="this.onerror=null;this.src='/img/049.png'" alt="Arch Linux 试毒：初探邪教的诱惑"/></a><div class="content"><a class="title" href="/2026/02/25/arch-linux-part1/" title="Arch Linux 试毒：初探邪教的诱惑">Arch Linux 试毒：初探邪教的诱惑</a><time datetime="2026-02-25T12:30:00.000Z" title="发表于 2026-02-25 20:30:00">2026-02-25</time></div></div></div></div><div class="card-widget card-categories"><div class="item-headline">
+            <i class="fas fa-folder-open"></i>
+            <span>分类</span>
+            
+          </div>
+          <ul class="card-category-list" id="aside-cat-list">
+            <li class="card-category-list-item "><a class="card-category-list-link" href="/categories/Vue%E5%AD%A6%E4%B9%A0%E4%B9%8B%E8%B7%AF/"><span class="card-category-list-name">Vue学习之路</span><span class="card-category-list-count">15</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E6%8A%80%E6%9C%AF%E9%9A%8F%E7%AC%94/"><span class="card-category-list-name">技术随笔</span><span class="card-category-list-count">3</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E7%9F%A5%E8%AF%86%E5%BA%93/"><span class="card-category-list-name">知识库</span><span class="card-category-list-count">2</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E9%9A%8F%E7%AC%94/"><span class="card-category-list-name">随笔</span><span class="card-category-list-count">2</span></a></li>
+          </ul></div><div class="card-widget card-tags"><div class="item-headline"><i class="fas fa-tags"></i><span>标签</span></div><div class="card-tag-cloud"><a href="/tags/Pinia/" style="font-size: 1.1em; color: #999">Pinia</a> <a href="/tags/%E5%AD%A6%E4%B9%A0/" style="font-size: 1.2em; color: #999da3">学习</a> <a href="/tags/CSS/" style="font-size: 1.1em; color: #999">CSS</a> <a href="/tags/Vue/" style="font-size: 1.5em; color: #99a9bf">Vue</a> <a href="/tags/%E8%AE%BE%E8%AE%A1/" style="font-size: 1.1em; color: #999">设计</a> <a href="/tags/%E7%BB%84%E4%BB%B6/" style="font-size: 1.1em; color: #999">组件</a> <a href="/tags/API/" style="font-size: 1.1em; color: #999">API</a> <a href="/tags/Arch/" style="font-size: 1.3em; color: #99a1ac">Arch</a> <a href="/tags/%E9%A1%B9%E7%9B%AE%E9%83%A8%E6%97%A5%E8%AE%B0/" style="font-size: 1.2em; color: #999da3">项目部日记</a> <a href="/tags/Linux/" style="font-size: 1.3em; color: #99a1ac">Linux</a> <a href="/tags/Vue-Router/" style="font-size: 1.1em; color: #999">Vue Router</a> <a href="/tags/%E5%B7%A5%E5%85%B7/" style="font-size: 1.1em; color: #999">工具</a> <a href="/tags/Vite/" style="font-size: 1.1em; color: #999">Vite</a> <a href="/tags/%E6%80%A7%E8%83%BD/" style="font-size: 1.1em; color: #999">性能</a> <a href="/tags/Vibe-Code/" style="font-size: 1.1em; color: #999">Vibe Code</a> <a href="/tags/%E8%B8%A9%E5%9D%91/" style="font-size: 1.1em; color: #999">踩坑</a> <a href="/tags/Vue3/" style="font-size: 1.4em; color: #99a5b6">Vue3</a> <a href="/tags/AI/" style="font-size: 1.3em; color: #99a1ac">AI</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 1.1em; color: #999">吐槽</a> <a href="/tags/%E6%94%BE%E5%BC%83/" style="font-size: 1.1em; color: #999">放弃</a> <a href="/tags/%E6%9E%81%E5%AE%A2/" style="font-size: 1.1em; color: #999">极客</a> <a href="/tags/%E5%A4%A7%E6%A8%A1%E5%9E%8B/" style="font-size: 1.1em; color: #999">大模型</a> <a href="/tags/%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7/" style="font-size: 1.1em; color: #999">效率工具</a> <a href="/tags/%E6%BA%90%E7%A0%81/" style="font-size: 1.1em; color: #999">源码</a> <a href="/tags/%E6%8A%98%E8%85%BE/" style="font-size: 1.3em; color: #99a1ac">折腾</a> <a href="/tags/%E5%BF%83%E6%83%85/" style="font-size: 1.1em; color: #999">心情</a> <a href="/tags/TypeScript/" style="font-size: 1.1em; color: #999">TypeScript</a> <a href="/tags/%E5%89%8D%E7%AB%AF/" style="font-size: 1.5em; color: #99a9bf">前端</a> <a href="/tags/%E8%A1%8C%E4%B8%9A%E5%88%86%E6%9E%90/" style="font-size: 1.1em; color: #999">行业分析</a> <a href="/tags/%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86/" style="font-size: 1.1em; color: #999">状态管理</a> <a href="/tags/%E6%8A%80%E6%9C%AF/" style="font-size: 1.4em; color: #99a5b6">技术</a></div></div><div class="card-widget card-archives">
+    <div class="item-headline">
+      <i class="fas fa-archive"></i>
+      <span>归档</span>
+      
+    </div>
+  
+    <ul class="card-archive-list">
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/03/">
+            <span class="card-archive-list-date">
+              三月 2026
+            </span>
+            <span class="card-archive-list-count">4</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/02/">
+            <span class="card-archive-list-date">
+              二月 2026
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/01/">
+            <span class="card-archive-list-date">
+              一月 2026
+            </span>
+            <span class="card-archive-list-count">8</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/12/">
+            <span class="card-archive-list-date">
+              十二月 2025
+            </span>
+            <span class="card-archive-list-count">5</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/11/">
+            <span class="card-archive-list-date">
+              十一月 2025
+            </span>
+            <span class="card-archive-list-count">2</span>
+          </a>
+        </li>
+      
+    </ul>
+  </div><div class="card-widget card-webinfo"><div class="item-headline"><i class="fas fa-chart-line"></i><span>网站信息</span></div><div class="webinfo"><div class="webinfo-item"><div class="item-name">文章数目 :</div><div class="item-count">20</div></div><div class="webinfo-item"><div class="item-name">本站访客数 :</div><div class="item-count" id="busuanzi_value_site_uv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">本站总浏览量 :</div><div class="item-count" id="busuanzi_value_site_pv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">最后更新时间 :</div><div class="item-count" id="last-push-date" data-lastPushDate="2026-03-25T03:10:16.765Z"><i class="fa-solid fa-spinner fa-spin"></i></div></div></div></div></div></div></main><footer id="footer" style="background-image: url(/img/040.jpg);"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By llbzow</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><div class="js-pjax"></div><script>var OriginTitle = document.title; var titleTime; document.addEventListener('visibilitychange', function () { if (document.hidden) { document.title = '╭(°A°`)╮ 页面崩溃啦 ~'; clearTimeout(titleTime); } else { document.title = '(ฅ>ω<*ฅ) 噫又好啦 ~ ' + OriginTitle; titleTime = setTimeout(function () { document.title = OriginTitle; }, 2000); } });</script><script defer="defer" id="fluttering_ribbon" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="255,255,255" opacity="0.6" zIndex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-nest.min.js"></script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      const usePjax = true
+      false
+        ? (usePjax ? pjax.loadUrl('/404.html') : window.location.href = '/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})()</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><!-- hexo injector body_end start -->
+<div id="dev-sidebar">
+    <div id="dev-toggle">💻</div>
+    <div id="dev-list">
+        <div class="dev-header">开发专栏</div>
+        <a href="/tools/sort/" class="dev-item">📊 排序算法演示</a>
+        <a href="/tools/webgpu-gravity/" class="dev-item">🌌 WebGPU 万有引力粒子</a>
+        <a href="/tools/yolo-detect/" class="dev-item">👁️ YOLO 实时目标检测</a>
+        <a href="/tools/fire-creation/" class="dev-item">🔥 火之创造 (元素沙盒)</a>
+    </div>
+</div>
+
+<style>
+    #dev-sidebar {
+        position: fixed;
+        right: -150px; /* Width of the list */
+        top: calc(30vh + 80px); /* Positioned below game-sidebar */
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    /* Hover area to keep it open */
+    #dev-sidebar:hover {
+        right: 0;
+    }
+
+    #dev-toggle {
+        width: 40px;
+        height: 40px;
+        background: #52c41a; /* Green color for dev theme */
+        color: white;
+        text-align: center;
+        line-height: 40px;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+        font-size: 20px;
+        position: absolute;
+        left: -40px;
+        top: 0;
+    }
+
+    #dev-list {
+        width: 150px; /* Width for text */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 0 8px; /* Bottom left rounded */
+        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+    
+    /* 自定义滚动条样式 */
+    #dev-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    #dev-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #dev-list::-webkit-scrollbar-thumb {
+        background: rgba(82, 196, 26, 0.3);
+        border-radius: 4px;
+    }
+    #dev-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(82, 196, 26, 0.6);
+    }
+    
+    .dev-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 10px;
+        background: #f6ffed;
+        color: #52c41a;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .dev-item {
+        display: block;
+        padding: 12px 15px;
+        color: #4c4948;
+        text-decoration: none !important;
+        font-size: 13px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0;
+    }
+
+    .dev-item:last-child {
+        border-bottom: none;
+    }
+
+    .dev-item:hover {
+        background: #52c41a;
+        color: white !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var toolSidebar = document.getElementById('tool-sidebar');
+        var gameSidebar = document.getElementById('game-sidebar');
+        var devSidebar = document.getElementById('dev-sidebar');
+        
+        if(devSidebar) {
+            devSidebar.addEventListener('mouseenter', function() {
+                if(toolSidebar) toolSidebar.style.right = '-220px'; // 180px + 40px(按钮宽度)
+                if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+            });
+            devSidebar.addEventListener('mouseleave', function() {
+                if(toolSidebar) toolSidebar.style.right = ''; 
+                if(gameSidebar) gameSidebar.style.right = ''; 
+            });
+        }
+    });
+</script>
+
+<div id="game-sidebar">
+    <div id="game-toggle">🎮</div>
+    <div id="game-list">
+        <div class="game-header">博客游戏</div>
+        <a href="/tools/2048" class="game-item">🧩 经典 2048</a>
+        <a href="/tools/tetris" class="game-item">🧱 俄罗斯方块 (Tetris)</a>
+        <a href="/tools/pacman" class="game-item">🟡 回忆吃豆人 (Pac-Man)</a>
+        <a href="/tools/snake" class="game-item">🐍 贪吃蛇 (Snake)</a>
+        <a href="/tools/gomoku" class="game-item">⚪ 五子棋 (Gomoku)</a>
+        <a href="/tools/minesweeper" class="game-item">💣 扫雷 (Minesweeper)</a>
+        <a href="/tools/tank-battle" class="game-item">🚓 坦克大战 (Tank Battle)</a>
+    </div>
+</div>
+
+<style>
+    #game-sidebar {
+        position: fixed; /* Fixed position */
+        right: -150px; /* Width of the list */
+        top: calc(30vh + 40px); /* Positioned exactly below tool-sidebar */
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    /* Hover area to keep it open */
+    #game-sidebar:hover {
+        right: 0;
+    }
+
+    #game-toggle {
+        width: 40px;
+        height: 40px;
+        background: #FF7D7D; /* Pink/Red color to distinguish from tool-sidebar */
+        color: white;
+        text-align: center;
+        line-height: 40px;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+        font-size: 20px;
+        position: absolute; /* Absolute relative to #game-sidebar */
+        left: -40px; /* Hangs off the left of the container */
+        top: 0;
+    }
+
+    #game-list {
+        width: 150px; /* Width for text */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 0 8px; /* Bottom left rounded */
+        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+    
+    /* 自定义滚动条样式 */
+    #game-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    #game-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #game-list::-webkit-scrollbar-thumb {
+        background: rgba(255, 125, 125, 0.3);
+        border-radius: 4px;
+    }
+    #game-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 125, 125, 0.6);
+    }
+    
+    .game-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 10px;
+        background: #fff0f0;
+        color: #FF7D7D;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .game-item {
+        display: block;
+        padding: 12px 15px;
+        color: #4c4948;
+        text-decoration: none !important;
+        font-size: 13px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0; /* 防止内容被挤压 */
+    }
+
+    .game-item:last-child {
+        border-bottom: none;
+    }
+
+    .game-item:hover {
+        background: #FF7D7D;
+        color: white !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var toolSidebar = document.getElementById('tool-sidebar');
+        var gameSidebar = document.getElementById('game-sidebar');
+        var devSidebar = document.getElementById('dev-sidebar');
+        
+        if(gameSidebar) {
+            gameSidebar.addEventListener('mouseenter', function() {
+                if(toolSidebar) toolSidebar.style.right = '-220px'; // 180px + 40px(按钮)
+                if(devSidebar) devSidebar.style.right = '-190px'; // 150px + 40px(按钮)
+            });
+            gameSidebar.addEventListener('mouseleave', function() {
+                if(toolSidebar) toolSidebar.style.right = ''; 
+                if(devSidebar) devSidebar.style.right = ''; 
+            });
+        }
+    });
+</script>
+
+  <style id="oml2d-force-styles">
+    /* ==========================================================================
+       1. STYLES
+       ========================================================================== */
+    .oml2d-menus .oml2d-menu-item,
+    .oml2d-menu-item {
+        background-color: #f0f0f0 !important;
+        border: 1px solid #ccc !important;
+    }
+    .oml2d-menus svg, .oml2d-menus path,
+    .oml2d-menu-item svg, .oml2d-menu-item path,
+    .oml2d-icon, .oml2d-icon svg, .oml2d-icon path {
+        fill: #333333 !important;
+        stroke: #333333 !important;
+        color: #333333 !important;
+        opacity: 1 !important;
+    }
+    .oml2d-menu-item:hover {
+        background-color: #ffffff !important;
+        transform: scale(1.1);
+    }
+    .oml2d-tips {
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(5px) !important;
+        -webkit-backdrop-filter: blur(5px) !important;
+        color: #333333 !important;
+        border: 1px solid rgba(0,0,0,0.1) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+        font-family: "Microsoft YaHei", sans-serif !important;
+        z-index: 9999 !important;
+        min-height: 40px;
+        height: auto !important; /* Force auto height */
+        max-height: 50vh !important;
+        overflow-y: auto !important;
+        width: auto !important;
+        max-width: 350px !important;
+        word-wrap: break-word !important;
+        white-space: pre-wrap !important;
+        display: block !important;
+        padding: 12px 15px;
+        font-size: 14px;
+        line-height: 1.6;
+        border-radius: 8px;
+        scrollbar-width: thin;
+        text-align: left;
+    }
+
+    /* Helper: Hide Legacy / Duplicate Widgets from other plugins */
+    /* Only specific legacy IDs */
+    #live2d-widget, .waifu { display: none !important; }
+
+    /* ==========================================================================
+       2. NEW UI COMPONENTS (Chat)
+       ========================================================================== */
+    #oml2d-chat-widget {
+        position: fixed;
+        left: 10px; /* Align with menu */
+        bottom: 10px; /* Tightly stuck to bottom-left */
+        z-index: 10000;
+        display: flex;
+        align-items: center; /* Center vertically */
+        gap: 8px;
+        flex-direction: row; /* Button left, Input right */
+    }
+
+    /* Toggle Button (Floating Chat Icon) */
+    #oml2d-toggle-btn {
+        width: 42px;
+        height: 42px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 22px;
+        transition: transform 0.2s, background 0.2s;
+        border: 1px solid #ddd;
+        user-select: none;
+        color: #555;
+        flex-shrink: 0; /* Don't shrink */
+    }
+
+    #oml2d-toggle-btn:hover {
+        transform: scale(1.1);
+        background: #f8f8f8;
+        color: #000;
+    }
+
+    /* Input Area */
+    #oml2d-input-area {
+        width: 260px;
+        background: rgba(255, 255, 255, 0.15); /* Very transparent */
+        padding: 10px;
+        border-radius: 12px;
+        border-bottom-left-radius: 4px; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        backdrop-filter: blur(3px); /* Low blur to see model */
+        display: flex;
+        gap: 8px;
+        transform-origin: left center; /* Expand from left */
+        transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        opacity: 1;
+        transform: scale(1);
+        margin-left: 2px;
+    }
+
+    #oml2d-input-area.hidden {
+        opacity: 0;
+        transform: scale(0.8) translateX(-20px);
+        pointer-events: none;
+    }
+
+    #oml2d-chat-input {
+        flex: 1;
+        border: 1px solid #eee;
+        background: #fafafa;
+        padding: 6px 12px;
+        border-radius: 20px;
+        outline: none;
+        font-size: 14px;
+        color: #333;
+        transition: border-color 0.2s;
+    }
+
+    #oml2d-chat-input:focus {
+        border-color: #4A90E2;
+        background: white;
+    }
+
+    #oml2d-send-btn-inner {
+        border: none;
+        background: #4A90E2;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+        color: #fff;
+        flex-shrink: 0;
+    }
+
+    #oml2d-send-btn-inner:hover {
+        background: #357ABD;
+    }
+
+    #oml2d-reply-area {
+        position: absolute;
+        bottom: 60px;
+        left: 50px; /* Align with input */
+        width: 300px;
+        max-height: 60vh;
+        background: rgba(255, 255, 255, 0.15); /* Very transparent */
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 12px;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        padding: 15px;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #000;
+        text-shadow: 0 0 4px #fff, 0 0 8px #fff; /* Stronger glow for readability */
+        overflow-y: auto;
+        backdrop-filter: blur(3px); /* Low blur */
+        transform-origin: bottom left;
+        transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+        pointer-events: none;
+        z-index: 10001;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: "Microsoft YaHei", sans-serif;
+        scrollbar-width: thin;
+    }
+    
+    #oml2d-reply-area.visible {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        pointer-events: auto;
+    }
+  </style>
+
+  <div id="oml2d-chat-widget">
+      <div id="oml2d-toggle-btn" title="AI对话">💬</div>
+      
+      <!-- Custom Reply Area -->
+      <div id="oml2d-reply-area"></div>
+      
+      <div id="oml2d-input-area" class="hidden">
+          <input type="text" id="oml2d-chat-input" placeholder="和宁宁聊聊天..." autocomplete="off">
+          <button id="oml2d-send-btn-inner">➤</button>
+      </div>
+  </div>
+
+  <script type="module">
+    import { loadOml2d } from 'https://unpkg.com/oh-my-live2d@latest?module';
+
+    const API_KEY = "sk-9a9f51b5638c4df79e53debf3aa12182";
+    const API_URL = "https://api.deepseek.com/chat/completions";
+
+    // CONFIG
+    const CONFIG = {
+      // Global Stage Style
+      stageStyle: { width: 350, height: 500 },
+      models: [
+        { path: '/live2d_models/ningning/model.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_1.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_2.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_3.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_4.json', scale: 0.18, position: [-50, -30] },
+        { path: '/live2d_models/ningning/model_5.json', scale: 0.18, position: [-50, -30] }
+      ],
+      dockedPosition: "left",
+      mobileDisplay: true,
+      menus: { 
+          disable: false, 
+          style: { left: '10px', bottom: '70px' } 
+      },
+      tips: {
+         disable: false,
+         style: { offsetY: -70, offsetX: 10 },
+         idleTips: { interval: 15000, message: [] },
+         welcomeTips: { message: { "default": "前辈，你来啦！(｡•̀ᴗ-)✧" } }
+      }
+    };
+
+    let oml2dInstance = null;
+    let blogIndex = null;
+    let chatHistory = [];
+    let autoHideTimer = null;
+    try {
+        const stored = localStorage.getItem('oml2d_history');
+        if (stored) chatHistory = JSON.parse(stored);
+    } catch(e) { console.error("History Load Error", e); }
+
+    let idleTimer = null;
+    const stopIdleLoop = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = null;
+    };
+    const startIdleLoop = () => {
+        stopIdleLoop();
+        const delay = Math.floor(Math.random() * 10000) + 5000; // 5-15s
+        idleTimer = setTimeout(triggerIdleTsukkomi, delay);
+    };
+    const triggerIdleTsukkomi = async () => {
+        if (!oml2dInstance) { startIdleLoop(); return; }
+        
+        const time = new Date().toLocaleTimeString();
+        let context = "无";
+        if (chatHistory.length > 0) {
+             for (let i = chatHistory.length - 1; i >= 0; i--) {
+                 if (chatHistory[i].role === 'user') {
+                     context = chatHistory[i].content.substring(0, 20);
+                     break;
+                 }
+             }
+        }
+        
+        try {
+             const res = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + API_KEY },
+                body: JSON.stringify({
+                    model: "deepseek-chat",
+                    messages: [
+                        { role: "system", content: "你是绫地宁宁。现在是发呆时间。请根据当前时间(" + time + ")和刚才聊的话题(" + context + ")，自言自语一句简短的吐槽或卖萌（10字以内）。不要重复。" },
+                    ],
+                    stream: false
+                })
+            });
+            const data = await res.json();
+            if (data.choices && data.choices[0]) {
+                let content = data.choices[0].message.content;
+                content = content.replace(/{{|}}/g, '');
+                oml2dInstance.tips.notification(content, 4000);
+            }
+        } catch(e) { }
+        
+        startIdleLoop();
+    };
+
+    // --- TOOLS (Client-Side Logic) ---
+    const Tools = {
+        async searchBlog(query) {
+            console.log("Searching blog for:", query);
+            if (!blogIndex) {
+                try {
+                    const res = await fetch('/search.json');
+                    blogIndex = await res.json();
+                } catch (e) {
+                    console.error("Failed to load search index", e);
+                    return "搜索服务暂时不可用。";
+                }
+            }
+            if (!blogIndex || blogIndex.length === 0) return "博客好像是空的...";
+
+            const keywords = query.toLowerCase().split(' ');
+            const results = blogIndex.filter(post => {
+                const text = (post.title + post.content).toLowerCase();
+                return keywords.every(k => text.includes(k));
+            }).slice(0, 3);
+
+            if (results.length === 0) return "抱歉，没有找到相关文章。";
+
+            return JSON.stringify(results.map(r => ({
+                title: r.title,
+                url: r.url,
+                preview: r.content.substring(0, 100).replace(new RegExp("<[^>]*>?", "gm"), '') + '...'
+            })));
+        },
+
+        triggerMotion(motionName) {
+            console.log("Tool Trigger Motion:", motionName);
+            if (!oml2dInstance || !oml2dInstance.models || !oml2dInstance.models[0]) return "Live2D模型未就绪";
+            
+            const model = oml2dInstance.models[0];
+            let success = false;
+
+            // Strategy 1: High Level
+            if (typeof oml2dInstance.setMotion === 'function') {
+                oml2dInstance.setMotion(motionName);
+                success = true;
+            } 
+            // Strategy 2: Model Level
+            else if (typeof model.motion === 'function') {
+                model.motion(motionName);
+                success = true;
+            }
+            // Strategy 3: Internal Model (Pixi/Cubism) - Aggressive Probe
+            else if (model.internalModel && model.internalModel.motionManager) {
+                try {
+                    console.log("Strategy 3 (Internal): Starting random motion for group", motionName);
+                    
+                    // LOCK FOCUS to prevent mouse tracking from overriding motion
+                    if (typeof model.focus === 'function') {
+                        model._lockFocus = true;
+                        // Unlock after 4 seconds (approx motion duration)
+                        setTimeout(() => { model._lockFocus = false; }, 4000);
+                    }
+
+                    // Priority 3 = FORCE. Use startRandomMotion to avoid index errors.
+                    const result = model.internalModel.motionManager.startRandomMotion(motionName, 3);
+                    success = !!result;
+                } catch (e) {
+                    console.warn("Strategy 3 failed:", e);
+                }
+            }
+
+            return success ? "动作已执行: " + motionName : "动作触发失败，请检查模型组名";
+        },
+
+        navigate(path) {
+            window.location.href = path;
+            return "正在跳转...";
+        },
+
+        readCurrentPage() {
+            // Butterfly theme uses #article-container usually
+            const article = document.getElementById('article-container') || 
+                            document.querySelector('.post-content') || 
+                            document.querySelector('article') ||
+                            document.body;
+            
+            if (!article) return "无法读取当前页面内容。";
+            
+            // Clean up text (remove scripts, styles)
+            const clone = article.cloneNode(true);
+            const scripts = clone.querySelectorAll('script, style, noscript');
+            scripts.forEach(n => n.remove());
+            
+            let text = clone.innerText || "";
+            // Truncate if too long (e.g. > 5000 chars) to save tokens, or trust V3
+            return text.substring(0, 5000) + (text.length > 5000 ? "...(内容太长，已截断)" : "");
+        },
+
+        async compressHistory() {
+            if (chatHistory.length <= 32) return;
+            console.log("Compressing history...");
+            
+            const toSummarize = chatHistory.slice(0, chatHistory.length - 10);
+            const keep = chatHistory.slice(-10);
+            
+            try {
+                 const summaryRes = await fetch("https://api.deepseek.com/chat/completions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + API_KEY },
+                    body: JSON.stringify({
+                        model: "deepseek-chat",
+                        messages: [
+                            { role: "system", content: "Summarize the following conversation briefly in Chinese." },
+                            ...toSummarize
+                        ],
+                        stream: false
+                    })
+                });
+                const data = await summaryRes.json();
+                const summary = data.choices[0].message.content;
+                
+                chatHistory = [
+                    { role: "system", content: "Previous Summary: " + summary },
+                    ...keep
+                ];
+                localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                console.log("History compressed.");
+            } catch(e) { console.error("Compression failed", e); }
+        }
+    };
+
+    // --- LLM SERVICE ---
+    const LLM = {
+        async chat(userMessage, callbacks) {
+            stopIdleLoop();
+            callbacks.onLoading(true);
+
+            try {
+                // System Prompt (Nene Persona)
+                // Use space concatenation to avoid syntax errors
+                const systemContent = "你叫宁宁（Nene），全名绫地宁宁，是《魔女的夜宴》中的角色，现在兼职 llbzow 博客的看板娘。 " +
+                        "你的主人 llbzow 既是开发者也是工地施工员（打灰人）。 " +
+                        "【性格设定】 " +
+                        "1. 性格温柔体贴，有些纯真和天然呆，非常容易害羞（动不动就脸红）。 " +
+                        "2. 做事非常认真，但偶尔会因为太紧张而出错。 " +
+                        "3. 称呼用户为“前辈”或者“主人”。 " +
+                        "4. 说话语气要软萌、有礼貌。 " +
+                        "5. 面对奇怪的问题会变得慌乱，不知所措。 " +
+                        "【能力】 " +
+                        "请使用工具（function calling）来搜索博客、触发动作或读取当前页面内容。 " +
+                        "当用户问“这篇文章讲了什么”时，调用 read_current_page。 " +
+                        "【双通道回复】" +
+                        "请务必在回答开头加入一句犀利或可爱的吐槽（10字以内），必须用 {{ 和 }} 包裹。这部分内容会显示在Live2D气泡中。" +
+                        "吐槽内容要结合：当前时间、对话上下文、用户的问题（如是否重复、是否愚蠢）。例如：{{大半夜的问这个...}} {{这已经是第三次问了哦...}} {{笨蛋前辈...}}" +
+                        "动作对应：Tap身体=开心/普通，Tap头顶=害羞/抱歉，Tap裙子=生气/拒绝，Tap呆毛=卖萌/唱歌，Tap左胸=亲近。 " +
+                        "当前时间：" + new Date().toLocaleString() + "。";
+
+                const messages = [
+                    { role: "system", content: systemContent },
+                    ...chatHistory, // Use full history (managed by compression)
+                    { role: "user", content: userMessage }
+                ];
+
+                // Tool Definitions
+                const tools = [
+                    {
+                        type: "function",
+                        function: {
+                            name: "search_blog",
+                            description: "Search blog posts when user asks about technical topics or blog content.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    query: { type: "string", description: "Keywords to search" }
+                                },
+                                required: ["query"]
+                            }
+                        }
+                    },
+                    {
+                        type: "function",
+                        function: {
+                            name: "react_motion",
+                            description: "Trigger a Live2D motion based on emotion.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    motion: { 
+                                        type: "string", 
+                                        description: "Motion group name", 
+                                        enum: ["Tap身体", "Tap头顶", "Tap脸", "Tap裙子", "Tap左胸", "Tap呆毛"] 
+                                    }
+                                },
+                                required: ["motion"]
+                            }
+                        }
+                    },
+                    {
+                        type: "function",
+                        function: {
+                            name: "navigate",
+                            description: "Navigate to a specific path/URL.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    path: { type: "string", description: "URL or path (e.g. /about/)" }
+                                },
+                                required: ["path"]
+                            }
+                        }
+                    },
+                    {
+                        type: "function",
+                        function: {
+                            name: "read_current_page",
+                            description: "Read the text content of the current page. Use this when user asks about 'this article' or 'current page'.",
+                            parameters: {
+                                type: "object",
+                                properties: {},
+                                required: []
+                            }
+                        }
+                    }
+                ];
+
+                const API_URL = "https://api.deepseek.com/chat/completions";
+
+                // First Call
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + API_KEY
+                    },
+                    body: JSON.stringify({
+                        model: "deepseek-chat", // Use V3 for speed & tools
+                        messages: messages,
+                        tools: tools,
+                        stream: false
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+
+                const choice = data.choices[0];
+                const message = choice.message;
+
+                // Handle Tool Calls
+                if (message.tool_calls) {
+                    messages.push(message); // Add assistant's thought/tool_call
+
+                    for (const toolCall of message.tool_calls) {
+                        const fnName = toolCall.function.name;
+                        const args = JSON.parse(toolCall.function.arguments);
+                        
+                        let toolResult = "";
+                        if (fnName === 'search_blog') {
+                            toolResult = await Tools.searchBlog(args.query);
+                        } else if (fnName === 'react_motion') {
+                            toolResult = Tools.triggerMotion(args.motion);
+                        } else if (fnName === 'navigate') {
+                            toolResult = Tools.navigate(args.path);
+                        } else if (fnName === 'read_current_page') {
+                            toolResult = Tools.readCurrentPage();
+                        }
+
+                        messages.push({
+                            role: "tool",
+                            tool_call_id: toolCall.id,
+                            content: toolResult
+                        });
+                    }
+
+                    // Second Call (Streamed)
+                    const secondResponse = await fetch(API_URL, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": "Bearer " + API_KEY
+                        },
+                        body: JSON.stringify({
+                            model: "deepseek-chat",
+                            messages: messages,
+                            tools: tools,
+                            stream: true
+                        })
+                    });
+                    
+                    const reader = secondResponse.body.getReader();
+                    const decoder = new TextDecoder("utf-8");
+                    let finalMsg = "";
+                    let buffer = "";
+                    let streamBuffer = "";
+                    let pendingReaction = true;
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop();
+
+                        for (const line of lines) {
+                            if (line.trim().startsWith('data: ')) {
+                                const dataStr = line.trim().substring(6);
+                                if (dataStr === '[DONE]') continue;
+                                try {
+                                    const json = JSON.parse(dataStr);
+                                    const content = json.choices[0].delta.content;
+                                    if (content) {
+                                        if (pendingReaction) {
+                                            streamBuffer += content;
+                                            if (streamBuffer.trimStart().startsWith('{{')) {
+                                                const closeIdx = streamBuffer.indexOf('}}');
+                                                if (closeIdx !== -1) {
+                                                    const reaction = streamBuffer.substring(streamBuffer.indexOf('{{') + 2, closeIdx);
+                                                    const duration = 3000 + reaction.length * 30;
+                                                    if (oml2dInstance) oml2dInstance.tips.notification(reaction, duration);
+                                                    
+                                                    const rest = streamBuffer.substring(closeIdx + 2);
+                                                    finalMsg += rest;
+                                                    callbacks.onMessage(finalMsg);
+                                                    
+                                                    pendingReaction = false;
+                                                    streamBuffer = "";
+                                                }
+                                            } else if (streamBuffer.length > 10) {
+                                                finalMsg += streamBuffer;
+                                                callbacks.onMessage(finalMsg);
+                                                pendingReaction = false;
+                                                streamBuffer = "";
+                                            }
+                                        } else {
+                                            finalMsg += content;
+                                            callbacks.onMessage(finalMsg);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error("Stream parse error", e);
+                                }
+                            }
+                        }
+                    }
+                    if (pendingReaction && streamBuffer) {
+                         finalMsg += streamBuffer;
+                         callbacks.onMessage(finalMsg);
+                    }
+
+                    // Save History & Compress
+                    chatHistory.push({ role: "user", content: userMessage });
+                    chatHistory.push({ role: "assistant", content: finalMsg });
+                    localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                    
+                    const replyArea = document.getElementById('oml2d-reply-area');
+                    if (replyArea && finalMsg) {
+                        const autoHideDuration = 3000 + finalMsg.length * 30;
+                        autoHideTimer = setTimeout(() => replyArea.classList.remove('visible'), autoHideDuration);
+                    }
+                    Tools.compressHistory();
+
+                } else {
+                    let content = message.content;
+                    // Dual Channel Check for non-stream response
+                    if (content.trim().startsWith('{{')) {
+                         const closeIdx = content.indexOf('}}');
+                         if (closeIdx !== -1) {
+                             const reaction = content.substring(content.indexOf('{{') + 2, closeIdx);
+                             const duration = 3000 + reaction.length * 30;
+                             if (oml2dInstance) oml2dInstance.tips.notification(reaction, duration);
+                             content = content.substring(closeIdx + 2);
+                         }
+                    }
+                    callbacks.onMessage(content);
+
+                    // Save History & Compress
+                    chatHistory.push({ role: "user", content: userMessage });
+                    chatHistory.push({ role: "assistant", content: content });
+                    localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                    
+                    const replyArea = document.getElementById('oml2d-reply-area');
+                    if (replyArea && content) {
+                        const autoHideDuration = 3000 + content.length * 30;
+                        autoHideTimer = setTimeout(() => replyArea.classList.remove('visible'), autoHideDuration);
+                    }
+                    Tools.compressHistory();
+                }
+
+            } catch (error) {
+                console.error("LLM Error:", error);
+                callbacks.onMessage("宁宁有点晕... 😵 (网络错误)");
+            } finally {
+                callbacks.onLoading(false);
+                startIdleLoop();
+            }
+        }
+    };
+
+    // 5. UI & INIT
+    try {
+        const toggleBtn = document.getElementById('oml2d-toggle-btn');
+        const inputArea = document.getElementById('oml2d-input-area');
+        const chatInput = document.getElementById('oml2d-chat-input');
+        const sendBtn = document.getElementById('oml2d-send-btn-inner');
+        const replyArea = document.getElementById('oml2d-reply-area');
+
+        if (replyArea) {
+            replyArea.addEventListener('click', () => {
+                replyArea.classList.remove('visible');
+            });
+        }
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isHidden = inputArea.classList.contains('hidden');
+                if (isHidden) {
+                    inputArea.classList.remove('hidden');
+                    setTimeout(() => chatInput.focus(), 100);
+                    toggleBtn.innerHTML = '×';
+                } else {
+                    inputArea.classList.add('hidden');
+                    replyArea.classList.remove('visible'); // Hide reply too
+                    toggleBtn.innerHTML = '💬';
+                }
+            });
+        }
+
+        const sendMessage = () => {
+            const text = chatInput.value.trim();
+            if (!text) return;
+            
+            chatInput.value = '';
+            if (autoHideTimer) clearTimeout(autoHideTimer);
+            
+            // Show loading in reply area
+            if (replyArea) {
+                replyArea.innerText = "思考中... 🧠";
+                replyArea.classList.add('visible');
+            }
+
+            LLM.chat(text, {
+                onLoading: (isLoading) => {
+                     // Handled locally above for instant feedback
+                },
+                onMessage: (msg) => {
+                    if (replyArea && msg) {
+                        replyArea.innerText = msg;
+                        replyArea.classList.add('visible');
+                        // Auto scroll to bottom
+                        replyArea.scrollTop = replyArea.scrollHeight;
+                    } 
+                    // Fallback to alert if something is wrong (shouldn't happen)
+                    else if (msg) {
+                        alert("宁宁: " + msg);
+                    }
+                }
+            });
+        };
+
+        if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+        if (chatInput) chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        if (window.innerWidth >= 768) {
+            // Safe Load Logic
+            try {
+                const res = loadOml2d(CONFIG);
+                const setupModel = (inst) => {
+                    oml2dInstance = inst;
+                    // Monkey Patch Focus to allow motion override
+                    if (inst.models && inst.models[0]) {
+                        const model = inst.models[0];
+                        if (typeof model.focus === 'function') {
+                            const originalFocus = model.focus;
+                            model.focus = function(x, y) {
+                                if (this._lockFocus) return;
+                                originalFocus.apply(this, arguments);
+                            };
+                            console.log("OML2D: Focus controller patched");
+                        }
+                    }
+                };
+
+                if (res && typeof res.then === 'function') {
+                    res.then(inst => {
+                        setupModel(inst);
+                        console.log('OML2D: Async Loaded');
+                        startIdleLoop();
+                    }).catch(e => console.error('OML2D Async Error:', e));
+                } else {
+                    setupModel(res);
+                    console.log('OML2D: Sync Loaded');
+                    startIdleLoop();
+                }
+            } catch(e) {
+                console.error('OML2D Load Error:', e);
+            }
+        }
+    } catch (e) {
+        console.error('UI Init Failed:', e);
+    }
+  </script>
+
+<div id="tool-sidebar">
+    <div id="tool-toggle">🛠️</div>
+    <div id="tool-list">
+        <div class="tool-header">博客工具</div>
+        <a href="/tools/time" class="tool-item">📅 时间戳与地理时间</a>
+        <a href="/tools/base64-img" class="tool-item">🖼️ 图片↔Base64</a>
+        <a href="/tools/hash" class="tool-item">🔐 MD5/SHA256 计算</a>
+        <a href="/tools/geojson" class="tool-item">🌍 GeoJSON 查询</a>
+        <a href="/tools/remove-bg" class="tool-item">✂️ 快速抠图</a>
+        <a href="/tools/watermark" class="tool-item">💧 水印生成与检测</a>
+        <a href="/tools/gif" class="tool-item">🎬 GIF 生成</a>
+        <a href="/tools/mirage-tank" class="tool-item">👻 幻影坦克制作</a>
+        <a href="/tools/converter" class="tool-item">🔄 文件全能转换</a>
+        <a href="/tools/qrcode" class="tool-item">📱 二维码生成/解析</a>
+        <a href="/tools/unit-converter" class="tool-item">📏 工程单位换算</a>
+        <a href="/tools/color" class="tool-item">🎨 颜色转换与调色</a>
+    </div>
+</div>
+
+<style>
+    #tool-sidebar {
+        position: fixed;
+        right: -180px; /* Width of the list */
+        top: 30vh;
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        transition: right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Lato, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    /* Hover area to keep it open */
+    #tool-sidebar:hover {
+        right: 0;
+    }
+
+    #tool-toggle {
+        width: 40px;
+        height: 40px;
+        background: #49b1f5;
+        color: white;
+        text-align: center;
+        line-height: 40px;
+        border-radius: 8px 0 0 8px;
+        cursor: pointer;
+        box-shadow: -2px 2px 8px rgba(0,0,0,0.15);
+        font-size: 20px;
+        position: absolute;
+        left: -40px; /* Hangs off the left of the sidebar container */
+        top: 0;
+    }
+
+    #tool-list {
+        width: 180px; /* Width for text */
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 0 8px; /* Bottom left rounded */
+        box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        max-height: 50vh; /* 限制最大高度以便能滚动 */
+        overflow-y: auto; /* 允许纵向滚动 */
+    }
+    
+    /* 自定义滚动条样式，使其不那么突兀 */
+    #tool-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    #tool-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #tool-list::-webkit-scrollbar-thumb {
+        background: rgba(73, 177, 245, 0.3);
+        border-radius: 4px;
+    }
+    #tool-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(73, 177, 245, 0.6);
+    }
+
+    .tool-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 10px;
+        background: #f7f9fe;
+        color: #49b1f5;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .tool-item {
+        display: block;
+        padding: 12px 15px;
+        color: #4c4948;
+        text-decoration: none !important;
+        font-size: 13px;
+        transition: all 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0; /* 防止由于 max-height 导致内容被挤压 */
+    }
+
+    .tool-item:last-child {
+        border-bottom: none;
+    }
+
+    .tool-item:hover {
+        background: #49b1f5;
+        color: white !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var toolSidebar = document.getElementById('tool-sidebar');
+        var gameSidebar = document.getElementById('game-sidebar');
+        var devSidebar = document.getElementById('dev-sidebar');
+        
+        if(toolSidebar) {
+            toolSidebar.addEventListener('mouseenter', function() {
+                if(gameSidebar) gameSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+                if(devSidebar) devSidebar.style.right = '-190px'; // 150px + 40px(按钮宽度)
+            });
+            toolSidebar.addEventListener('mouseleave', function() {
+                if(gameSidebar) gameSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
+                if(devSidebar) devSidebar.style.right = ''; // 恢复默认通过 CSS :hover 控制的逻辑
+            });
+        }
+    });
+</script>
+<!-- hexo injector body_end end --></body></html>
