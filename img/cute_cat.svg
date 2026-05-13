@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <!-- 背景圆角矩形的渐变 -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFF0F5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFE4E1;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 阴影滤镜，增加立体感 -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#FFB6C1" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- 温馨的柔粉色背景 -->
+  <rect width="400" height="400" rx="40" fill="url(#bgGrad)" />
+
+  <!-- 漂浮的小爱心 1 (左上) -->
+  <g opacity="0.8">
+    <path d="M 60,120 A 15,15 0 0,1 90,120 A 15,15 0 0,1 120,120 Q 120,140 90,165 Q 60,140 60,120 Z" fill="#FF69B4" opacity="0.6">
+      <animateTransform attributeName="transform" type="translate" values="0,0; 0,-15; 0,0" dur="3s" repeatCount="indefinite" />
+    </path>
+  </g>
+
+  <!-- 漂浮的小爱心 2 (右上) -->
+  <g opacity="0.8">
+    <path d="M 300,90 A 10,10 0 0,1 320,90 A 10,10 0 0,1 340,90 Q 340,105 320,120 Q 300,105 300,90 Z" fill="#FFB6C1" opacity="0.8">
+      <animateTransform attributeName="transform" type="translate" values="0,0; 0,-25; 0,0" dur="2.5s" repeatCount="indefinite" />
+    </path>
+  </g>
+  
+  <!-- 星光点缀 -->
+  <path d="M 320,250 L 325,260 L 335,265 L 325,270 L 320,280 L 315,270 L 305,265 L 315,260 Z" fill="#FFD700" opacity="0.6">
+    <animate attributeName="opacity" values="0.2;1;0.2" dur="2s" repeatCount="indefinite" />
+  </path>
+
+  <g transform="translate(200, 240)">
+    <!-- 影子 -->
+    <ellipse cx="0" cy="115" rx="90" ry="15" fill="#E6C8D0" opacity="0.5" />
+
+    <!-- 猫咪的左耳 -->
+    <polygon points="-65,-70 -110,-140 -20,-100" fill="#FFFFFF" filter="url(#dropShadow)" />
+    <!-- 左耳内侧粉红 -->
+    <polygon points="-62,-80 -95,-125 -32,-100" fill="#FFD1DC" />
+    
+    <!-- 猫咪的右耳 -->
+    <polygon points="65,-70 110,-140 20,-100" fill="#FFFFFF" filter="url(#dropShadow)" />
+    <!-- 右耳内侧粉红 -->
+    <polygon points="62,-80 95,-125 32,-100" fill="#FFD1DC" />
+    
+    <!-- 胖嘟嘟的脸蛋 -->
+    <ellipse cx="0" cy="0" rx="140" ry="120" fill="#FFFFFF" filter="url(#dropShadow)" />
+    
+    <!-- 腮红 -->
+    <ellipse cx="-85" cy="15" rx="20" ry="12" fill="#FFC0CB" opacity="0.6" />
+    <ellipse cx="85" cy="15" rx="20" ry="12" fill="#FFC0CB" opacity="0.6" />
+    
+    <!-- 左眼睛 -->
+    <ellipse cx="-45" cy="-5" rx="12" ry="15" fill="#5C4033" />
+    <!-- 左眼高光 -->
+    <circle cx="-50" cy="-12" r="5" fill="#FFFFFF" />
+    <circle cx="-42" cy="-2" r="2" fill="#FFFFFF" />
+    
+    <!-- 右眼睛 -->
+    <ellipse cx="45" cy="-5" rx="12" ry="15" fill="#5C4033">
+      <!-- 眨眼动画：通过缩小 y 轴缩放呈现 -->
+      <animateTransform attributeName="transform" type="scale" values="1,1; 1,0.1; 1,1" keyTimes="0; 0.5; 1" dur="0.2s" begin="2s; 7s; 11s" fill="freeze" />
+    </ellipse>
+    <!-- 右眼高光 -->
+    <g>
+      <circle cx="40" cy="-12" r="5" fill="#FFFFFF" />
+      <circle cx="48" cy="-2" r="2" fill="#FFFFFF" />
+      <animate attributeName="opacity" values="1; 0; 1" keyTimes="0; 0.5; 1" dur="0.2s" begin="2s; 7s; 11s" fill="freeze" />
+    </g>
+    
+    <!-- 嘴巴 (可爱的 ω 形状) -->
+    <path d="M -20,10 Q -10,30 0,15 Q 10,30 20,10" fill="none" stroke="#5C4033" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+    
+    <!-- 额头的花纹 (淡淡的粉色) -->
+    <path d="M 0,-120 L 0,-90 M -25,-110 L -15,-85 M 25,-110 L 15,-85" stroke="#FFE4E1" stroke-width="6" stroke-linecap="round" />
+    
+    <!-- 左边胡须 -->
+    <path d="M -100,-5 L -140,-15 M -105,10 L -145,10 M -100,25 L -140,35" stroke="#E0D0D0" stroke-width="3" stroke-linecap="round" />
+    
+    <!-- 右边胡须 -->
+    <path d="M 100,-5 L 140,-15 M 105,10 L 145,10 M 100,25 L 140,35" stroke="#E0D0D0" stroke-width="3" stroke-linecap="round" />
+  </g>
+</svg>
