@@ -1,0 +1,495 @@
+/**
+ * TIPS AND TRICKS FOR CONTRIBUTORS
+ * 1) Memorize the layering of body parts. Hands are higher than arms, feet higher than legs
+ * 2) Generally you will want to avoid lower pri items on the same layer sticking out on seams if your object is skintight.
+ * In general, this is accomplished by having higher priority items cover more of the original
+ */
+
+AddModel({
+	Name: "AuraHair",
+	Folder: "Hair2",
+	TopLevel: true,
+	Protected: true,
+	Parent: "StraightBangs",
+	Categories: ["Hairstyles", "FrontHair"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "HairAura_Front", Layer: "Hair", Pri: 1,
+			SwapLayerPose: {HoodMask: "HairOver"},
+			InheritColor: "Front",
+		},
+		{ Name: "HairAura", Layer: "HairFront", Pri: 4,
+			InheritColor: "Sides",
+		},
+	])
+});
+AddModel({
+	Name: "Aura_Bang",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "StraightBangs",
+	Parent2: ["AuraHair"],
+	Protected: true,
+	Categories: ["Hairstyles", "FrontHair"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "HairAura_Front2", Layer: "Hair", Pri: 1,
+			SwapLayerPose: {HoodMask: "HairOver"},
+			InheritColor: "Front",
+		},
+	])
+});
+
+
+AddModel({
+	Name: "BlondeFront",
+	Folder: "Hair2",
+	Parent: "StraightBangs",
+	Protected: true,
+	Categories: ["Hairstyles", "FrontHair"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "BlondeFront", Layer: "HairOver", Pri: 3,
+			InheritColor: "Hair",
+			HidePoses: {"Marhnth": true},
+		},
+		{ Name: "BlondeBangs", Layer: "HairFront", Pri: 3,
+			InheritColor: "Bangs",
+			HidePoses: {"Marhnth": true},
+			DisplacementInvariant: true,
+			DisplaceLayers: {HairBlockBF: true,},
+			DisplacementSprite: "BlindfoldHide",
+			DisplaceAmount: 20,
+		},
+		{ Name: "BlondeFrontM", Layer: "HairOver", Pri: 3,
+			InheritColor: "Hair",
+			RequirePoses: {"Marhnth": true},
+		},
+		{ Name: "BlondeBangsM", Layer: "HairFront", Pri: 3,
+			InheritColor: "Bangs",
+			RequirePoses: {"Marhnth": true},
+			DisplacementInvariant: true,
+			DisplaceLayers: {HairBlockBF: true,},
+			DisplacementSprite: "BlindfoldHide",
+			DisplaceAmount: 20,
+		},
+		{ Name: "Hairpin", Layer: "HairFront", Pri: 30,
+			NoOverride: true,
+			Folder: "Uniform",
+			RequirePoses: {"Marhnth": true},
+		},
+	])
+});
+AddModel({
+	Name: "BlondeBack",
+	Folder: "Hair2",
+	Parent: "BackStraight",
+	Protected: true,
+	Categories: ["Hairstyles", "BackHair"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "BlondeBack", Layer: "HairBack", Pri: -3,
+			InheritColor: "Back",
+			HidePoses: {"Marhnth": true},
+		},
+		{ Name: "BlondeBackM", Layer: "HairBack", Pri: -3,
+			InheritColor: "Back",
+			RequirePoses: {"Marhnth": true},
+		},
+	])
+});
+
+
+
+AddModel({
+	Name: "AuraBang_Left",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "AuraHair",
+	Protected: true,
+	Categories: ["Hairstyles", "BackHair"],
+	Layers: ToLayerMap([
+		{ Name: "HairAura_Left", Layer: "Hair", Pri: -100,
+			InheritColor: "Bang",
+		},
+		{ Name: "HairAura_LeftB", Layer: "Hair", Pri: -105,
+			InheritColor: "Tail",
+		},
+	])
+});
+AddModel({
+	Name: "AuraBang_Right",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "AuraHair",
+	Protected: true,
+	Categories: ["Hairstyles", "BackHair"],
+	Layers: ToLayerMap([
+		{ Name: "HairAura_Right", Layer: "Hair", Pri: -100,
+			InheritColor: "Bang",
+		},
+		{ Name: "HairAura_RightB", Layer: "Hair", Pri: -105,
+			InheritColor: "Tail",
+		},
+	])
+});
+
+
+
+AddModel({
+	Name: "AuraBang_Left_Back",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "AuraHair",
+	Protected: true,
+	Categories: ["Hairstyles", "BackHair"],
+	Layers: ToLayerMap([
+		{ Name: "HairAura_Left", Layer: "Hair", Pri: -100,
+			InheritColor: "Bang",
+		},
+		{ Name: "HairAura_LeftB", Layer: "HairPonytail", Pri: -5,
+			InheritColor: "Tail",
+		},
+	])
+});
+AddModel({
+	Name: "AuraBang_Right_Back",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "AuraHair",
+	Protected: true,
+	Categories: ["Hairstyles", "BackHair"],
+	Layers: ToLayerMap([
+		{ Name: "HairAura_Right", Layer: "Hair", Pri: 0,
+			InheritColor: "Bang",
+		},
+		{ Name: "HairAura_RightB", Layer: "HairPonytail", Pri: -5,
+			InheritColor: "Tail",
+		},
+	])
+});
+
+
+AddModel({
+	Name: "Hair2",
+	Folder: "Hair2",
+	Parent: "Straight",
+	Protected: true,
+	Categories: ["Hairstyles", "FrontHair"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair2_Front", Layer: "Hair", Pri: 9,
+			SwapLayerPose: {HoodMask: "HairOver"},
+			InheritColor: "Front",
+		},
+		{ Name: "Hair2_FrontB", Layer: "HairFront", Pri: -5,
+			InheritColor: "LeftSideBang",
+			DisplacementInvariant: true,
+			DisplaceLayers: {HairBlockBF: true,},
+			DisplacementSprite: "BlindfoldHide",
+			DisplaceAmount: 20,
+		},
+		{ Name: "Hair2_FrontC", Layer: "HairFront", Pri: -5,
+			InheritColor: "RightSideBang",
+		},
+	])
+});
+AddModel({
+	Name: "Hair2_LeftPuff",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "Twintails",
+	Protected: true,
+	Categories: ["Hairstyles", "BackHair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair2_Left", Layer: "Hair", Pri: 40,
+			InheritColor: "LeftPuff",
+		},
+	])
+});
+AddModel({
+	Name: "Hair2_RightPuff",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "Twintails",
+	Protected: true,
+	Categories: ["Hairstyles", "BackHair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair2_Right", Layer: "Hair", Pri: 40,
+			InheritColor: "RightPuff",
+		},
+	])
+});
+
+
+AddModel({
+	Name: "Hair3",
+	Folder: "Hair2",
+	Parent: "StraightBangs",
+	Protected: true,
+	Categories: ["Hairstyles", "FrontHair"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair3_FrontA", Layer: "Hair", Pri: 9,
+			SwapLayerPose: {HoodMask: "HairOver"},
+			InheritColor: "Hair",
+		},
+		{ Name: "Hair3_FrontC", Layer: "HairFront", Pri: 30,
+			InheritColor: "Bangs",
+			DisplacementInvariant: true,
+			DisplaceLayers: {HairBlockBF: true,},
+			DisplacementSprite: "BlindfoldHide",
+			DisplaceAmount: 20,
+		},
+		{ Name: "Hair3_FrontD", Layer: "HairFront", Pri: 31,
+			InheritColor: "Under",
+			TieToLayer: "Hair3_FrontC",
+		},
+	])
+});
+AddModel({
+	Name: "Hair3_Short",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "Curly",
+	Protected: true,
+	Categories: ["Hairstyles", "FrontHair"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair3_FrontA", Layer: "Hair", Pri: 9,
+			SwapLayerPose: {HoodMask: "HairOver"},
+			InheritColor: "Hair",
+		},
+		{ Name: "Hair3_FrontC", Layer: "HairFront", Pri: 30,
+			InheritColor: "Bangs",
+			DisplacementInvariant: true,
+			DisplaceLayers: {HairBlockBF: true,},
+			DisplacementSprite: "BlindfoldHide",
+			DisplaceAmount: 20,
+		},
+		{ Name: "Hair3_FrontD", Layer: "HairFront", Pri: 31,
+			InheritColor: "Under",
+			TieToLayer: "Hair3_FrontC",
+		},
+	])
+});
+AddModel({
+	Name: "Hair3_Bangs",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "StraightBangs",
+	Protected: true,
+	Categories: ["Hairstyles"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair3_FrontE", Layer: "HairFront", Pri: 40,
+			InheritColor: "Bangs",
+			DisplacementInvariant: true,
+			DisplaceLayers: {HairBlockBF: true,},
+			DisplacementSprite: "BlindfoldHide",
+			DisplaceAmount: 20,
+		},
+	])
+});
+AddModel({
+	Name: "Hair3Back",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "MessyBack",
+	Protected: true,
+	Categories: ["Hairstyles", "BackHair"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair3_Back", Layer: "HairBack", Pri: -40,
+			InheritColor: "Back",
+		},
+	])
+});
+
+
+AddModel({
+	Name: "Hair4",
+	Folder: "Hair2",
+	Parent: "Straight",
+	Protected: true,
+	Categories: ["Hairstyles", "FrontHair"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair4_Front", Layer: "Hair", Pri: 4,
+			SwapLayerPose: {HoodMask: "HairOver"},
+			InheritColor: "Hair",
+		},
+		{ Name: "Hair4_FrontB", Layer: "HairFront", Pri: 5,
+			InheritColor: "Front",
+			DisplacementInvariant: true,
+			DisplaceLayers: {HairBlockBF: true,},
+			DisplacementSprite: "BlindfoldHide",
+			DisplaceAmount: 20,
+		},
+	])
+});
+
+AddModel({
+	Name: "Hair4_TailLeft",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "Twintails",
+	Protected: true,
+	Categories: ["Hairstyles"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair4_Left", Layer: "HairPonytail", Pri: -5,
+			InheritColor: "Tail",
+		},
+		{ Name: "Hair4_LeftB", Layer: "HairPonytail", Pri: -4.9,
+			InheritColor: "Highlight",
+		},
+	])
+});
+AddModel({
+	Name: "Hair4_TailRight",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "Twintails",
+	Protected: true,
+	Categories: ["Hairstyles"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair4_Right", Layer: "HairPonytail", Pri: -5,
+			InheritColor: "Tail",
+		},
+		{ Name: "Hair4_RightB", Layer: "HairPonytail", Pri: -4.9,
+			InheritColor: "Highlight",
+		},
+	])
+});
+
+
+AddModel({
+	Name: "Hair5",
+	Folder: "Hair2",
+	Parent: "Straight",
+	Protected: true,
+	Categories: ["Hairstyles", "FrontHair"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair5_Front", Layer: "Hair", Pri: 4,
+			SwapLayerPose: {HoodMask: "HairOver"},
+			InheritColor: "Hair",
+		},
+		{ Name: "Hair5_FrontB", Layer: "HairFront", Pri: 5,
+			InheritColor: "FrontLeft",
+			DisplacementInvariant: true,
+			DisplaceLayers: {HairBlockBF: true,},
+			DisplacementSprite: "BlindfoldHide",
+			DisplaceAmount: 20,
+		},
+		{ Name: "Hair5_FrontC", Layer: "HairFront", Pri: 5.2,
+			InheritColor: "Under",
+		},
+	])
+});
+AddModel({
+	Name: "Hair5_Highlight",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "Straight",
+	Protected: true,
+	Categories: ["Hairstyles", "FrontHair"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair5_FrontD", Layer: "HairFront", Pri: 6,
+			InheritColor: "HighlightLeft",
+			DisplacementInvariant: true,
+			DisplaceLayers: {HairBlockBF: true,},
+			DisplacementSprite: "BlindfoldHide",
+			DisplaceAmount: 20,
+		},
+		{ Name: "Hair5_FrontE", Layer: "HairFront", Pri: 6,
+			InheritColor: "HighlightRight",
+		},
+	])
+});
+
+AddModel({
+	Name: "Hair5_TailLeft",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "Twintails",
+	Protected: true,
+	Categories: ["Hairstyles"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair5_Left", Layer: "HairPonytail", Pri: -4,
+			InheritColor: "Tail",
+		},
+	])
+});
+AddModel({
+	Name: "Hair5_TailRight",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "Twintails",
+	Protected: true,
+	Categories: ["Hairstyles"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair5_Right", Layer: "HairPonytail", Pri: -4,
+			InheritColor: "Tail",
+		},
+	])
+});
+
+
+
+AddModel({
+	Name: "Hair6",
+	Folder: "Hair2",
+	Parent: "Straight",
+	Protected: true,
+	Categories: ["Hairstyles", "FrontHair"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair6_Front", Layer: "Hair", Pri: 7,
+			SwapLayerPose: {HoodMask: "HairOver"},
+			InheritColor: "Hair",
+		},
+		{ Name: "Hair6_FrontB", Layer: "HairFront", Pri: 8,
+			InheritColor: "FrontLeft",
+			DisplacementInvariant: true,
+			DisplaceLayers: {HairBlockBF: true,},
+			DisplacementSprite: "BlindfoldHide",
+			DisplaceAmount: 20,
+		},
+	])
+});
+
+
+AddModel({
+	Name: "Hair6_TailLeft",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "Twintails",
+	Protected: true,
+	Categories: ["Hairstyles"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair6_Left", Layer: "HairPonytail", Pri: 30,
+			InheritColor: "Tail",
+		},
+	])
+});
+AddModel({
+	Name: "Hair6_TailRight",
+	Folder: "Hair2",
+	TopLevel: false,
+	Parent: "Twintails",
+	Protected: true,
+	Categories: ["Hairstyles"],
+	AddPose: ["Hair"],
+	Layers: ToLayerMap([
+		{ Name: "Hair6_Right", Layer: "HairPonytail", Pri: 30,
+			InheritColor: "Tail",
+		},
+	])
+});

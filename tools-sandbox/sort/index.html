@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>排序算法演示与验证</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<link rel="stylesheet" href="/css/tools.css">
+
+<style>
+/* Sort Visualization Specific Styles */
+#sort-container {
+    height: 350px;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background-color: #f5f7fa;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+    padding: 20px 10px 0 10px;
+    margin-top: 20px;
+    overflow: hidden;
+}
+
+[data-theme='dark'] #sort-container {
+    background-color: #1a1a1a;
+    border-color: #333;
+}
+
+.sort-bar {
+    width: 10px;
+    margin: 0 1px;
+    background-color: #49b1f5;
+    transition: height 0.2s ease, background-color 0.1s ease;
+    border-radius: 3px 3px 0 0;
+}
+
+/* Colors for different states during sort */
+.sort-bar.comparing {
+    background-color: #e6a23c !important;
+}
+
+.sort-bar.swapping {
+    background-color: #f56c6c !important;
+}
+
+.sort-bar.sorted {
+    background-color: #67c23a !important;
+}
+
+.control-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+</style>
+
+
+<div class="tool-container" id="tool-sort-container">
+
+    <div class="tool-section">
+        <div class="tool-title">📊 排序算法演示</div>
+        
+        <div class="control-panel">
+            <div>
+                <label for="array-size">数据量 (10-100): </label>
+                <input type="number" id="array-size" min="10" max="100" value="50" style="width: 80px;">
+            </div>
+            
+            <div>
+                <label for="algorithm-select">算法: </label>
+                <select id="algorithm-select">
+                    <option value="bubble">冒泡排序 (Bubble Sort)</option>
+                    <option value="selection">选择排序 (Selection Sort)</option>
+                    <option value="insertion">插入排序 (Insertion Sort)</option>
+                    <option value="quick">快速排序 (Quick Sort)</option>
+                    <option value="merge">归并排序 (Merge Sort)</option>
+                    <option value="heap">堆排序 (Heap Sort)</option>
+                    <option value="shell">希尔排序 (Shell Sort)</option>
+                    <option value="cocktail">双向冒泡 (Cocktail Shaker Sort)</option>
+                    <option value="comb">梳排序 (Comb Sort)</option>
+                    <option value="gnome">侏儒排序 (Gnome Sort)</option>
+                    <option value="oddEven">奇偶排序 (Odd-Even Sort)</option>
+                    <option value="cycle">圈排序 (Cycle Sort)</option>
+                    <option value="pancake">煎饼排序 (Pancake Sort)</option>
+                    <option value="radix">基数排序 (Radix Sort)</option>
+                    <option value="bogo">猴子排序 (Bogo Sort) 🐒</option>
+                </select>
+            </div>
+            
+            <div>
+                <label for="speed-select">速度: </label>
+                <select id="speed-select">
+                    <option value="10">极快 (10ms)</option>
+                    <option value="50" selected>正常 (50ms)</option>
+                    <option value="200">较慢 (200ms)</option>
+                    <option value="500">极其缓慢 (500ms)</option>
+                </select>
+            </div>
+
+            <button class="btn" id="btn-generate" style="background: #e6a23c;">🔄 生成新数据</button>
+            <button class="btn" id="btn-sort" style="background: #67c23a;">▶️ 开始排序</button>
+        </div>
+
+        <div id="sort-container">
+            <!-- Bars will be generated here by JS -->
+        </div>
+        
+        <div style="margin-top: 15px; font-size: 13px; color: #666; text-align: center;">
+            <span style="display:inline-block; margin: 0 10px;"><span style="display:inline-block; width:12px; height:12px; background:#49b1f5; margin-right:5px; border-radius:2px;"></span>未排序</span>
+            <span style="display:inline-block; margin: 0 10px;"><span style="display:inline-block; width:12px; height:12px; background:#e6a23c; margin-right:5px; border-radius:2px;"></span>比较中</span>
+            <span style="display:inline-block; margin: 0 10px;"><span style="display:inline-block; width:12px; height:12px; background:#f56c6c; margin-right:5px; border-radius:2px;"></span>交换中</span>
+            <span style="display:inline-block; margin: 0 10px;"><span style="display:inline-block; width:12px; height:12px; background:#67c23a; margin-right:5px; border-radius:2px;"></span>已排序</span>
+        </div>
+    </div>
+
+</div>
+
+
+<script src="/js/tools/sort.js"></script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>

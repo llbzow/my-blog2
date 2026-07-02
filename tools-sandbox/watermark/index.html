@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>水印生成与检测</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<link rel="stylesheet" href="/css/tools.css">
+<!-- PDF Lib & PDF.js -->
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+    // Set worker src
+    if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+</script>
+
+<style>
+.controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.tabs {
+    display: flex;
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 20px;
+}
+.tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #666;
+}
+.tab.active {
+    color: #49b1f5;
+    border-bottom: 2px solid #49b1f5;
+    margin-bottom: -2px;
+}
+.canvas-container {
+    overflow: auto;
+    text-align: center;
+    margin-top: 20px;
+    border: 1px solid #eee;
+    padding: 10px;
+    max-height: 600px;
+    position: relative;
+}
+canvas {
+    max-width: 100%;
+}
+#pdf-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+.pdf-page-wrapper {
+    position: relative;
+    border: 1px solid #999;
+    margin-bottom: 10px;
+    display: inline-block;
+}
+.remove-mask {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px dashed red;
+    cursor: move;
+}
+</style>
+
+
+<div class="tool-container" id="tool-watermark-container">
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('visible')">👁️ 显性水印</div>
+        <div class="tab" onclick="switchTab('invisible')">🕵️ 隐形水印 (LSB)</div>
+        <div class="tab" onclick="switchTab('remove')">🧼 去水印 (图片/PDF)</div>
+    </div>
+
+    <!-- Visible Watermark -->
+    <div id="tab-visible" class="tool-section-content" style="background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <div class="upload-box" onclick="document.getElementById('vis-file').click()">
+            <p>1. 点击上传主图</p>
+            <input type="file" id="vis-file" accept="image/*" style="display: none;">
+        </div>
+
+        <div style="margin: 15px 0;">
+            <label>水印类型:</label>
+            <input type="radio" name="wm-type" value="text" checked onchange="toggleWmType()"> 文字
+            <input type="radio" name="wm-type" value="image" onchange="toggleWmType()"> 图片
+        </div>
+
+        <div class="controls">
+            <!-- Text Controls -->
+            <div id="ctrl-text-group" style="display: contents;">
+                <div class="control-group">
+                    <label>水印文字:</label>
+                    <input type="text" id="vis-text" value="我的水印">
+                </div>
+                <div class="control-group">
+                    <label>字体大小:</label>
+                    <input type="number" id="vis-size" value="40">
+                </div>
+                <div class="control-group">
+                    <label>颜色:</label>
+                    <input type="color" id="vis-color" value="#ffffff">
+                </div>
+            </div>
+
+            <!-- Image Controls -->
+            <div id="ctrl-image-group" style="display: none; grid-column: span 2;">
+                <div class="control-group">
+                    <label>上传水印图片:</label>
+                    <input type="file" id="wm-img-file" accept="image/*">
+                </div>
+                <div class="control-group">
+                    <label>缩放比例 (0.1-2):</label>
+                    <input type="number" id="wm-scale" value="0.5" step="0.1">
+                </div>
+            </div>
+
+            <!-- Common Controls -->
+            <div class="control-group">
+                <label>透明度 (0-1):</label>
+                <input type="number" id="vis-opacity" value="0.5" step="0.1" min="0" max="1">
+            </div>
+            <div class="control-group">
+                <label>位置:</label>
+                <select id="vis-pos">
+                    <option value="center">居中</option>
+                    <option value="bottom-right">右下角</option>
+                    <option value="top-left">左上角</option>
+                    <option value="repeat">全屏平铺</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="vis-canvas"></canvas>
+        </div>
+        <button class="btn" style="width: 100%; margin-top: 10px;" onclick="downloadCanvas('vis-canvas', 'watermarked.png')">下载图片</button>
+    </div>
+
+    <!-- Invisible Watermark -->
+    <div id="tab-invisible" class="tool-section-content" style="display: none; background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <h3>LSB 隐写术</h3>
+        <div class="upload-box" onclick="document.getElementById('invis-file').click()">
+            <p>点击上传图片</p>
+            <input type="file" id="invis-file" accept="image/*" style="display: none;">
+        </div>
+        <div class="controls">
+            <div class="control-group">
+                <label>隐写内容:</label>
+                <input type="text" id="invis-text" placeholder="输入要隐藏的文字">
+            </div>
+            <div class="control-group" style="flex-direction: row; align-items: flex-end;">
+                <button class="btn" onclick="encodeLSB()">🔒 写入</button>
+                <button class="btn" onclick="decodeLSB()" style="background: #e6a23c; margin-left: 10px;">🔓 读取</button>
+            </div>
+        </div>
+        <div id="invis-result" style="margin: 10px 0; font-weight: bold; color: #e6a23c;"></div>
+        <div class="canvas-container"><canvas id="invis-canvas"></canvas></div>
+        <button class="btn" style="width: 100%; margin-top: 10px;" onclick="downloadCanvas('invis-canvas', 'hidden_watermark.png')">下载加密图片</button>
+    </div>
+
+    <!-- Remove Watermark Tab (New) -->
+    <div id="tab-remove" class="tool-section-content" style="display: none; background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <div class="upload-box" onclick="document.getElementById('remove-file').click()">
+            <p>1. 上传图片或 PDF 文件</p>
+            <input type="file" id="remove-file" accept="image/*,application/pdf" style="display: none;">
+        </div>
+
+        <!-- Image Removal UI -->
+        <div id="remove-image-ui" style="display: none; margin-top: 20px;">
+            <div class="tool-title">2. 图片去水印 (涂抹修复)</div>
+            <div class="controls">
+                <div class="control-group">
+                    <label>画笔大小: <span id="brush-size-val">20</span>px</label>
+                    <input type="range" id="brush-size" min="5" max="50" value="20" oninput="document.getElementById('brush-size-val').innerText = this.value">
+                </div>
+                <div class="control-group" style="flex-direction: row; align-items: flex-end;">
+                     <button class="btn" onclick="undoRemove()" style="background: #909399; margin-right: 10px;">↩️ 撤销</button>
+                     <button class="btn" onclick="downloadCanvas('remove-canvas', 'cleaned.png')">📥 下载结果</button>
+                </div>
+            </div>
+            <p style="font-size: 12px; color: #666;">💡 在水印处涂抹，算法将自动尝试修复背景（适用于简单背景）</p>
+            <div class="canvas-container" style="cursor: crosshair;">
+                <canvas id="remove-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- PDF Removal UI -->
+        <div id="remove-pdf-ui" style="display: none; margin-top: 20px;">
+            <div class="tool-title">2. PDF 去水印 (遮罩覆盖)</div>
+            <p>在下方页面中拖拽画出白色遮罩框，覆盖水印区域。所有遮罩将应用到导出的 PDF 中。</p>
+            <div class="controls">
+                <button class="btn" id="btn-add-mask-mode" onclick="toggleMaskMode()">🔳 进入框选模式</button>
+                <button class="btn" onclick="saveCleanPDF()">💾 保存并下载 PDF</button>
+            </div>
+            <div id="pdf-container" class="canvas-container" style="background: #f0f0f0; padding: 20px;">
+                <!-- PDF Pages will be rendered here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="/js/tools/watermark.js"></script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>吃豆人简易版 (Pac-Man)</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<style>
+  .pacman-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+    background: #111;
+    padding: 20px;
+    border-radius: 8px;
+    color: #fff;
+  }
+  #pacman-canvas {
+    background-color: #000;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    border: 2px solid #3366ff;
+    border-radius: 4px;
+    max-width: 100%;
+  }
+  .p-info {
+    margin: 15px 0;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #ffd700;
+  }
+  .p-btn {
+    padding: 8px 20px;
+    background-color: #3366ff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s;
+  }
+  .p-btn:hover {
+    background-color: #5588ff;
+  }
+  .p-keys {
+    font-size: 12px;
+    color: #aaa;
+    margin-top: 10px;
+  }
+</style>
+
+<div class="pacman-container">
+  <div class="p-info" id="p-score">分数: 0 | 关卡: 1</div>
+<label style="font-size:12px; margin-bottom: 10px; color:#ff9800;" id="gpu-label">
+<input type="checkbox" id="p-gpu-toggle" disabled> 🔍 探测 WebGPU 并发算力中...
+</label>
+  <canvas id="pacman-canvas" width="380" height="380"></canvas>
+  <div style="margin-top:20px; display:flex; gap:10px;">
+    <button class="p-btn" id="p-ai">🤖 AI 托管</button>
+    <button class="p-btn" id="p-restart">开始游戏</button>
+  </div>
+  <div class="p-keys">请使用方向键控制，或点击 AI 托管</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('pacman-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const scoreInfo = document.getElementById('p-score');
+    const restartBtn = document.getElementById('p-restart');
+    const aiBtn = document.getElementById('p-ai');
+
+    const tileSize = 20;
+    const cols = canvas.width / tileSize;
+    const rows = canvas.height / tileSize;
+
+    // 0: Wall, 1: Dot, 2: Power Pellet, 3: Empty
+    let map = [];
+    let dotsLeft = 0;
+    let score = 0;
+    let level = 1;
+    let isGameOver = true;
+    let timer = null;
+    let aiMode = false;
+
+    let pacman = { x: 1, y: 1, vx: 0, vy: 0, nextVx: 0, nextVy: 0, mouthOpen: 0, dMouth: 0.1, dirAngle: 0 };
+    let ghosts = [];
+
+    // Basic map generator (border + random inner walls)
+    function generateMap() {
+        map = [];
+        dotsLeft = 0;
+        for (let r=0; r<rows; r++) {
+            let row = [];
+            for (let c=0; c<cols; c++) {
+                if (r===0 || r===rows-1 || c===0 || c===cols-1) {
+                    row.push(0); // borders
+                } else if (r%2===0 && c%2===0 && Math.random() > 0.3) {
+                    row.push(0); // obstacles
+                } else {
+                    row.push(1); // dots
+                    dotsLeft++;
+                }
+            }
+            map.push(row);
+        }
+        // Secure starting positions
+        map[1][1] = 3; map[1][2] = 3; map[2][1] = 3; // pacman spawn
+        dotsLeft -= 3;
+    }
+
+    function initGame() {
+        score = 0;
+        level = 1;
+        initLevel();
+        isGameOver = false;
+        restartBtn.innerText = "重新开始";
+        if(timer) clearInterval(timer);
+        timer = setInterval(loop, 60);
+    }
+
+    let deadEndMap = [];
+    function initLevel() {
+        generateMap();
+        
+        // Compute dead-end map
+        deadEndMap = Array.from({length: rows}, () => Array(cols).fill(0));
+        let changes = true;
+        while(changes) {
+            changes = false;
+            for(let r=1; r<rows-1; r++) {
+                for(let c=1; c<cols-1; c++) {
+                    if(map[r][c] !== 0 && deadEndMap[r][c] === 0) {
+                        // Check if only 1 contiguous free neighbor
+                        let freeNeighbors = 0;
+                        const dirs = [[0,1], [1,0], [0,-1], [-1,0]];
+                        for(let d of dirs) {
+                            let nr = r + d[0], nc = c + d[1];
+                            if(map[nr][nc] !== 0 && deadEndMap[nr][nc] === 0) freeNeighbors++;
+                        }
+                        if(freeNeighbors <= 1 && !(r===1 && c===1)) {
+                            deadEndMap[r][c] = 1;
+                            changes = true;
+                        }
+                    }
+                }
+            }
+        }
+        
+        pacman = { x: 1, y: 1, vx: 0, vy: 0, nextVx: 0, nextVy: 0, mouthOpen: 0, dMouth: 0.2, dirAngle: 0 };
+        ghosts = [];
+        let ghostCount = Math.min(6, level + 2);
+        for(let i=0; i<ghostCount; i++) {
+            ghosts.push({
+                x: cols-2, y: rows-2 - i*2, 
+                vx: 0, vy: 0, 
+                color: ['#FF0000', '#FFB8FF', '#00FFFF', '#FFB852'][i%4]
+            });
+            // clear spawn
+            if (map[ghosts[i].y][ghosts[i].x] === 1) {
+                map[ghosts[i].y][ghosts[i].x] = 3;
+                dotsLeft--;
+            }
+        }
+        scoreInfo.innerText = `分数: ${score} | 关卡: ${level}`;
+    }
+
+    function drawMap() {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0,0, canvas.width, canvas.height);
+        for (let r=0; r<rows; r++) {
+            for (let c=0; c<cols; c++) {
+                if (map[r][c] === 0) {
+                    ctx.fillStyle = '#111199'; // wall
+                    ctx.fillRect(c*tileSize, r*tileSize, tileSize, tileSize);
+                    ctx.strokeStyle = '#3366ff';
+                    ctx.strokeRect(c*tileSize+2, r*tileSize+2, tileSize-4, tileSize-4);
+                } else if (map[r][c] === 1) {
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(c*tileSize + tileSize/2, r*tileSize + tileSize/2, 3, 0, Math.PI*2);
+                    ctx.fill();
+                }
+            }
+        }
+    }
+
+    function drawPacman() {
+        pacman.mouthOpen += pacman.dMouth;
+        if (pacman.mouthOpen >= 0.5 || pacman.mouthOpen <= 0) pacman.dMouth *= -1;
+        
+        ctx.save();
+        ctx.translate(pacman.x*tileSize + tileSize/2, pacman.y*tileSize + tileSize/2);
+        
+        // determine rotation based on velocity
+        if (pacman.vx === 1) pacman.dirAngle = 0;
+        else if (pacman.vx === -1) pacman.dirAngle = Math.PI;
+        else if (pacman.vy === 1) pacman.dirAngle = Math.PI/2;
+        else if (pacman.vy === -1) pacman.dirAngle = -Math.PI/2;
+        
+        ctx.rotate(pacman.dirAngle);
+        
+        ctx.fillStyle = '#FFEB3B';
+        ctx.beginPath();
+        ctx.arc(0, 0, tileSize/2 - 2, pacman.mouthOpen * Math.PI, (2 - pacman.mouthOpen) * Math.PI);
+        ctx.lineTo(0, 0);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawGhosts() {
+        ghosts.forEach(g => {
+            let cx = g.x*tileSize + tileSize/2;
+            let cy = g.y*tileSize + tileSize/2;
+            ctx.fillStyle = g.color;
+            ctx.beginPath();
+            ctx.arc(cx, cy, tileSize/2 - 2, Math.PI, 0);
+            ctx.lineTo(cx + tileSize/2 - 2, cy + tileSize/2 - 2);
+            ctx.lineTo(cx - tileSize/2 + 2, cy + tileSize/2 - 2);
+            ctx.fill();
+            
+            // eyes
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(cx-3, cy-2, 2.5, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx+3, cy-2, 2.5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#000';
+            ctx.beginPath(); ctx.arc(cx-3, cy-2, 1, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx+3, cy-2, 1, 0, Math.PI*2); ctx.fill();
+        });
+    }
+
+    function isValid(x, y) {
+        if (x<0 || x>=cols || y<0 || y>=rows) return false;
+        return map[y][x] !== 0; // 0 == wall
+    }
+
+    // ====== WEBGPU IMPLEMENTATION ======
+let device = null;
+let computePipeline = null;
+let gpuEnabled = false;
+let gpuBufferScore, gpuBufferMap, gpuBufferParams;
+
+const wgslCode = `
+@group(0) @binding(0) var<storage, read> distMap: array<i32>;
+@group(0) @binding(1) var<storage, read_write> scores: array<f32>;
+@group(0) @binding(3) var<storage, read> deadEnds: array<i32>;
+
+struct Params { px: i32, py: i32, gx0: i32, gy0: i32, gx1: i32, gy1: i32, gx2: i32, gy2: i32, gx3: i32, gy3: i32 }
+@group(0) @binding(2) var<uniform> params: Params;
+
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let index = id.x + id.y * 19u;
+    if (id.x >= 19u || id.y >= 19u) { return; }
+
+    var score: f32 = -1000.0;
+    let dToDot = distMap[index];
+    
+    if (dToDot != 9999) {
+        score = 500.0 - f32(dToDot) * 10.0;
+        
+        // 死胡同致命惩罚
+        if (deadEnds[index] == 1) {
+            score = score - 15000.0;
+        }
+        
+        // Enhanced Ghost Avoidance: increase radius and penalty to guarantee survival over food
+        let gxs = array<i32,4>(params.gx0, params.gx1, params.gx2, params.gx3);
+        let gys = array<i32,4>(params.gy0, params.gy1, params.gy2, params.gy3);
+        
+        var minGDist: i32 = 99;
+        for(var i=0; i<4; i=i+1) {
+            if(gxs[i] != -1) {
+                let gDist = abs(i32(id.x) - gxs[i]) + abs(i32(id.y) - gys[i]);
+                if (gDist < minGDist) { minGDist = gDist; }
+                if (gDist < 6) {
+                    score = score - (7.0 - f32(gDist)) * (7.0 - f32(gDist)) * 300.0;
+                }
+            }
+        }
+        // 如果在死胡同周围而且幽灵靠近，额外扣分（宁可在空旷处被抓也不要进胡同）
+        if (deadEnds[index] == 1 && minGDist < 7) {
+            score = score - 50000.0;
+        }
+    }
+    scores[index] = score;
+}
+`;
+
+let gpuBufferDeadEnds;
+async function initWebGPU() {
+    const gpuLabel = document.getElementById('gpu-label');
+    if (!navigator.gpu) {
+        gpuLabel.innerHTML = '❌ WebGPU 不可用 (平滑回退至 JS 串行寻路引擎)';
+        return;
+    }
+    try {
+        const adapter = await navigator.gpu.requestAdapter();
+        device = await adapter.requestDevice();
+        const shaderModule = device.createShaderModule({ code: wgslCode });
+        computePipeline = device.createComputePipeline({
+            layout: 'auto',
+            compute: { module: shaderModule, entryPoint: 'main' },
+        });
+
+        gpuBufferScore = device.createBuffer({ size: 19*19*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+        gpuBufferMap = device.createBuffer({ size: 19*19*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+        gpuBufferDeadEnds = device.createBuffer({ size: 19*19*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+        gpuBufferParams = device.createBuffer({ size: 40, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+
+        gpuEnabled = true;
+        gpuLabel.style.color = "#4caf50";
+        gpuLabel.innerHTML = '<input type="checkbox" id="p-gpu-toggle" checked> 🚀 已激活 WebGPU 高并发计算加速引擎 (361 渲染算核)';
+        document.getElementById('p-gpu-toggle').addEventListener('change', (e) => gpuEnabled = e.target.checked);
+    } catch(e) {
+        gpuLabel.innerHTML = '❌ 初始化 WebGPU 失败';
+    }
+}
+
+async function findPathGPU() {
+    let distMap = new Int32Array(19*19).fill(9999);
+    let queue = [];
+    for(let r=0; r<19; r++){
+        for(let c=0; c<19; c++){
+            if(map[r][c]===1) {
+                queue.push({x:c, y:r, d:0});
+                distMap[r*19+c] = 0;
+            }
+        }
+    }
+    let head = 0;
+    const searchDirs = [{dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0}];
+    while(head < queue.length) {
+        let curr = queue[head++];
+        for(let d of searchDirs) {
+            let nx = curr.x+d.dx, ny = curr.y+d.dy;
+            if(isValid(nx,ny) && distMap[ny*19+nx] > curr.d+1) {
+                distMap[ny*19+nx] = curr.d+1;
+                queue.push({x:nx, y:ny, d:curr.d+1});
+            }
+        }
+    }
+    
+    let gParams = [pacman.x, pacman.y, -1,-1,-1,-1,-1,-1,-1,-1];
+    for(let i=0; i<Math.min(4, ghosts.length); i++) {
+        gParams[2 + i*2] = ghosts[i].x;
+        gParams[2 + i*2 + 1] = ghosts[i].y;
+    }
+    
+    let flatDeadEnds = new Int32Array(19*19);
+    for(let r=0; r<19; r++) for(let c=0; c<19; c++) flatDeadEnds[r*19+c] = deadEndMap[r][c] || 0;
+    
+    device.queue.writeBuffer(gpuBufferMap, 0, distMap);
+    device.queue.writeBuffer(gpuBufferDeadEnds, 0, flatDeadEnds);
+    device.queue.writeBuffer(gpuBufferParams, 0, new Int32Array(gParams));
+
+    const bindGroup = device.createBindGroup({
+        layout: computePipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: gpuBufferMap } },
+            { binding: 1, resource: { buffer: gpuBufferScore } },
+            { binding: 2, resource: { buffer: gpuBufferParams } },
+            { binding: 3, resource: { buffer: gpuBufferDeadEnds } }
+        ]
+    });
+
+    const commandEncoder = device.createCommandEncoder();
+    const passEncoder = commandEncoder.beginComputePass();
+    passEncoder.setPipeline(computePipeline);
+    passEncoder.setBindGroup(0, bindGroup);
+    passEncoder.dispatchWorkgroups(2, 2); 
+    passEncoder.end();
+
+    const outputBuffer = device.createBuffer({ size: 19*19*4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    commandEncoder.copyBufferToBuffer(gpuBufferScore, 0, outputBuffer, 0, 19*19*4);
+    device.queue.submit([commandEncoder.finish()]);
+
+    await outputBuffer.mapAsync(GPUMapMode.READ);
+    const scores = new Float32Array(outputBuffer.getMappedRange());
+    
+    const dirs = [{dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0}];
+    let bestScore = -Infinity;
+    let bestDir = null;
+
+    for(let d of dirs) {
+        let nx = pacman.x + d.dx, ny = pacman.y + d.dy;
+        if(isValid(nx, ny)) {
+            let sc = scores[ny*19 + nx];
+            if (sc > bestScore) { bestScore = sc; bestDir = d; }
+        }
+    }
+    outputBuffer.unmap();
+    return bestDir;
+}
+
+function pacmanAiStepJS() {
+        if(isGameOver || !aiMode) return;
+
+        let queue = [{x: pacman.x, y: pacman.y, path: []}];
+        let visited = Array.from({length: rows}, () => Array(cols).fill(false));
+        visited[pacman.y][pacman.x] = true;
+
+        // 把幽灵当前和即将可能去的位置设为危险区权重（不寻路）
+        ghosts.forEach(g => {
+            visited[g.y][g.x] = true;
+            const dirs = [{dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0}];
+            dirs.forEach(d => {
+                if(isValid(g.x+d.dx, g.y+d.dy)) visited[g.y+d.dy][g.x+d.dx] = true;
+            });
+        });
+
+        let nextMove = null;
+        while(queue.length > 0 && !nextMove) {
+            let curr = queue.shift();
+            if (map[curr.y][curr.x] === 1) { // 找到最近的豆子
+                nextMove = curr.path[0];
+                break;
+            }
+            if (curr.path.length > 30) break; // 限制深度
+            const dirs = [{dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0}];
+            for(let d of dirs) {
+                let nx = curr.x + d.dx, ny = curr.y + d.dy;
+                if(isValid(nx, ny) && !visited[ny][nx]) {
+                    visited[ny][nx] = true;
+                    queue.push({x: nx, y: ny, path: [...curr.path, d]});
+                }
+            }
+        }
+
+        if (nextMove) {
+            pacman.nextVx = nextMove.dx;
+            pacman.nextVy = nextMove.dy;
+        } else {
+            // 被困住时尽量随机移动求生
+            const dirs = [{dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0}];
+            let safeDirs = dirs.filter(d => isValid(pacman.x + d.dx, pacman.y + d.dy));
+            if(safeDirs.length > 0) {
+                let rd = safeDirs[Math.floor(Math.random()*safeDirs.length)];
+                pacman.nextVx = rd.dx;
+                pacman.nextVy = rd.dy;
+            }
+        }
+    }
+
+    function loop() {
+        if (isGameOver) return;
+        if (aiMode) {
+            if (gpuEnabled) {
+                findPathGPU().then(d => {
+                    if (d) { pacman.nextVx = d.dx; pacman.nextVy = d.dy; }
+                    else pacmanAiStepJS(); // Fallback if GPU pathfinding fails or finds no path
+                });
+            } else {
+                pacmanAiStepJS();
+            }
+        }
+
+        // Apply Next Direction if valid
+        if (pacman.nextVx !== 0 || pacman.nextVy !== 0) {
+            if (isValid(pacman.x + pacman.nextVx, pacman.y + pacman.nextVy)) {
+                pacman.vx = pacman.nextVx;
+                pacman.vy = pacman.nextVy;
+                pacman.nextVx = 0; pacman.nextVy = 0;
+            }
+        }
+
+        // Move Pacman
+        if (isValid(pacman.x + pacman.vx, pacman.y + pacman.vy)) {
+            pacman.x += pacman.vx;
+            pacman.y += pacman.vy;
+        }
+
+        // Eat dot
+        if (map[pacman.y][pacman.x] === 1) {
+            map[pacman.y][pacman.x] = 3;
+            dotsLeft--;
+            score += 10;
+            scoreInfo.innerText = `分数: ${score} | 关卡: ${level}`;
+            if (dotsLeft <= 0) {
+                level++;
+                initLevel(); // Next stage
+                return;
+            }
+        }
+
+        // Move Ghosts (very naive random walker)
+        // Slow down ghosts artificially (update every 2nd or 3rd frame)
+        if (Math.random() < 0.6) {
+            ghosts.forEach(g => {
+                let moves = [];
+                const dirs = [[1,0], [-1,0], [0,1], [0,-1]];
+                dirs.forEach(d => {
+                    if (isValid(g.x + d[0], g.y + d[1]) && !(d[0]===-g.vx && d[1]===-g.vy)) { // avoid reverse
+                        moves.push(d);
+                    }
+                });
+                if (moves.length === 0) { g.vx *= -1; g.vy *= -1; } // dead end, turn around
+                else {
+                    let move = moves[Math.floor(Math.random()*moves.length)];
+                    
+                    // Slightly biased towards pacman roughly 30% of the time
+                    if (Math.random() < 0.3) {
+                       let bestDist = Infinity;
+                       moves.forEach(m => {
+                           let dist = Math.abs((g.x+m[0])-pacman.x) + Math.abs((g.y+m[1])-pacman.y);
+                           if (dist < bestDist) { bestDist = dist; move = m; }
+                       });
+                    }
+
+                    g.vx = move[0]; g.vy = move[1];
+                }
+
+                if (isValid(g.x + g.vx, g.y + g.vy)) {
+                    g.x += g.vx; g.y += g.vy;
+                }
+            });
+        }
+
+        // Check death
+        let died = false;
+        ghosts.forEach(g => {
+            if (g.x === pacman.x && g.y === pacman.y) died = true;
+        });
+
+        if (died) {
+            isGameOver = true;
+            clearInterval(timer);
+            scoreInfo.innerText = `游戏结束！ | 分数: ${score} | 关卡: ${level}`;
+        }
+
+        drawMap();
+        drawPacman();
+        drawGhosts();
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if(!isGameOver && [37, 38, 39, 40, 32].includes(e.keyCode)) e.preventDefault();
+        if (e.key === 'ArrowUp' || e.key === 'w') { pacman.nextVx = 0; pacman.nextVy = -1; }
+        else if (e.key === 'ArrowDown' || e.key === 's') { pacman.nextVx = 0; pacman.nextVy = 1; }
+        else if (e.key === 'ArrowLeft' || e.key === 'a') { pacman.nextVx = -1; pacman.nextVy = 0; }
+        else if (e.key === 'ArrowRight' || e.key === 'd') { pacman.nextVx = 1; pacman.nextVy = 0; }
+    });
+
+    aiBtn.addEventListener('click', () => {
+        aiMode = !aiMode;
+        aiBtn.innerText = aiMode ? "停止托管" : "🤖 AI 托管";
+    });
+
+    restartBtn.addEventListener('click', initGame);
+    initWebGPU();
+    drawMap(); // Initial map draw
+});
+</script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+
+
+<div class="tool-container">
+    <div class="tool-header">
+        <h2>📏 常用工程单位快速换算</h2>
+        <p>支持长度、面积、体积/方量、重量等建筑及施工常用单位的即时转换。</p>
+    </div>
+
+    <div class="converter-section">
+        <div class="input-group">
+            <label>数值：</label>
+            <input type="number" id="inputValue" placeholder="输入数值" value="1">
+        </div>
+
+        <div class="type-selector">
+            <button class="type-btn active" data-type="length">长度 (Length)</button>
+            <button class="type-btn" data-type="area">面积 (Area)</button>
+            <button class="type-btn" data-type="volume">体积/方量 (Volume)</button>
+            <button class="type-btn" data-type="weight">重量 (Weight)</button>
+        </div>
+
+        <div class="converter-boxes">
+            <div class="box">
+                <label>从：</label>
+                <select id="fromUnit"></select>
+            </div>
+            <div class="switch-icon" onclick="swapUnits()">⇄</div>
+            <div class="box">
+                <label>至：</label>
+                <select id="toUnit"></select>
+            </div>
+        </div>
+
+        <div class="result-display">
+            <span id="resultValue">0.00</span>
+            <span id="resultUnit" class="unit-label"></span>
+        </div>
+    </div>
+</div>
+
+<style>
+.tool-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+.tool-header h2 { margin-top: 0; color: var(--text-highlight-color); }
+.converter-section { margin-top: 20px; }
+.input-group { margin-bottom: 20px; }
+.input-group input {
+    width: 100%; padding: 12px; font-size: 18px;
+    border: 2px solid var(--border-color); border-radius: 8px;
+    background: var(--search-bg); color: var(--font-color);
+}
+.type-selector {
+    display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.type-btn {
+    padding: 8px 16px; border: 1px solid var(--border-color);
+    background: transparent; border-radius: 20px; cursor: pointer;
+    color: var(--font-color); transition: 0.3s;
+}
+.type-btn.active { background: #49b1f5; color: white; border-color: #49b1f5; }
+.converter-boxes {
+    display: flex; align-items: center; justify-content: space-between; gap: 15px;
+    margin-bottom: 20px;
+}
+.converter-boxes .box { flex: 1; display: flex; flex-direction: column; }
+.converter-boxes select {
+    padding: 10px; font-size: 16px; border-radius: 8px;
+    border: 1px solid var(--border-color); background: var(--search-bg);
+    color: var(--font-color);
+}
+.switch-icon {
+    font-size: 24px; cursor: pointer; color: #49b1f5;
+    padding: 10px; border-radius: 50%; background: rgba(73, 177, 245, 0.1);
+    transition: transform 0.3s;
+    user-select: none;
+}
+.switch-icon:hover { transform: rotate(180deg); }
+.result-display {
+    text-align: center; padding: 30px; background: rgba(73, 177, 245, 0.05);
+    border-radius: 12px; border: 2px dashed #49b1f5;
+}
+#resultValue { font-size: 3em; font-weight: bold; color: #49b1f5; word-break: break-all; }
+.unit-label { font-size: 1.2em; color: var(--font-color); margin-left: 10px; }
+</style>
+
+<script>
+const units = {
+    length: {
+        'mm': { name: '毫米 (mm)', factor: 0.001 },
+        'cm': { name: '厘米 (cm)', factor: 0.01 },
+        'm': { name: '米 (m)', factor: 1 },
+        'km': { name: '千米 (km)', factor: 1000 },
+        'in': { name: '英寸 (in)', factor: 0.0254 },
+        'ft': { name: '英尺 (ft)', factor: 0.3048 }
+    },
+    area: {
+        'sq_m': { name: '平方米 (m²)', factor: 1 },
+        'mu': { name: '亩', factor: 666.666667 },
+        'ha': { name: '公顷 (ha)', factor: 10000 },
+        'sq_km': { name: '平方千米 (km²)', factor: 1000000 },
+        'sq_ft': { name: '平方英尺 (sq ft)', factor: 0.092903 }
+    },
+    volume: {
+        'cu_m': { name: '方 / 立方米 (m³)', factor: 1 },
+        'l': { name: '升 (L)', factor: 0.001 },
+        'ml': { name: '毫升 (mL)', factor: 0.000001 },
+        'cu_yd': { name: '立方码 (cu yd)', factor: 0.764555 }
+    },
+    weight: {
+        'kg': { name: '千克 (kg)', factor: 1000 },
+        't': { name: '吨 (t)', factor: 1000000 },
+        'g': { name: '克 (g)', factor: 1 },
+        'jin': { name: '斤', factor: 500 },
+        'lb': { name: '磅 (lb)', factor: 453.59237 }
+    }
+};
+
+let currentType = 'length';
+
+function initOptions() {
+    const fromSelect = document.getElementById('fromUnit');
+    const toSelect = document.getElementById('toUnit');
+    if(!fromSelect || !toSelect) return;
+    
+    fromSelect.innerHTML = '';
+    toSelect.innerHTML = '';
+    
+    Object.keys(units[currentType]).forEach(key => {
+        fromSelect.add(new Option(units[currentType][key].name, key));
+        toSelect.add(new Option(units[currentType][key].name, key));
+    });
+    
+    if(fromSelect.options.length > 1) {
+        toSelect.selectedIndex = 1;
+    }
+    calculate();
+}
+
+function calculate() {
+    const fromSelect = document.getElementById('fromUnit');
+    const toSelect = document.getElementById('toUnit');
+    if(!fromSelect || !toSelect) return;
+
+    const valStr = document.getElementById('inputValue').value;
+    const val = parseFloat(valStr);
+    
+    if(isNaN(val) || valStr.trim() === '') {
+        document.getElementById('resultValue').innerText = '0.00';
+        document.getElementById('resultUnit').innerText = '';
+        return;
+    }
+    
+    const from = fromSelect.value;
+    const to = toSelect.value;
+    
+    const baseVal = val * units[currentType][from].factor;
+    let result = baseVal / units[currentType][to].factor;
+    
+    // Auto format: prevent long scientific notations for simple usage
+    let resultStr = parseFloat(result.toPrecision(10)).toString();
+    
+    document.getElementById('resultValue').innerText = resultStr;
+    const unitName = units[currentType][to].name.split(' ')[0]; // Extract chinese part for display
+    document.getElementById('resultUnit').innerText = unitName;
+}
+
+window.swapUnits = function() {
+    const from = document.getElementById('fromUnit');
+    const to = document.getElementById('toUnit');
+    if(!from || !to) return;
+    
+    const temp = from.value;
+    from.value = to.value;
+    to.value = temp;
+    calculate();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.type-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            currentType = e.target.dataset.type;
+            initOptions();
+        });
+    });
+
+    ['inputValue', 'fromUnit', 'toUnit'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) {
+            el.addEventListener('input', calculate);
+            el.addEventListener('change', calculate);
+        }
+    });
+
+    initOptions();
+});
+</script>

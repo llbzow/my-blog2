@@ -1,0 +1,94 @@
+/* ==========================================================
+   自定义博客的美化样式 (Custom Style for Butterfly)
+   主要用于配合背景图片，实现内容容器的半透明毛玻璃效果
+   ========================================================== */
+
+/* 1. 整体布局页面背景透明，让 body 背景图透射出来 */
+#body-wrap {
+    background: transparent !important;
+}
+
+/* 2. 主卡片容器（文章列表、内容页）的半透明毛玻璃效果 */
+.layout > div:first-child:not(.recent-posts) {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border-radius: 12px;
+    box-shadow: 0 4px 8px 6px rgba(7, 17, 27, 0.06);
+}
+
+/* 首页文章卡片 */
+.recent-posts > .recent-post-item {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border-radius: 12px;
+    box-shadow: 0 4px 8px 6px rgba(7, 17, 27, 0.06);
+}
+
+/* 3. 侧边栏所有块状元素（名片、公告、分类等）透明毛玻璃效果 */
+#aside-content .card-widget {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border-radius: 12px;
+    box-shadow: 0 4px 8px 6px rgba(7, 17, 27, 0.06);
+}
+
+/* 4. 分页栏容器透明处理 */
+#pagination {
+    background: transparent !important;
+}
+
+#pagination .page-number.current {
+    background: var(--btn-bg) !important;
+}
+
+/* 5. 顶层导航栏（随屏幕滚动效果调整） */
+#page-header.nav-fixed #nav {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: 0 5px 6px -5px rgba(133, 133, 133, 0.6);
+}
+
+/* 6. 深色模式下的适配 (Dark mode compatibility) */
+[data-theme="dark"] .layout > div:first-child:not(.recent-posts),
+[data-theme="dark"] .recent-posts > .recent-post-item,
+[data-theme="dark"] #aside-content .card-widget {
+    background: rgba(30, 30, 30, 0.8) !important; /* 深灰色半透明 */
+    box-shadow: 0 4px 8px 6px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] #page-header.nav-fixed #nav {
+    background: rgba(18, 18, 18, 0.8) !important;
+    box-shadow: 0 5px 6px -5px rgba(0, 0, 0, 0.6);
+}
+
+/* 隐藏不需要的线条组件 (如果配置中开启了 canvas_nest 觉得乱可以强行在此隐藏) */
+/* canvas {
+    opacity: 0.3 !important; 
+} */
+
+/* ==========================================================
+   LQIP 图片懒加载渐入动效
+   使用 lazysizes 的 class 状态控制，确保加载后图片清晰还原
+   ========================================================== */
+
+/* 加载中：模糊 + 半透明（lazysizes 会自动添加这些 class）*/
+img.lazyload,
+img.lazyloading {
+    filter: blur(10px);
+    opacity: 0.6;
+    transition: filter 0.45s ease, opacity 0.45s ease;
+    will-change: filter, opacity;
+}
+
+/* 加载完成：完全清晰（lazysizes 添加 lazyloaded class 后生效）*/
+img.lazyloaded {
+    filter: blur(0) !important;
+    opacity: 1 !important;
+    transition: filter 0.45s ease, opacity 0.45s ease;
+}
+
+

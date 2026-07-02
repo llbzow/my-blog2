@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>文件全能转换</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<link rel="stylesheet" href="/css/tools.css">
+<!-- UI 辅助库 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+<style>
+/* Custom Styles */
+.converter-header {
+    background: #3b82f6; 
+    color: white;
+    padding: 40px 20px;
+    text-align: center;
+    border-radius: 8px 8px 0 0;
+    margin-bottom: 0;
+}
+.converter-header h1 { margin: 0; font-size: 2em; }
+.converter-header p { opacity: 0.9; margin-top: 10px; }
+
+.converter-body {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-top: none;
+    padding: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    border-radius: 0 0 8px 8px;
+}
+
+.upload-section {
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.drop-zone {
+    background: white;
+    border: 2px dashed #3b82f6;
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.drop-zone:hover { background: #eff6ff; }
+.drop-zone i { font-size: 48px; color: #3b82f6; margin-bottom: 15px; font-style: normal; }
+
+.format-section {
+    flex: 2;
+    min-width: 300px;
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #eee;
+}
+
+.format-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    overflow-x: auto;
+}
+.format-tab {
+    padding: 5px 15px;
+    background: #eee;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+}
+.format-tab.active { background: #3b82f6; color: white; }
+
+.format-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.format-item {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 90px;
+}
+.format-item:hover, .format-item.selected {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+.format-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+    display: block;
+}
+.format-name {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.2;
+}
+.format-tag {
+    font-size: 9px;
+    background: #e0f2fe;
+    color: #0284c7;
+    padding: 2px 4px;
+    border-radius: 4px;
+    margin-top: 4px;
+}
+.tag-ai { background: #f3e8ff; color: #9333ea; }
+
+.convert-action-bar {
+    width: 100%;
+    margin-top: 20px;
+    padding: 20px;
+    background: #eef2f6;
+    border-radius: 8px;
+    text-align: center;
+    display: none; 
+}
+.btn-convert {
+    background: #3b82f6;
+    color: white;
+    padding: 12px 40px;
+    border-radius: 30px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    transition: all 0.3s;
+}
+.btn-convert:hover { background: #2563eb; transform: scale(1.05); }
+
+.queue-section {
+    margin-top: 30px;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.queue-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+.queue-status {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 10px;
+}
+.status-pending { background: #eee; color: #666; }
+.status-processing { background: #fff7ed; color: #f97316; }
+.status-done { background: #f0fdf4; color: #16a34a; }
+.status-error { background: #fef2f2; color: #ef4444; }
+
+.ai-settings {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    display: none;
+}
+.ai-settings input {
+    width: 100%;
+    margin-top: 5px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+</style>
+
+
+<div id="tool-converter-container" class="tool-container">
+    
+    <div class="converter-header">
+        <h1>全能文档格式工厂</h1>
+        <p>前端负责交互编排，转换能力由 ConvertX 后端提供</p>
+    </div>
+
+    <div class="converter-body">
+        
+        <!-- Left: Upload -->
+        <div class="upload-section">
+            <div class="drop-zone" onclick="document.getElementById('file-input').click()">
+                <i>☁️</i>
+                <h3>选择文件（支持批量）</h3>
+                <p style="font-size: 12px; color: #999;">支持拖拽上传</p>
+                <input type="file" id="file-input" style="display: none;" multiple>
+            </div>
+            
+            <div style="background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+                <h4>ℹ️ 功能亮点:</h4>
+                <ul style="font-size: 12px; color: #666; padding-left: 20px; margin: 5px 0;">
+                    <li><strong>统一网关:</strong> 对接 ConvertX API</li>
+                    <li><strong>前端职责:</strong> 上传、状态轮询、结果下载</li>
+                    <li><strong>后端职责:</strong> 格式识别、转换执行、文件产出</li>
+                    <li><strong>建议:</strong> 优先填写正确 converter 名称以提高成功率</li>
+                </ul>
+            </div>
+
+            <div class="ai-settings" id="ai-settings-panel">
+                <h4 style="margin:0 0 5px 0; font-size:13px;">☁️ ConvertX 连接配置</h4>
+                <label style="font-size:12px;">Base URL:</label>
+                <input type="text" id="convertx-base-url" placeholder="https://doc.luozili.work" value="">
+                <label style="font-size:12px; margin-top:8px;">X-API-Key:</label>
+                <input type="password" id="api-key" placeholder="请输入 API Key" value="">
+                <label style="font-size:12px; margin-top:8px;">转换器 (可选):</label>
+                <input type="text" id="converter-name" placeholder="例如 imagemagick / ffmpeg / libreoffice" value="">
+                <label style="font-size:12px; margin-top:8px;">协议模式:</label>
+                <select id="protocol-mode" style="padding:8px; border:1px solid #ccc; border-radius:4px; width:100%;">
+                    <option value="auto">自动识别</option>
+                    <option value="sync">仅同步模式</option>
+                    <option value="async">仅异步 job 模式</option>
+                </select>
+                <button class="btn" style="margin-top:8px;" onclick="checkBackendConnectivity()">手动检测后端</button>
+                <p id="backend-status" style="font-size:10px; color:#999; margin-top:5px;">等待连接后端...</p>
+            </div>
+        </div>
+
+        <!-- Right: Format Selection -->
+        <div class="format-section">
+            <div class="format-tabs">
+                <div class="format-tab active" onclick="filterFormats('all')">全部</div>
+                <div class="format-tab" onclick="filterFormats('doc')">文档</div>
+                <div class="format-tab" onclick="filterFormats('img')">图片</div>
+                <div class="format-tab" onclick="filterFormats('data')">数据</div>
+                <div class="format-tab" onclick="filterFormats('media')">多媒体</div>
+            </div>
+
+            <div class="format-grid" id="format-grid">
+                <!-- Word Targets -->
+                <div class="format-item" data-type="doc" onclick="selectFormat('pdf')">
+                    <span class="format-icon">📄</span>
+                    <span class="format-name">转 PDF</span>
+                </div>
+                <div class="format-item" data-type="doc" onclick="selectFormat('docx')">
+                    <span class="format-icon">📝</span>
+                    <span class="format-name">转 Word</span>
+                    <span class="format-tag">视觉</span>
+                </div>
+
+                <!-- Image Targets -->
+                <div class="format-item" data-type="img" onclick="selectFormat('jpg')">
+                    <span class="format-icon">🖼️</span>
+                    <span class="format-name">转 JPG</span>
+                </div>
+                <div class="format-item" data-type="doc" onclick="selectFormat('pdf-img')">
+                    <span class="format-icon">📸</span>
+                    <span class="format-name">PDF转长图</span>
+                </div>
+
+                <div class="format-item" data-type="img" onclick="selectFormat('webp')">
+                    <span class="format-icon">🌐</span>
+                    <span class="format-name">转 WEBP</span>
+                </div>
+
+                <div class="format-item" data-type="media" onclick="selectFormat('gif')">
+                    <span class="format-icon">🎞️</span>
+                    <span class="format-name">转 GIF</span>
+                </div>
+
+                <div class="format-item" data-type="media" onclick="selectFormat('mp4')">
+                    <span class="format-icon">🎬</span>
+                    <span class="format-name">转 MP4</span>
+                </div>
+
+                <div class="format-item" data-type="media" onclick="selectFormat('mp3')">
+                    <span class="format-icon">🎵</span>
+                    <span class="format-name">转 MP3</span>
+                </div>
+
+                <!-- Text/Data Targets -->
+                <div class="format-item" data-type="data" onclick="selectFormat('txt')">
+                    <span class="format-icon">📃</span>
+                    <span class="format-name">提取文本</span>
+                </div>
+                <div class="format-item" data-type="data" onclick="selectFormat('md')">
+                    <span class="format-icon">⬇️</span>
+                    <span class="format-name">转 MD</span>
+                </div>
+                <div class="format-item" data-type="data" onclick="selectFormat('csv')">
+                    <span class="format-icon">📊</span>
+                    <span class="format-name">转 CSV</span>
+                </div>
+                <div class="format-item" data-type="data" onclick="selectFormat('xlsx')">
+                    <span class="format-icon">📗</span>
+                    <span class="format-name">转 Excel</span>
+                </div>
+            </div>
+
+            <div class="convert-action-bar" id="action-bar">
+                <div style="margin-bottom: 10px; color: #666;">
+                    已选择: <strong id="selected-file-name">file.docx</strong> 
+                    → 目标: <strong id="target-format-name">PDF</strong>
+                </div>
+                <button class="btn-convert" onclick="startConversion()">⚡ 立即转换</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="queue-section">
+        <h3>🚀 转换任务</h3>
+        <div style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+            <button class="btn" onclick="startBatchConversion()">批量开始</button>
+            <button class="btn" style="background:#e6a23c;" onclick="retryFailedTasks()">重试失败</button>
+            <button class="btn" style="background:#909399;" onclick="clearTaskQueue()">清空队列</button>
+            <button class="btn" style="background:#67c23a;" onclick="exportDiagnostics()">导出诊断包</button>
+        </div>
+        <div style="margin-bottom:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <label style="font-size:12px; color:#666;">任务筛选:</label>
+            <select id="task-filter" onchange="filterTaskView()" style="padding:6px; border:1px solid #ddd; border-radius:6px;">
+                <option value="all">全部</option>
+                <option value="pending">等待中</option>
+                <option value="running">进行中</option>
+                <option value="done">已完成</option>
+                <option value="error">失败</option>
+            </select>
+        </div>
+        <div id="conversion-queue">
+            <div class="queue-item" style="color: #999; justify-content: center;">暂无任务</div>
+        </div>
+    </div>
+
+    <div class="queue-section">
+        <h3>📈 调试日志面板</h3>
+        <div style="margin-bottom:10px; display:flex; gap:10px;">
+            <button class="btn" style="background:#909399;" onclick="clearDebugLogs()">清空日志</button>
+        </div>
+        <div id="debug-log-panel" style="max-height:220px; overflow:auto; background:#111827; color:#d1d5db; border-radius:8px; padding:10px; font-family:Consolas, monospace; font-size:12px; line-height:1.5;">
+            <div style="color:#6b7280;">暂无日志</div>
+        </div>
+    </div>
+
+    <div class="queue-section">
+        <h3>🗂️ 本地资产中心</h3>
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <button class="btn" onclick="refreshAssetCenter()">刷新资产</button>
+            <button class="btn" style="background:#909399;" onclick="clearAssetCenter()">清空资产</button>
+        </div>
+        <div id="asset-center-list" style="font-size:13px; color:#666;">暂无本地资产</div>
+    </div>
+</div>
+
+
+<script src="/js/tools/converter.js"></script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>

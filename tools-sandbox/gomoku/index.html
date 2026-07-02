@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>五子棋 (Gomoku)</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<style>
+.gomoku-container {
+display: flex;
+flex-direction: column;
+align-items: center;
+margin-top: 20px;
+}
+#gomoku-canvas {
+background-color: #d18b47;
+box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+cursor: pointer;
+border-radius: 4px;
+max-width: 100%;
+}
+.gomoku-info {
+margin: 15px 0;
+font-size: 1.2rem;
+font-weight: bold;
+color: var(--text-color, #333);
+}
+.gomoku-btn {
+padding: 8px 20px;
+background-color: var(--btn-bg, #49b1f5);
+color: var(--btn-color, #fff);
+border: none;
+border-radius: 4px;
+cursor: pointer;
+font-size: 1rem;
+transition: all 0.3s;
+}
+.gomoku-btn:hover {
+background-color: var(--btn-hover-color, #FF7D7D);
+}
+</style>
+
+<div class="gomoku-container">
+<div class="gomoku-info" id="g-info">当前回合: 玩家 (黑子)</div>
+<label style="font-size:12px; margin-bottom: 10px; color:#ff9800;" id="gpu-label">
+<input type="checkbox" id="g-gpu-toggle" disabled> 🔍 探测 WebGPU 并发算力中...
+</label>
+<canvas id="gomoku-canvas" width="450" height="450"></canvas>
+<div style="margin-top:20px; display:flex; gap:10px; flex-wrap: wrap; justify-content: center;">
+<button class="gomoku-btn" id="g-ai-move">AI 代打 (单步)</button>
+<button class="gomoku-btn" id="g-ai-vs-ai">AI 对打 (观战模式)</button>
+<button class="gomoku-btn" id="g-restart">重新开始</button>
+</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+const canvas = document.getElementById('gomoku-canvas');
+if (!canvas) return;
+const ctx = canvas.getContext('2d');
+const info = document.getElementById('g-info');
+const restartBtn = document.getElementById('g-restart');
+const aiMoveBtn = document.getElementById('g-ai-move');
+const aiVsAiBtn = document.getElementById('g-ai-vs-ai');
+
+const gridSize = 15;
+const padding = 15;
+const cellWidth = (canvas.width - padding * 2) / (gridSize - 1);
+
+let board = [];
+let currentPlayer = 1; // 1: 黑, 2: 白 
+let isGameOver = false;
+let aiVsAiMode = false;
+let aiTimer = null;
+
+function initBoard() {
+board = Array.from({length: gridSize}, () => Array(gridSize).fill(0));
+currentPlayer = 1;
+isGameOver = false;
+aiVsAiMode = false;
+aiVsAiBtn.innerText = "AI 对打 (观战模式)";
+clearTimeout(aiTimer);
+updateInfo();
+drawBoard();
+}
+
+function updateInfo() {
+if(isGameOver) return;
+const pName = currentPlayer === 1 ? '黑子' : '白子';
+info.innerText = `当前回合: ${pName} ${aiVsAiMode ? '(AI 自动推演中...)' : ''}`;
+}
+
+function drawBoard() {
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+ctx.strokeStyle = '#000';
+ctx.lineWidth = 1;
+for (let i = 0; i < gridSize; i++) {
+ctx.beginPath();
+ctx.moveTo(padding, padding + i * cellWidth);
+ctx.lineTo(canvas.width - padding, padding + i * cellWidth);
+ctx.stroke();
+
+ctx.beginPath();
+ctx.moveTo(padding + i * cellWidth, padding);
+ctx.lineTo(padding + i * cellWidth, canvas.height - padding);
+ctx.stroke();
+}
+
+for (let r = 0; r < gridSize; r++) {
+for (let c = 0; c < gridSize; c++) {
+if (board[r][c] !== 0) {
+drawPiece(r, c, board[r][c]);
+}
+}
+}
+}
+
+function drawPiece(r, c, player) {
+ctx.beginPath();
+const x = padding + c * cellWidth;
+const y = padding + r * cellWidth;
+ctx.arc(x, y, cellWidth * 0.4, 0, 2 * Math.PI);
+const gradient = ctx.createRadialGradient(x - 2, y - 2, cellWidth*0.1, x, y, cellWidth*0.4);
+if (player === 1) {
+gradient.addColorStop(0, '#555');
+gradient.addColorStop(1, '#000');
+} else {
+gradient.addColorStop(0, '#fff');
+gradient.addColorStop(1, '#ccc');
+}
+ctx.fillStyle = gradient;
+ctx.fill();
+ctx.shadowBlur = 4;
+ctx.shadowColor = 'rgba(0,0,0,0.4)';
+}
+
+function checkWin(r, c, player) {
+const dirs = [
+[[-1, 0], [1, 0]],
+[[0, -1], [0, 1]],
+[[-1, -1], [1, 1]],
+[[-1, 1], [1, -1]]
+];
+
+for (let dir of dirs) {
+let count = 1;
+for (let d of dir) {
+let nr = r + d[0], nc = c + d[1];
+while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && board[nr][nc] === player) {
+count++;
+nr += d[0];
+nc += d[1];
+}
+}
+if (count >= 5) return true;
+}
+return false;
+}
+
+function evaluateCell(r, c, p) {
+const dirs = [
+[[-1, 0], [1, 0]], [[0, -1], [0, 1]], 
+[[-1, -1], [1, 1]], [[-1, 1], [1, -1]]
+];
+let totalScore = 0;
+for (let dir of dirs) {
+let count = 1;
+let openEnds = 0;
+for (let d of dir) {
+let nr = r + d[0], nc = c + d[1];
+while(nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && board[nr][nc] === p) {
+count++;
+nr += d[0]; nc += d[1];
+}
+if(nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && board[nr][nc] === 0) {
+openEnds++;
+}
+}
+// Heuristic weights for Gomoku
+if (count >= 5) totalScore += 100000;
+else if (count === 4 && openEnds > 0) totalScore += 10000;
+else if (count === 3 && openEnds === 2) totalScore += 1000;
+else if (count === 3 && openEnds === 1) totalScore += 100;
+else if (count === 2 && openEnds === 2) totalScore += 10;
+}
+return totalScore;
+}
+
+function getBestMove(player) {
+let bestScore = -1;
+let candidates = [];
+const opponent = player === 1 ? 2 : 1;
+
+// 第一回合下中间
+let emptyCount = 0;
+for(let r=0; r<gridSize; r++) {
+for(let c=0; c<gridSize; c++) {
+if(board[r][c] === 0) emptyCount++;
+}
+}
+if(emptyCount === gridSize*gridSize) return {r: Math.floor(gridSize/2), c: Math.floor(gridSize/2)};
+
+for (let r = 0; r < gridSize; r++) {
+for (let c = 0; c < gridSize; c++) {
+if (board[r][c] === 0) {
+// 防守反击权值：优先满足自己的进攻路线，同时破坏对方的进攻路线
+const myScore = evaluateCell(r, c, player);
+const oppScore = evaluateCell(r, c, opponent);
+const score = myScore * 1.1 + oppScore;
+
+if (score > bestScore) {
+bestScore = score;
+candidates = [{r, c}];
+} else if (score === bestScore && score > 0) {
+candidates.push({r, c});
+}
+}
+}
+}
+
+if (candidates.length === 0) { // 找不到好位置时随机下
+for (let r = 0; r < gridSize; r++) {
+for (let c = 0; c < gridSize; c++) {
+if (board[r][c] === 0) candidates.push({r, c});
+}
+}
+}
+return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+// ============== WEBGPU PARALLEL AI COMPUTATION ==============
+let device = null;
+let computePipeline = null;
+let gpuEnabled = false;
+
+const wgslCode = `
+@group(0) @binding(0) var<storage, read> board: array<i32>;
+@group(0) @binding(1) var<storage, read_write> scores: array<f32>;
+
+struct Params { player: i32, opponent: i32 }
+@group(0) @binding(2) var<uniform> params: Params;
+
+fn evaluateLine(r: i32, c: i32, dr: i32, dc: i32, p: i32) -> f32 {
+    var count: i32 = 1;
+    var openEnds: i32 = 0;
+    
+    var nr = r + dr; var nc = c + dc;
+    while(nr >= 0 && nr < 15 && nc >= 0 && nc < 15 && board[nr * 15 + nc] == p) {
+        count = count + 1;
+        nr = nr + dr; nc = nc + dc;
+    }
+    if(nr >= 0 && nr < 15 && nc >= 0 && nc < 15 && board[nr * 15 + nc] == 0) { openEnds = openEnds + 1; }
+    
+    nr = r - dr; nc = c - dc;
+    while(nr >= 0 && nr < 15 && nc >= 0 && nc < 15 && board[nr * 15 + nc] == p) {
+        count = count + 1;
+        nr = nr - dr; nc = nc - dc;
+    }
+    if(nr >= 0 && nr < 15 && nc >= 0 && nc < 15 && board[nr * 15 + nc] == 0) { openEnds = openEnds + 1; }
+
+    var score: f32 = 0.0;
+    if (count >= 5) { score = score + 100000.0; }
+    else if (count == 4 && openEnds > 0) { score = score + 10000.0; }
+    else if (count == 3 && openEnds == 2) { score = score + 1000.0; }
+    else if (count == 3 && openEnds == 1) { score = score + 100.0; }
+    else if (count == 2 && openEnds == 2) { score = score + 10.0; }
+    return score;
+}
+
+@compute @workgroup_size(15, 15)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let index = id.x + id.y * 15u;
+    if (index >= 225u) { return; }
+    
+    if (board[index] != 0) {
+        scores[index] = -1.0;
+        return;
+    }
+    
+    let r = i32(id.y); let c = i32(id.x);
+    let p_score = evaluateLine(r, c, 1, 0, params.player) + evaluateLine(r, c, 0, 1, params.player) + 
+                  evaluateLine(r, c, 1, 1, params.player) + evaluateLine(r, c, 1, -1, params.player);
+    let o_score = evaluateLine(r, c, 1, 0, params.opponent) + evaluateLine(r, c, 0, 1, params.opponent) + 
+                  evaluateLine(r, c, 1, 1, params.opponent) + evaluateLine(r, c, 1, -1, params.opponent);
+                  
+    scores[index] = p_score * 1.1 + o_score;
+}
+`;
+
+async function initWebGPU() {
+    const gpuLabel = document.getElementById('gpu-label');
+    if (!navigator.gpu) {
+        gpuLabel.innerHTML = '❌ 您的浏览器不支持 WebGPU (已平滑回退至 JS 串行引擎)';
+        return;
+    }
+    try {
+        const adapter = await navigator.gpu.requestAdapter();
+        if (!adapter) throw new Error("No Adapter");
+        device = await adapter.requestDevice();
+        
+        const shaderModule = device.createShaderModule({ code: wgslCode });
+        computePipeline = device.createComputePipeline({
+            layout: 'auto',
+            compute: { module: shaderModule, entryPoint: 'main' },
+        });
+        
+        gpuEnabled = true;
+        gpuLabel.style.color = "#4caf50";
+        gpuLabel.innerHTML = '<input type="checkbox" id="g-gpu-toggle" checked> 🚀 已激活 WebGPU 高并发计算加速引擎 (225 并行计算核心)';
+        document.getElementById('g-gpu-toggle').addEventListener('change', (e) => gpuEnabled = e.target.checked);
+    } catch(e) {
+        gpuLabel.innerHTML = '❌ 初始化 WebGPU 失败 (已回退到基础模式)';
+    }
+}
+
+async function getBestMoveGPU(player) {
+    const opponent = player === 1 ? 2 : 1;
+    let emptyCount = 0;
+    let flatBoard = new Int32Array(225);
+    for(let r=0; r<15; r++) {
+       for(let c=0; c<15; c++) {
+           flatBoard[r*15 + c] = board[r][c];
+           if(board[r][c] === 0) emptyCount++;
+       }
+    }
+    if (emptyCount === 225) return {r: 7, c: 7};
+
+    const boardBuffer = device.createBuffer({ size: 225*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    device.queue.writeBuffer(boardBuffer, 0, flatBoard);
+
+    const scoresBuffer = device.createBuffer({ size: 225*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+    const paramsBuffer = device.createBuffer({ size: 8, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    device.queue.writeBuffer(paramsBuffer, 0, new Int32Array([player, opponent]));
+
+    const bindGroup = device.createBindGroup({
+        layout: computePipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: boardBuffer } },
+            { binding: 1, resource: { buffer: scoresBuffer } },
+            { binding: 2, resource: { buffer: paramsBuffer } }
+        ]
+    });
+
+    const commandEncoder = device.createCommandEncoder();
+    const passEncoder = commandEncoder.beginComputePass();
+    passEncoder.setPipeline(computePipeline);
+    passEncoder.setBindGroup(0, bindGroup);
+    passEncoder.dispatchWorkgroups(1, 1); // 15x15 is within a single 256 workgroup size
+    passEncoder.end();
+
+    const outputBuffer = device.createBuffer({ size: 225*4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    commandEncoder.copyBufferToBuffer(scoresBuffer, 0, outputBuffer, 0, 225*4);
+    device.queue.submit([commandEncoder.finish()]);
+
+    await outputBuffer.mapAsync(GPUMapMode.READ);
+    const scores = new Float32Array(outputBuffer.getMappedRange());
+    
+    let bestScore = -1; let candidates = [];
+    for (let i = 0; i < 225; i++) {
+        if (scores[i] >= 0) {
+            let r = Math.floor(i / 15); let c = i % 15;
+            if (scores[i] > bestScore) {
+                bestScore = scores[i]; candidates = [{r, c}];
+            } else if (scores[i] === bestScore && scores[i] > 0) {
+                candidates.push({r, c});
+            }
+        }
+    }
+    outputBuffer.unmap();
+    if(candidates.length === 0) {
+       for(let r=0; r<15; r++) for(let c=0; c<15; c++) if(board[r][c]===0) candidates.push({r,c});
+    }
+    return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+async function performAutoMoveAsync() {
+if (isGameOver) return;
+
+const pName = currentPlayer === 1 ? '黑子' : '白子';
+info.innerText = `当前回合: ${pName} (AI 计算中，引擎: ${gpuEnabled ? 'WebGPU' : 'JS'})`;
+
+// 加入一点延时来拟真人类/模型思考和渲染 UI
+if(aiTimer) clearTimeout(aiTimer);
+aiTimer = setTimeout(async () => {
+if(isGameOver) return;
+const move = gpuEnabled ? await getBestMoveGPU(currentPlayer) : getBestMove(currentPlayer);
+if (move) {
+board[move.r][move.c] = currentPlayer;
+drawPiece(move.r, move.c, currentPlayer);
+
+if(checkWin(move.r, move.c, currentPlayer)) {
+info.innerText = `${pName} (AI) 赢了！`;
+isGameOver = true;
+aiVsAiMode = false;
+aiVsAiBtn.innerText = "AI 对打 (观战模式)";
+return;
+}
+
+currentPlayer = currentPlayer === 1 ? 2 : 1;
+updateInfo();
+
+if (aiVsAiMode) {
+performAutoMoveAsync();
+} else if (currentPlayer === 2) {
+// PVE 下，该轮到白子（AI）下棋时自动再调一次
+performAutoMoveAsync(); 
+}
+}
+}, gpuEnabled ? 50 : 300); // GPU加速模式缩短强制等待动画
+}
+
+canvas.addEventListener('click', (e) => {
+if (isGameOver || currentPlayer !== 1 || aiVsAiMode) return;
+const rect = canvas.getBoundingClientRect();
+const mouseX = e.clientX - rect.left;
+const mouseY = e.clientY - rect.top;
+
+let c = Math.round((mouseX - padding) / cellWidth);
+let r = Math.round((mouseY - padding) / cellWidth);
+
+if (r >= 0 && r < gridSize && c >= 0 && c < gridSize && board[r][c] === 0) {
+board[r][c] = 1;
+drawPiece(r, c, 1);
+if (checkWin(r, c, 1)) {
+info.innerText = '你赢啦！(黑子胜)';
+isGameOver = true;
+return;
+}
+currentPlayer = 2;
+updateInfo();
+performAutoMoveAsync(); // 触发 AI (白子)
+}
+});
+
+aiMoveBtn.addEventListener('click', () => {
+if (isGameOver || aiVsAiMode) return;
+// 允许在玩家（黑子）的回合强制让 AI 代行一步
+if (currentPlayer === 1) {
+performAutoMoveAsync();
+}
+});
+
+aiVsAiBtn.addEventListener('click', () => {
+if (isGameOver) return;
+if (!aiVsAiMode) {
+aiVsAiMode = true;
+aiVsAiBtn.innerText = "停止自动对战观战";
+performAutoMoveAsync();
+} else {
+aiVsAiMode = false;
+clearTimeout(aiTimer);
+aiVsAiBtn.innerText = "AI 对打 (观战模式)";
+updateInfo();
+if(currentPlayer === 2) {
+performAutoMoveAsync(); // 若暂停时恰好是白子回合，顺势下出接着让黑子下
+}
+}
+});
+
+restartBtn.addEventListener('click', initBoard);
+initWebGPU();
+initBoard();
+});
+</script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>
