@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>时间戳与地理时间转换</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<link rel="stylesheet" href="/css/tools.css">
+
+
+<div class="tool-container" id="tool-time-container">
+
+    <!-- Section 1: Current Time -->
+    <div class="tool-section">
+        <div class="tool-title">⏱️ 当前时间</div>
+        <div style="font-size: 2em; text-align: center; margin: 20px 0; font-weight: bold;" id="current-now">Loading...</div>
+        <div style="text-align: center;">
+            <span style="color: #666;">Unix 时间戳 (秒): </span>
+            <code id="current-unix-s" style="color: #e05e5e; font-size: 1.2em; margin: 0 5px;">-</code>
+            <button class="btn copy-btn" style="padding: 2px 8px; font-size: 12px;" data-copy-target="current-unix-s">复制</button>
+            <br><br>
+            <span style="color: #666;">Unix 时间戳 (毫秒): </span>
+            <code id="current-unix-ms" style="color: #e05e5e; font-size: 1.2em; margin: 0 5px;">-</code>
+            <button class="btn copy-btn" style="padding: 2px 8px; font-size: 12px;" data-copy-target="current-unix-ms">复制</button>
+        </div>
+        <div style="text-align: center; margin-top: 15px;">
+            <button class="btn" id="toggle-pause">⏸️ 暂停更新</button>
+        </div>
+    </div>
+
+    <!-- Section 2: Timestamp Converter -->
+    <div class="tool-section">
+        <div class="tool-title">🔄 时间戳转换</div>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap;">
+            <label>时间戳:</label>
+            <input type="text" id="input-timestamp" placeholder="Unix 时间戳 (秒/毫秒)">
+            <select id="timestamp-unit">
+                <option value="auto">自动检测</option>
+                <option value="s">秒 (10位)</option>
+                <option value="ms">毫秒 (13位)</option>
+            </select>
+            <button class="btn" id="btn-convert-ts">转换 ➔</button>
+        </div>
+        <div class="upload-box" style="padding: 15px; text-align: left; cursor: default;" id="result-date">
+            结果将显示在这里...
+        </div>
+
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+
+        <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap;">
+            <label>日期时间:</label>
+            <input type="datetime-local" id="input-date" step="1">
+            <button class="btn" id="btn-convert-date">转换 ➔</button>
+        </div>
+        <div class="upload-box" style="padding: 15px; text-align: left; cursor: default;" id="result-timestamp">
+            结果将显示在这里...
+        </div>
+    </div>
+
+    <!-- Section 3: World Clock -->
+    <div class="tool-section">
+        <div class="tool-title">🌍 世界时钟</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px;" id="world-clocks">
+            <!-- Clocks injected by JS -->
+        </div>
+    </div>
+
+</div>
+
+
+<script src="/js/tools/time.js"></script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>

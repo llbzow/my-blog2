@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>👁️ WebGPU 实时目标检测 (YOLO)</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<style>
+.yolo-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    background: #0a0a0f;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    font-family: monospace;
+}
+
+.video-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #000;
+}
+
+#webcam, #overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#webcam {
+    display: none; /* 隐藏原生视频，全部通过 canvas 渲染以保持同步 */
+}
+
+#overlay {
+    z-index: 10;
+}
+
+.yolo-ui {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: rgba(15, 15, 25, 0.95);
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 255, 128, 0.4);
+    background: rgba(0, 255, 128, 0.1);
+    color: #00ff80;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+    outline: none;
+}
+
+.btn:hover {
+    background: rgba(0, 255, 128, 0.2);
+    box-shadow: 0 0 10px rgba(0, 255, 128, 0.3);
+}
+
+.btn:disabled {
+    border-color: #555;
+    color: #555;
+    background: transparent;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.status-panel {
+    display: flex;
+    gap: 15px;
+    color: #aaa;
+    font-size: 13px;
+}
+
+.status-item span {
+    color: #fff;
+    font-weight: bold;
+}
+
+.loading-screen {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #00ff80;
+    z-index: 20;
+}
+
+.spinner {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(0,255,128,0.2);
+    border-top-color: #00ff80;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+.hidden { display: none !important; }
+</style>
+
+
+<div class="yolo-wrapper">
+    <div class="video-container">
+        <video id="webcam" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+        <div id="loading" class="loading-screen hidden">
+            <div class="spinner"></div>
+            <div id="load-text">正在加载 WebGPU 引擎与模型 (约 11MB)...</div>
+        </div>
+    </div>
+    
+    <div class="yolo-ui">
+        <button id="btn-toggle" class="btn">🚀 启动摄像头</button>
+        <div class="status-panel">
+            <div class="status-item">Engine: <span id="stat-engine">None</span></div>
+            <div class="status-item">FPS: <span id="stat-fps">0</span></div>
+            <div class="status-item">Latency: <span id="stat-time">0ms</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- 引入 TensorFlow.js 4.17.0 + 兼容的后端 + COCO-SSD 模型 -->
+<!-- 使用 4.17.0 版本确保与 webgpu backend 兼容 -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@0.0.1-alpha.10/dist/tf-webgpu.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.17.0/dist/tf-webgl.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-cpu@4.17.0/dist/tf-cpu.min.js"></script>
+
+<script type="module">
+/**
+ * YOLO/COCO TensorFlow.js 实时检测引擎 v2.0
+ * 作者: llbzow
+ * 特性: 健壮的后端降级链路 webgpu -> webgl -> cpu
+ */
+
+const YOLO_CLASSES = [
+  'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
+  'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
+  'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+  'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard',
+  'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
+  'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+  'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone',
+  'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear',
+  'hair drier', 'toothbrush'
+];
+
+const COLORS = [
+    '#FF3838', '#FF9D97', '#FF701F', '#FFB21D', '#CFD231', '#48F90A', '#92CC17', '#3DDB86', '#1A9334', '#00D4BB',
+    '#2C99A8', '#00C2FF', '#344593', '#6473FF', '#0018EC', '#8438FF', '#520085', '#CB38FF', '#FF95C8', '#FF37C7'
+];
+
+// 配置
+const INPUT_SIZE = 640;
+const CONF_THRESH = 0.25;
+const IOU_THRESH = 0.45;
+
+let model = null;
+let isRunning = false;
+let videoStream = null;
+let animationId = null;
+let lastTime = performance.now();
+let frames = 0;
+let backendType = 'unknown';
+let modelType = 'unknown';
+
+const video = document.getElementById('webcam');
+const canvas = document.getElementById('overlay');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const btnToggle = document.getElementById('btn-toggle');
+const uiLoading = document.getElementById('loading');
+const uiLoadText = document.getElementById('load-text');
+const statEngine = document.getElementById('stat-engine');
+const statFps = document.getElementById('stat-fps');
+const statTime = document.getElementById('stat-time');
+
+// 离屏 Canvas 用于图像预处理
+const offCanvas = document.createElement('canvas');
+offCanvas.width = INPUT_SIZE;
+offCanvas.height = INPUT_SIZE;
+const offCtx = offCanvas.getContext('2d');
+
+// 动态加载 COCO-SSD 模型
+async function loadCocoSsd() {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.0.3/dist/coco-ssd.min.js';
+        script.onload = async () => {
+            try {
+                const model = await cocoSsd.load({
+                    base: 'lite_mobilenet_v2'
+                });
+                resolve(model);
+            } catch (e) {
+                reject(e);
+            }
+        };
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+/**
+ * 启用 TFJS 性能优化
+ * 包含多线程预热、推理预热等加速策略
+ */
+async function enablePerformanceOptimization(backendName) {
+    console.log(`[TFJS] 正在为 ${backendName} 后端优化性能...`);
+    
+    // 模型预热 (Warmup) - 首次推理时 kernel 编译会导致卡顿
+    // 预先执行一次 dummy inference 避免首次检测卡顿
+    if (model && offCanvas) {
+        uiLoadText.innerText = '正在预热模型...';
+        try {
+            // 使用真实预处理后的 canvas 做一次 warmup，避免 dtype 不匹配
+            await model.detect(offCanvas);
+            console.log('[TFJS] 模型预热完成');
+        } catch (e) {
+            console.warn('[TFJS] 模型预热失败:', e.message);
+        }
+    }
+    
+    console.log('[TFJS] 性能优化完成');
+}
+
+// 初始化 TensorFlow.js 引擎 v2.0 - 健壮的后端降级链路
+async function initTFJS() {
+    try {
+        uiLoading.classList.remove('hidden');
+        
+        // 性能优化在模型加载后执行（见后文）
+        
+        // 诊断信息（兼容不同 tfjs 内部结构，避免空对象导致初始化中断）
+        const tfVersion = tf?.version?.tfjs || 'unknown';
+        const engine = typeof tf?.engine === 'function' ? tf.engine() : null;
+        const backendNameCandidates = [
+            engine?.registryFactory,
+            engine?.registry,
+            engine?.backends,
+            engine?.registeredBackends
+        ].filter(v => v && typeof v === 'object');
+        const registeredBackendNames = [...new Set(
+            backendNameCandidates.flatMap(obj => Object.keys(obj))
+        )];
+
+        console.log('[TFJS] version:', tfVersion);
+        console.log('[TFJS] engine keys:', engine ? Object.keys(engine) : 'engine-unavailable');
+        console.log('[TFJS] 已注册的 backends:', registeredBackendNames.length ? registeredBackendNames : 'unknown');
+        
+        // 按优先级尝试后端初始化
+        const backends = [
+            { name: 'webgpu', check: checkWebGPU, desc: 'WebGPU' },
+            { name: 'webgl', check: () => Promise.resolve(true), desc: 'WebGL' },
+            { name: 'cpu', check: () => Promise.resolve(true), desc: 'CPU' }
+        ];
+        
+        let success = false;
+        let lastError = null;
+        
+        for (const backend of backends) {
+            try {
+                uiLoadText.innerText = `正在检测 ${backend.desc}...`;
+
+                // backend 未注册则直接跳过，避免 "Backend name not found in registry" 噪声
+                if (!registeredBackendNames.includes(backend.name)) {
+                    console.log(`[TFJS] ${backend.desc} backend 未注册，跳过`);
+                    continue;
+                }
+                
+                // 检查底层能力
+                const hasCapability = await backend.check();
+                if (!hasCapability) {
+                    console.log(`[TFJS] ${backend.desc} 底层能力不可用，跳过`);
+                    continue;
+                }
+                
+                uiLoadText.innerText = `正在初始化 ${backend.desc} 后端...`;
+                
+                // 尝试设置后端
+                await tf.setBackend(backend.name);
+                await tf.ready();
+                
+                backendType = backend.desc;
+                console.log(`[TFJS] 成功初始化 ${backend.desc} 后端`);
+                success = true;
+                break;
+            } catch (e) {
+                console.warn(`[TFJS] ${backend.desc} 初始化失败:`, e.message);
+                lastError = e;
+                // 继续尝试下一个后端
+            }
+        }
+        
+        if (!success) {
+            throw new Error(`所有后端初始化失败，最后错误: ${lastError?.message || '未知'}`);
+        }
+        
+        // 检查实际使用的后端
+        const actualBackend = tf.getBackend();
+        console.log('[TFJS] 实际使用后端:', actualBackend);
+        
+        uiLoadText.innerText = '正在加载 COCO-SSD 模型 (约 20MB)...';
+        
+        // 加载模型
+        try {
+            model = await loadCocoSsd();
+            modelType = 'COCO-SSD (lite_mobilenet_v2)';
+            console.log('[TFJS] 模型加载成功:', modelType);
+            
+            // 模型加载完成后执行性能优化 (预热等)
+            await enablePerformanceOptimization(actualBackend);
+        } catch (modelError) {
+            console.error('[TFJS] COCO-SSD 模型加载失败:', modelError);
+            uiLoadText.innerText = '模型加载失败: ' + modelError.message;
+            return false;
+        }
+        
+        statEngine.innerText = actualBackend + ' + ' + modelType;
+        uiLoading.classList.add('hidden');
+        return true;
+    } catch (e) {
+        console.error("[TFJS] Initialization failed:", e);
+        uiLoadText.innerText = '初始化失败: \n' + e.message;
+        return false;
+    }
+}
+
+// 检测 WebGPU 底层能力 (与 backend 注册分离)
+async function checkWebGPU() {
+    try {
+        if (!navigator.gpu) {
+            console.log('[WebGPU] navigator.gpu 不可用');
+            return false;
+        }
+        const adapter = await navigator.gpu.requestAdapter();
+        if (!adapter) {
+            console.log('[WebGPU] 无法获取适配器');
+            return false;
+        }
+        console.log('[WebGPU] 可用，适配器:', adapter.info);
+        return true;
+    } catch (e) {
+        console.log('[WebGPU] 检测异常:', e.message);
+        return false;
+    }
+}
+
+// 运行模型检测
+async function detectObjects(imageElement) {
+    try {
+        if (!model) return [];
+        
+        // 使用 COCO-SSD 模型进行检测
+        const predictions = await model.detect(imageElement);
+        
+        // 转换预测结果为统一格式
+        const boxes = predictions
+            .filter(pred => pred.score > CONF_THRESH)
+            .map(pred => ({
+                x1: pred.bbox[0],
+                y1: pred.bbox[1],
+                x2: pred.bbox[0] + pred.bbox[2],
+                y2: pred.bbox[1] + pred.bbox[3],
+                score: pred.score,
+                classId: YOLO_CLASSES.indexOf(pred.class) >= 0 ? YOLO_CLASSES.indexOf(pred.class) : 0,
+                className: pred.class
+            }));
+        
+        // 应用 NMS
+        return nms(boxes, IOU_THRESH);
+    } catch (e) {
+        console.error('检测失败:', e);
+        return [];
+    }
+}
+
+// 非极大值抑制
+function nms(boxes, iouThresh) {
+    if (boxes.length === 0) return [];
+    
+    boxes.sort((a, b) => b.score - a.score);
+    
+    const result = [];
+    while (boxes.length > 0) {
+        const current = boxes.shift();
+        result.push(current);
+        boxes = boxes.filter(box => calculateIOU(current, box) < iouThresh);
+    }
+    return result;
+}
+
+function calculateIOU(box1, box2) {
+    const xA = Math.max(box1.x1, box2.x1);
+    const yA = Math.max(box1.y1, box2.y1);
+    const xB = Math.min(box1.x2, box2.x2);
+    const yB = Math.min(box1.y2, box2.y2);
+    
+    const interArea = Math.max(0, xB - xA) * Math.max(0, yB - yA);
+    if (interArea === 0) return 0;
+    
+    const box1Area = (box1.x2 - box1.x1) * (box1.y2 - box1.y1);
+    const box2Area = (box2.x2 - box2.x1) * (box2.y2 - box2.y1);
+    
+    return interArea / (box1Area + box2Area - interArea);
+}
+
+async function startCamera() {
+    try {
+        videoStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+        });
+        video.srcObject = videoStream;
+        await new Promise((resolve) => { video.onloadedmetadata = resolve; });
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        video.play();
+        
+        isRunning = true;
+        btnToggle.innerText = '⏹ 停止检测';
+        btnToggle.style.borderColor = '#ff3838';
+        btnToggle.style.color = '#ff3838';
+        
+        detectLoop();
+    } catch (e) {
+        alert("无法访问摄像头: " + e.message);
+    }
+}
+
+function stopCamera() {
+    isRunning = false;
+    if (animationId) cancelAnimationFrame(animationId);
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    btnToggle.innerText = '🚀 启动摄像头';
+    btnToggle.style.borderColor = 'rgba(0, 255, 128, 0.4)';
+    btnToggle.style.color = '#00ff80';
+    statFps.innerText = '0';
+    statTime.innerText = '0ms';
+}
+
+function preprocess() {
+    // 计算缩放比例
+    const scale = Math.min(INPUT_SIZE / video.videoWidth, INPUT_SIZE / video.videoHeight);
+    const w = Math.round(video.videoWidth * scale);
+    const h = Math.round(video.videoHeight * scale);
+    const dx = (INPUT_SIZE - w) / 2;
+    const dy = (INPUT_SIZE - h) / 2;
+    
+    // 填充灰色底色
+    offCtx.fillStyle = '#727272';
+    offCtx.fillRect(0, 0, INPUT_SIZE, INPUT_SIZE);
+    
+    // 绘制视频帧
+    offCtx.drawImage(video, dx, dy, w, h);
+    
+    return offCtx.getImageData(0, 0, INPUT_SIZE, INPUT_SIZE);
+}
+
+function drawBoxes(boxes) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    boxes.forEach(box => {
+        const color = COLORS[box.classId % COLORS.length];
+        const label = `${box.className || YOLO_CLASSES[box.classId]} ${(box.score * 100).toFixed(1)}%`;
+        
+        // 绘制检测框
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        ctx.stroke();
+        
+        // 绘制标签背景
+        ctx.fillStyle = color;
+        const textWidth = ctx.measureText(label).width;
+        ctx.fillRect(box.x1, box.y1 - 25, textWidth + 10, 25);
+        
+        // 绘制文字
+        ctx.fillStyle = '#fff';
+        ctx.font = '16px monospace';
+        ctx.fillText(label, box.x1 + 5, box.y1 - 7);
+        
+        // 四角装饰
+        const len = 15;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(box.x1, box.y1 + len); ctx.lineTo(box.x1, box.y1); ctx.lineTo(box.x1 + len, box.y1);
+        ctx.moveTo(box.x2 - len, box.y1); ctx.lineTo(box.x2, box.y1); ctx.lineTo(box.x2, box.y1 + len);
+        ctx.moveTo(box.x1, box.y2 - len); ctx.lineTo(box.x1, box.y2); ctx.lineTo(box.x1 + len, box.y2);
+        ctx.moveTo(box.x2 - len, box.y2); ctx.lineTo(box.x2, box.y2); ctx.lineTo(box.x2, box.y2 - len);
+        ctx.stroke();
+    });
+}
+
+async function detectLoop() {
+    if (!isRunning) return;
+    
+    if (video.readyState >= 2) {
+        const t0 = performance.now();
+        
+        try {
+            // 1. 绘制当前视频帧到离屏 Canvas (letterbox 缩放)
+            const scale = Math.min(INPUT_SIZE / video.videoWidth, INPUT_SIZE / video.videoHeight);
+            const w = Math.round(video.videoWidth * scale);
+            const h = Math.round(video.videoHeight * scale);
+            const dx = (INPUT_SIZE - w) / 2;
+            const dy = (INPUT_SIZE - h) / 2;
+            
+            offCtx.fillStyle = '#727272';
+            offCtx.fillRect(0, 0, INPUT_SIZE, INPUT_SIZE);
+            offCtx.drawImage(video, dx, dy, w, h);
+            
+            // 2. 运行 COCO-SSD 模型检测
+            const boxes = await detectObjects(offCanvas);
+            
+            // 3. 缩放检测框坐标到原始视频尺寸
+            const scaledBoxes = boxes.map(box => ({
+                x1: Math.round((box.x1 - dx) / scale),
+                y1: Math.round((box.y1 - dy) / scale),
+                x2: Math.round((box.x2 - dx) / scale),
+                y2: Math.round((box.y2 - dy) / scale),
+                score: box.score,
+                classId: box.classId,
+                className: box.className
+            }));
+            
+            // 4. 渲染
+            drawBoxes(scaledBoxes);
+            
+            // 性能统计
+            const t1 = performance.now();
+            statTime.innerText = `${(t1 - t0).toFixed(1)}ms`;
+            
+            frames++;
+            if (t1 - lastTime >= 1000) {
+                statFps.innerText = frames;
+                frames = 0;
+                lastTime = t1;
+            }
+        } catch (err) {
+            console.error("Detection Error:", err);
+        }
+    }
+    
+    animationId = requestAnimationFrame(detectLoop);
+}
+
+btnToggle.addEventListener('click', async () => {
+    if (isRunning) {
+        stopCamera();
+    } else {
+        if (!model) {
+            btnToggle.disabled = true;
+            const success = await initTFJS();
+            btnToggle.disabled = false;
+            if (!success) return;
+        }
+        startCamera();
+    }
+});
+</script>
+
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>

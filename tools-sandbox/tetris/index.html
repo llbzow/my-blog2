@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>俄罗斯方块 (Tetris)</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<style>
+.tetris-container {
+display: flex;
+flex-direction: column;
+align-items: center;
+margin-top: 20px;
+font-family: sans-serif;
+}
+.tetris-board {
+display: flex;
+gap: 20px;
+}
+#tetris-canvas {
+background-color: #222;
+box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+border: 2px solid #555;
+border-radius: 4px;
+}
+.side-panel {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 15px;
+color: var(--text-color, #333);
+}
+.info-box {
+background: #f0f0f0;
+padding: 10px 15px;
+border-radius: 6px;
+text-align: center;
+min-width: 100px;
+border: 1px solid #ccc;
+color: #333;
+}
+.info-box span {
+display: block;
+font-size: 14px;
+font-weight: bold;
+color: #666;
+}
+.info-box strong {
+font-size: 20px;
+}
+.tetris-btn {
+padding: 10px 20px;
+background-color: var(--btn-bg, #49b1f5);
+color: var(--btn-color, #fff);
+border: none;
+border-radius: 4px;
+cursor: pointer;
+font-size: 1rem;
+font-weight: bold;
+transition: all 0.3s;
+width: 100%;
+}
+.tetris-btn:hover {
+background-color: var(--btn-hover-color, #FF7D7D);
+}
+.controls-hint {
+font-size: 12px;
+color: #666;
+text-align: left;
+background: #fff;
+padding: 10px;
+border-radius: 4px;
+border: 1px dashed #ccc;
+}
+</style>
+
+<div class="tetris-container">
+<div class="tetris-board">
+<canvas id="tetris-canvas" width="240" height="400"></canvas>
+
+<div class="side-panel">
+<div class="info-box">
+<span>分数</span>
+<strong id="t-score">0</strong>
+</div>
+<div class="info-box">
+<span>等级</span>
+<strong id="t-level">1</strong>
+</div>
+<div class="info-box" style="display:none;" id="t-lines-box">
+<span>消除行数</span>
+<strong id="t-lines">0</strong>
+</div>
+
+<div style="display:flex; gap:10px; width:100%;">
+<button class="tetris-btn" id="t-ai">🤖 AI 托管</button>
+<button class="tetris-btn" id="t-start">开始游戏</button>
+</div>
+
+<div class="controls-hint">
+<strong>操作说明:</strong><br>
+⬆️ : 旋转块<br>
+⬅️ ➡️ : 左右移动<br>
+⬇️ : 加速下落<br>
+空格 : 直接落下
+</div>
+<label style="font-size:12px; margin-top: 15px; color:#ff9800;" id="gpu-label">
+<input type="checkbox" id="t-gpu-toggle" disabled> 🔍 探测 WebGPU 并发层中...
+</label>
+</div>
+</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+const canvas = document.getElementById('tetris-canvas');
+if (!canvas) return;
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('t-score');
+const levelEl = document.getElementById('t-level');
+const linesEl = document.getElementById('t-lines');
+const startBtn = document.getElementById('t-start');
+const aiBtn = document.getElementById('t-ai');
+
+// Make canvas scalable internally
+ctx.scale(20, 20);
+
+// Tetrominoes matrixes
+const pieces = [
+[],
+[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I - Cyan (1)
+[[2,0,0],[2,2,2],[0,0,0]],             // J - Blue (2)
+[[0,0,3],[3,3,3],[0,0,0]],             // L - Orange (3)
+[[4,4],[4,4]],                         // O - Yellow (4)
+[[0,5,5],[5,5,0],[0,0,0]],             // S - Green (5)
+[[0,6,0],[6,6,6],[0,0,0]],             // T - Purple (6)
+[[7,7,0],[0,7,7],[0,0,0]]              // Z - Red (7)
+];
+
+const colors = [
+null, '#00FFFF', '#0000FF', '#FFA500', 
+'#FFFF00', '#00FF00', '#800080', '#FF0000'
+];
+
+let arena = createMatrix(12, 20);
+let player = {
+pos: {x: 0, y: 0},
+matrix: null,
+score: 0,
+lines: 0,
+level: 1
+};
+
+let dropCounter = 0;
+let dropInterval = 1000;
+let lastTime = 0;
+let reqId = null;
+let isPlaying = false;
+
+function createMatrix(w, h) {
+const matrix = [];
+while (h--) {
+matrix.push(new Array(w).fill(0));
+}
+return matrix;
+}
+
+function drawMatrix(matrix, offset) {
+matrix.forEach((row, y) => {
+row.forEach((value, x) => {
+if (value !== 0) {
+ctx.fillStyle = colors[value];
+ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
+ctx.strokeStyle = '#222';
+ctx.lineWidth = 0.05;
+ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
+}
+});
+});
+}
+
+function draw() {
+ctx.fillStyle = '#222';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+drawMatrix(arena, {x: 0, y: 0});
+if (player.matrix) {
+drawMatrix(player.matrix, player.pos);
+}
+}
+
+function merge(arena, player) {
+player.matrix.forEach((row, y) => {
+row.forEach((value, x) => {
+if (value !== 0) {
+arena[y + player.pos.y][x + player.pos.x] = value;
+}
+});
+});
+}
+
+function collide(arena, player) {
+const [m, o] = [player.matrix, player.pos];
+for (let y = 0; y < m.length; ++y) {
+for (let x = 0; x < m[y].length; ++x) {
+if (m[y][x] !== 0 &&
+(arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) {
+return true;
+}
+}
+}
+return false;
+}
+
+function rotate(matrix, dir) {
+for (let y = 0; y < matrix.length; ++y) {
+for (let x = 0; x < y; ++x) {
+[matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+}
+}
+if (dir > 0) {
+matrix.forEach(row => row.reverse());
+} else {
+matrix.reverse();
+}
+}
+
+function playerRotate(dir) {
+if (!isPlaying || !player.matrix) return;
+const pos = player.pos.x;
+let offset = 1;
+rotate(player.matrix, dir);
+while (collide(arena, player)) {
+player.pos.x += offset;
+offset = -(offset + (offset > 0 ? 1 : -1));
+if (offset > player.matrix[0].length) {
+rotate(player.matrix, -dir);
+player.pos.x = pos;
+return;
+}
+}
+}
+
+function playerMove(dir) {
+if (!isPlaying || !player.matrix) return;
+player.pos.x += dir;
+if (collide(arena, player)) {
+player.pos.x -= dir;
+}
+}
+
+function playerDrop() {
+if (!isPlaying || !player.matrix) return;
+player.pos.y++;
+if (collide(arena, player)) {
+player.pos.y--;
+merge(arena, player);
+playerReset();
+arenaSweep();
+updateScore();
+}
+dropCounter = 0;
+}
+
+function playerHardDrop() {
+if (!isPlaying || !player.matrix) return;
+while (!collide(arena, player)) {
+player.pos.y++;
+}
+player.pos.y--;
+merge(arena, player);
+playerReset();
+arenaSweep();
+updateScore();
+dropCounter = 0;
+}
+
+function playerReset() {
+const piecesPool = 'ILJOTSZ';
+const type = piecesPool[Math.floor(Math.random() * piecesPool.length)];
+let pidx = piecesPool.indexOf(type) + 1;
+
+player.matrix = [];
+pieces[pidx].forEach(r => player.matrix.push([...r]));
+
+player.pos.y = 0;
+player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
+aiTarget = null; // 清除AI目标
+
+if (collide(arena, player)) {
+// Game Over
+arena.forEach(row => row.fill(0));
+player.score = 0;
+player.level = 1;
+player.lines = 0;
+updateScore();
+isPlaying = false;
+startBtn.innerText = '开始游戏';
+aiMode = false;
+aiBtn.innerText = '🤖 AI 托管';
+alert("游戏结束啦！");
+}
+}
+
+let aiMode = false;
+let aiTarget = null;
+let aiLastTime = 0;
+
+function evaluateBoard(testArena) {
+let heights = new Array(testArena[0].length).fill(0);
+let holes = 0;
+let lines = 0;
+for(let y=0; y<testArena.length; y++) {
+let isLine = true;
+for(let x=0; x<testArena[y].length; x++) {
+if(testArena[y][x] !== 0) {
+if(heights[x] === 0) heights[x] = testArena.length - y;
+} else {
+isLine = false;
+if(heights[x] > 0) holes++;
+}
+}
+if(isLine) lines++;
+}
+let bumpiness = 0;
+let aggHeight = 0;
+for(let x=0; x<heights.length; x++) {
+aggHeight += heights[x];
+if(x < heights.length - 1) {
+bumpiness += Math.abs(heights[x] - heights[x+1]);
+}
+}
+return lines * 100 - aggHeight * 5 - holes * 350 - bumpiness * 20;
+}
+
+// ====== WEBGPU TETRIS IMPLEMENTATION ======
+let device = null;
+let computePipeline = null;
+let gpuEnabled = false;
+let gpuBufferScore, gpuBufferBoards;
+
+const wgslCode = `
+@group(0) @binding(0) var<storage, read> boards: array<i32>;
+@group(0) @binding(1) var<storage, read_write> scores: array<f32>;
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let index = id.x; // 0..63 configurations (4 rots * max 15 widths approx)
+    if (index >= 64u) { return; }
+    
+    // Each simulated board is 20 rows * 12 cols = 240 cells. Base offset = index * 240
+    let offset = index * 240u;
+    
+    // Check if valid flag (first cell = -999 means invalid configuration)
+    if (boards[offset] == -999) {
+        scores[index] = -999999.0;
+        return;
+    }
+
+    var heights: array<i32, 12>;
+    for (var i = 0; i < 12; i = i + 1) { heights[i] = 0; }
+    
+    var holes: i32 = 0;
+    var lines: i32 = 0;
+    
+    for (var y = 0; y < 20; y = y + 1) {
+        var isLine: bool = true;
+        for (var x = 0; x < 12; x = x + 1) {
+            let val = boards[offset + u32(y * 12 + x)];
+            if (val != 0) {
+                if (heights[x] == 0) { heights[x] = 20 - y; }
+            } else {
+                isLine = false;
+                if (heights[x] > 0) { holes = holes + 1; }
+            }
+        }
+        if (isLine) { lines = lines + 1; }
+    }
+    
+    var bumpiness: i32 = 0;
+    var aggHeight: i32 = 0;
+    for (var x = 0; x < 12; x = x + 1) {
+        aggHeight = aggHeight + heights[x];
+        if (x < 11) {
+            bumpiness = bumpiness + abs(heights[x] - heights[x+1]);
+        }
+    }
+    
+    scores[index] = f32(lines * 100 - aggHeight * 5 - holes * 350 - bumpiness * 20);
+}
+`;
+
+async function initWebGPU() {
+    const gpuLabel = document.getElementById('gpu-label');
+    if (!navigator.gpu) {
+        gpuLabel.innerHTML = '❌ WebGPU 未能命中 (回退至 JS 寻优引擎)';
+        return;
+    }
+    try {
+        const adapter = await navigator.gpu.requestAdapter();
+        device = await adapter.requestDevice();
+        const shaderModule = device.createShaderModule({ code: wgslCode });
+        computePipeline = device.createComputePipeline({
+            layout: 'auto',
+            compute: { module: shaderModule, entryPoint: 'main' },
+        });
+
+        gpuBufferScore = device.createBuffer({ size: 64*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+        gpuBufferBoards = device.createBuffer({ size: 64*240*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST }); 
+
+        gpuEnabled = true;
+        gpuLabel.style.color = "#4caf50";
+        gpuLabel.innerHTML = '<input type="checkbox" id="t-gpu-toggle" checked> 🚀 已激活 WebGPU 高并发计算加速引擎 (处理 4×15 配置拓扑)';
+        document.getElementById('t-gpu-toggle').addEventListener('change', (e) => gpuEnabled = e.target.checked);
+    } catch(e) {
+        gpuLabel.innerHTML = '❌ 初始化 WebGPU 失败';
+    }
+}
+
+async function calculateAiTargetGPU() {
+    let boardsData = new Int32Array(64 * 240);
+    boardsData.fill(-999); // Fill with invalidate marker
+    
+    let originalX = player.pos.x;
+    let originalY = player.pos.y;
+    
+    let configs = [];
+    let cfgIndex = 0;
+    
+    for(let rot=0; rot<4; rot++) {
+        for(let x=-3; x<15; x++) {
+            player.pos.x = x;
+            player.pos.y = 0;
+            if(!collide(arena, player)) {
+                while(!collide(arena, player)) player.pos.y++;
+                player.pos.y--;
+                
+                configs.push({rot, x, index: cfgIndex});
+                
+                // Construct merged board in place
+                let offset = cfgIndex * 240;
+                for(let r=0; r<20; r++) {
+                    for(let c=0; c<12; c++) {
+                        boardsData[offset + r*12 + c] = arena[r][c];
+                    }
+                }
+                player.matrix.forEach((row, ry) => {
+                    row.forEach((value, cx) => {
+                        let ny = ry + player.pos.y;
+                        let nx = cx + player.pos.x;
+                        if (value !== 0 && ny >= 0 && ny < 20 && nx >= 0 && nx < 12) {
+                            boardsData[offset + ny*12 + nx] = value;
+                        }
+                    });
+                });
+                cfgIndex++;
+            }
+            player.pos.y = originalY;
+        }
+        player.pos.x = originalX;
+        rotate(player.matrix, 1);
+    }
+    
+    if(cfgIndex === 0) return null;
+
+    device.queue.writeBuffer(gpuBufferBoards, 0, boardsData);
+    
+    const bindGroup = device.createBindGroup({
+        layout: computePipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: gpuBufferBoards } },
+            { binding: 1, resource: { buffer: gpuBufferScore } },
+        ]
+    });
+
+    const commandEncoder = device.createCommandEncoder();
+    const passEncoder = commandEncoder.beginComputePass();
+    passEncoder.setPipeline(computePipeline);
+    passEncoder.setBindGroup(0, bindGroup);
+    passEncoder.dispatchWorkgroups(1);
+    passEncoder.end();
+
+    const outputBuffer = device.createBuffer({ size: 64*4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    commandEncoder.copyBufferToBuffer(gpuBufferScore, 0, outputBuffer, 0, 64*4);
+    device.queue.submit([commandEncoder.finish()]);
+
+    await outputBuffer.mapAsync(GPUMapMode.READ);
+    const scores = new Float32Array(outputBuffer.getMappedRange());
+    
+    let bestScore = -Infinity;
+    let bestTarget = null;
+    
+    configs.forEach(cfg => {
+        if(scores[cfg.index] > bestScore) {
+            bestScore = scores[cfg.index];
+            bestTarget = cfg;
+        }
+    });
+    
+    outputBuffer.unmap();
+    return bestTarget;
+}
+
+function calculateAiTargetJS() {
+let bestScore = -Infinity;
+let bestRot = 0;
+let bestX = 0;
+
+let originalX = player.pos.x;
+let originalY = player.pos.y;
+
+for(let rot=0; rot<4; rot++) {
+for(let x=-3; x<arena[0].length+3; x++) {
+player.pos.x = x;
+player.pos.y = 0;
+if(!collide(arena, player)) {
+while(!collide(arena, player)) player.pos.y++;
+player.pos.y--;
+
+let testArena = arena.map(r => [...r]);
+player.matrix.forEach((row, y) => {
+row.forEach((value, cx) => {
+if (value !== 0 && y + player.pos.y >=0 && y + player.pos.y < testArena.length && cx + player.pos.x >=0 && cx + player.pos.x < testArena[0].length) {
+testArena[y + player.pos.y][cx + player.pos.x] = value;
+}
+});
+});
+
+let score = evaluateBoard(testArena);
+if(score > bestScore) {
+bestScore = score;
+bestRot = rot;
+bestX = x;
+}
+}
+player.pos.y = originalY;
+}
+player.pos.x = originalX;
+rotate(player.matrix, 1);
+}
+return { rot: bestRot, x: bestX };
+}
+
+async function aiStepAsync() {
+if(!aiMode || !isPlaying || !player.matrix) return;
+if(!aiTarget) {
+if (gpuEnabled) aiTarget = await calculateAiTargetGPU();
+else aiTarget = calculateAiTargetJS();
+}
+if(aiTarget) {
+if(aiTarget.rot > 0) {
+playerRotate(1);
+aiTarget.rot--;
+} else if(player.pos.x > aiTarget.x) {
+let px = player.pos.x;
+playerMove(-1);
+if(player.pos.x === px) aiTarget.x = px;
+} else if(player.pos.x < aiTarget.x) {
+let px = player.pos.x;
+playerMove(1);
+if(player.pos.x === px) aiTarget.x = px;
+} else {
+playerHardDrop();
+}
+}
+}
+
+function arenaSweep() {
+let rowCount = 1;
+let linesCleared = 0;
+outer: for (let y = arena.length -1; y > 0; --y) {
+for (let x = 0; x < arena[y].length; ++x) {
+if (arena[y][x] === 0) {
+continue outer;
+}
+}
+const row = arena.splice(y, 1)[0].fill(0);
+arena.unshift(row);
+++y;
+
+player.score += rowCount * 100;
+rowCount *= 2;
+linesCleared++;
+}
+
+if (linesCleared > 0) {
+player.lines += linesCleared;
+player.level = Math.floor(player.lines / 5) + 1;
+dropInterval = Math.max(100, 1000 - (player.level - 1) * 100);
+}
+}
+
+function updateScore() {
+scoreEl.innerText = player.score;
+levelEl.innerText = player.level;
+linesEl.innerText = player.lines;
+}
+
+function update(time = 0) {
+if (!isPlaying) return;
+const deltaTime = time - lastTime;
+lastTime = time;
+
+if (aiMode) {
+if (time - aiLastTime > 40) { // 极速AI (40ms 一步)
+aiStepAsync(); // Non-blocking evaluation call
+aiLastTime = time;
+}
+} else {
+dropCounter += deltaTime;
+if (dropCounter > dropInterval) {
+playerDrop();
+}
+}
+
+draw();
+reqId = requestAnimationFrame(update);
+}
+
+document.addEventListener('keydown', event => {
+if (!isPlaying) return;
+
+// Prevent default scrolling for Space and Arrows
+if([32, 37, 38, 39, 40].includes(event.keyCode)) {
+event.preventDefault();
+}
+
+if (event.keyCode === 37) { // Left
+playerMove(-1);
+} else if (event.keyCode === 39) { // Right
+playerMove(1);
+} else if (event.keyCode === 40) { // Down
+playerDrop();
+} else if (event.keyCode === 38) { // Up
+playerRotate(1);
+} else if (event.keyCode === 32) { // Space
+playerHardDrop();
+}
+});
+
+startBtn.addEventListener('click', () => {
+if (isPlaying) {
+isPlaying = false;
+startBtn.innerText = '继续';
+cancelAnimationFrame(reqId);
+} else {
+if (!player.matrix) {
+arena.forEach(row => row.fill(0));
+player.score = 0;
+player.level = 1;
+player.lines = 0;
+updateScore();
+playerReset();
+}
+isPlaying = true;
+startBtn.innerText = '暂停';
+lastTime = performance.now();
+update();
+}
+});
+
+// Initial draw
+draw();
+
+initWebGPU();
+
+aiBtn.addEventListener('click', () => {
+aiMode = !aiMode;
+aiBtn.innerText = aiMode ? "停止托管" : "🤖 AI 托管";
+if (aiMode && !isPlaying) startBtn.click();
+});
+
+});
+</script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>

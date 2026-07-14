@@ -1,0 +1,197 @@
+
+
+<div class="tool-container">
+    <div class="tool-header">
+        <h2>{} JSON 格式化与校验</h2>
+        <p>提供 JSON 字符串的压缩、美化、转义及语法错误校验功能，纯前端处理保障隐私。</p>
+    </div>
+
+    <div class="action-bar">
+        <button class="action-btn" onclick="formatJson()">✨ 格式化 (美化)</button>
+        <button class="action-btn" onclick="compressJson()">🗜 压缩</button>
+        <button class="action-btn" onclick="escapeJson()">🔄 转义</button>
+        <button class="action-btn" onclick="unescapeJson()">🔙 去除转义</button>
+        <button class="action-btn danger" onclick="clearAll()">🗑 清空</button>
+    </div>
+
+    <div class="editor-area">
+        <div class="status-bar" id="statusBar">准备就绪</div>
+        <textarea id="jsonInput" placeholder="在此粘贴您的 JSON 字符串..." spellcheck="false"></textarea>
+        <button class="copy-btn" onclick="copyResult()">📋 复制结果</button>
+    </div>
+</div>
+
+<style>
+.tool-container {
+    max-width: 900px; margin: 0 auto; padding: 20px;
+    background: var(--card-bg); border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+.tool-header h2 { margin-top: 0; color: var(--text-highlight-color); }
+
+.action-bar {
+    display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.action-btn {
+    padding: 10px 16px; font-size: 14px; font-weight: bold; border-radius: 6px;
+    background: #49b1f5; color: white; border: none; cursor: pointer; transition: 0.2s;
+}
+.action-btn:hover { background: #3b9fe0; transform: translateY(-2px); }
+.action-btn.danger { background: #ff7242; }
+.action-btn.danger:hover { background: #e56539; }
+
+.editor-area {
+    position: relative; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+.status-bar {
+    padding: 8px 15px; font-size: 13px; font-weight: bold;
+    background: #f7f9fe; color: #4c4948; border-bottom: 1px solid var(--border-color);
+}
+.status-bar.success { background: #e8f5e9; color: #2e7d32; }
+.status-bar.error { background: #ffebee; color: #c62828; }
+
+[data-theme="dark"] .status-bar { background: #2d2d2d; color: #ccc; }
+[data-theme="dark"] .status-bar.success { background: #1b3a1e; color: #81c784; }
+[data-theme="dark"] .status-bar.error { background: #4a1c1c; color: #e57373; }
+
+#jsonInput {
+    width: 100%; height: 500px; padding: 15px; border: none; outline: none;
+    background: var(--search-bg); color: var(--font-color); font-size: 14px;
+    font-family: 'Consolas', 'Courier New', monospace; resize: vertical;
+    white-space: pre; overflow-x: auto;
+}
+.copy-btn {
+    position: absolute; bottom: 20px; right: 20px; padding: 8px 16px;
+    background: rgba(73, 177, 245, 0.9); color: white; border: none;
+    border-radius: 20px; cursor: pointer; backdrop-filter: blur(5px);
+    transition: 0.3s; opacity: 0; pointer-events: none;
+}
+.editor-area:hover .copy-btn { opacity: 1; pointer-events: auto; }
+.copy-btn:hover { background: #3b9fe0; transform: scale(1.05); }
+</style>
+
+<script>
+const input = document.getElementById('jsonInput');
+const statusBar = document.getElementById('statusBar');
+
+function setStatus(msg, type = 'normal') {
+    statusBar.textContent = msg;
+    statusBar.className = 'status-bar ' + (type !== 'normal' ? type : '');
+}
+
+function getJsonStr() {
+    return input.value.trim();
+}
+
+function formatJson() {
+    const str = getJsonStr();
+    if(!str) return;
+    try {
+        const obj = JSON.parse(str);
+        input.value = JSON.stringify(obj, null, 4);
+        setStatus('✅ JSON 格式化成功，语法正确', 'success');
+    } catch (e) {
+        setStatus('❌ 解析失败: ' + e.message, 'error');
+    }
+}
+
+function compressJson() {
+    const str = getJsonStr();
+    if(!str) return;
+    try {
+        const obj = JSON.parse(str);
+        input.value = JSON.stringify(obj);
+        setStatus('✅ JSON 压缩成功', 'success');
+    } catch (e) {
+        setStatus('❌ 解析失败: ' + e.message, 'error');
+    }
+}
+
+function escapeJson() {
+    const str = getJsonStr();
+    if(!str) return;
+    // Compress first, then escape to avoid escaping spaces and newlines
+    try {
+        const obj = JSON.parse(str);
+        const compressed = JSON.stringify(obj);
+        // Replace \ with \\, and " with \"
+        const escaped = compressed.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        input.value = escaped;
+        setStatus('✅ JSON 字符串转义成功', 'success');
+    } catch (e) {
+        // If not valid JSON, just do raw string escape
+        const escaped = str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+        input.value = escaped;
+        setStatus('⚠️ 已进行普通字符串转义 (非标准JSON结构)', 'normal');
+    }
+}
+
+function unescapeJson() {
+    let str = getJsonStr();
+    if(!str) return;
+    // Remove surrounding quotes if they exist
+    if (str.startsWith('"') && str.endsWith('"')) {
+        try {
+            str = JSON.parse(str); // Parse the string literal
+        } catch(e) {}
+    } else {
+        // Manual unescape
+        str = str.replace(/\\"/g, '"').replace(/\\\\/g, '\\').replace(/\\n/g, '\n').replace(/\\r/g, '\r');
+    }
+    
+    input.value = str;
+    // Try to format it automatically
+    try {
+        const obj = JSON.parse(str);
+        input.value = JSON.stringify(obj, null, 4);
+        setStatus('✅ 去除转义并格式化成功', 'success');
+    } catch (e) {
+        setStatus('⚠️ 已去除转义，但似乎不是标准JSON', 'normal');
+    }
+}
+
+function clearAll() {
+    input.value = '';
+    setStatus('准备就绪', 'normal');
+    input.focus();
+}
+
+function copyResult() {
+    const str = getJsonStr();
+    if(!str) return;
+    input.select();
+    document.execCommand('copy');
+    setStatus('📋 结果已复制到剪贴板！', 'success');
+    
+    // Replace snackbar string manually instead of using btf if btf is not available everywhere
+    if(typeof btf !== 'undefined' && btf.snackbarShow) {
+        btf.snackbarShow("已复制到剪贴板", false, 2000);
+    }
+}
+
+// Auto check syntax on paste/type (debounced)
+let timeoutId;
+input.addEventListener('input', () => {
+    clearTimeout(timeoutId);
+    setStatus('输入中...', 'normal');
+    timeoutId = setTimeout(() => {
+        const str = getJsonStr();
+        if(!str) {
+            setStatus('准备就绪', 'normal');
+            return;
+        }
+        try {
+            JSON.parse(str);
+            setStatus('✅ 语法正确', 'success');
+        } catch (e) {
+            // Check if it's an escaped string
+            if(str.includes('\\\"')) {
+                setStatus('ℹ️ 检测到转义字符，请先点击"去除转义"', 'normal');
+            } else {
+                setStatus('❌ 语法错误: ' + e.message, 'error');
+            }
+        }
+    }, 800);
+});
+</script>

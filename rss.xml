@@ -1,0 +1,2381 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>llbzow 的摸鱼日记</title><description>记录开发、网络排障、工程现场与日常折腾的个人日志</description><link>https://blog.luozili.work/</link><language>zh_CN</language><item><title>市政道路 RTK 数据导入：断链映射与缓和曲线重建</title><link>https://blog.luozili.work/posts/municipal-road-rtk-alignment-import/</link><guid isPermaLink="true">https://blog.luozili.work/posts/municipal-road-rtk-alignment-import/</guid><description>解析市政道路测量 Excel/CSV 数据，建立连续桩号映射、重建缓和曲线，并对输入数据执行闭合差审计。</description><pubDate>Sun, 12 Jul 2026 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;最近整理了一套市政道路 RTK 数据导入流程。测量终端通过移动端接口提供 WGS84 与本地 NEH 坐标，中心线、桩号和设计高程仍需要应用自行计算。&lt;/p&gt;
+&lt;p&gt;为了把重点放在算法上，设备接口、表头和误差阈值都用通用配置表示。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;1. 从绝对坐标到道路桩号&lt;/h3&gt;
+&lt;p&gt;道路测量通常需要回答四个问题：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;当前点属于哪条道路中心线；&lt;/li&gt;
+&lt;li&gt;对应的名义桩号是多少；&lt;/li&gt;
+&lt;li&gt;相对中心线的左右偏距是多少；&lt;/li&gt;
+&lt;li&gt;实测高程与设计高程之间的差值是多少。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;终端提供的 NEH 坐标只能作为输入。应用还需要解析经过授权的设计数据，重建中心线几何，并把采样点投影到连续桩号轴上。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;2. 输入文件的容错解析&lt;/h3&gt;
+&lt;p&gt;现场表格可能来自不同版本的办公软件，样式表、数字格式和空单元格处理并不一致。解析流程可以分为三层：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;文件层&lt;/strong&gt;：校验扩展名、压缩包结构、文件大小和哈希；&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;表格层&lt;/strong&gt;：按列名别名识别桩号、坐标、高程和曲线参数；&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;业务层&lt;/strong&gt;：检查数据单调性、重复桩号、缺失区间与版本一致性。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;对于无法识别的样式，应降级为只读取单元格值，不能因为格式异常直接中断整个导入任务。列名通过别名表适配，不要把某一份业务表格的表头写死在解析器中。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;3. 断链与连续桩号映射&lt;/h3&gt;
+&lt;p&gt;市政道路可能因设计调整出现桩号不连续或重叠。直接用名义桩号计算距离，会让投影结果在断点附近跳变。&lt;/p&gt;
+&lt;p&gt;一种通用方法是建立分段映射：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;class ChainageSegment {
+  final double nominalStart;
+  final double nominalEnd;
+  final double continuousStart;
+
+  const ChainageSegment({
+    required this.nominalStart,
+    required this.nominalEnd,
+    required this.continuousStart,
+  });
+
+  double toContinuous(double nominal) {
+    return continuousStart + (nominal - nominalStart);
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;所有几何计算都在单调递增的连续轴上完成，展示结果时再转换回名义桩号。断链表必须来自受控数据源，并在导入时校验区间是否重叠。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;4. 缓和曲线的数值重建&lt;/h3&gt;
+&lt;p&gt;设计表通常只包含关键控制点和曲线参数。移动端可以根据切线方位角变化规律，以自适应步长执行数值积分：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;double interpolateAzimuth(
+  FeaturePoint start,
+  FeaturePoint end,
+  double progress,
+) {
+  var delta = end.azimuth - start.azimuth;
+  while (delta &amp;gt; pi) delta -= 2 * pi;
+  while (delta &amp;lt; -pi) delta += 2 * pi;
+
+  final factor = switch (start.type) {
+    &apos;TRANSITION_IN&apos; =&amp;gt; progress * progress,
+    &apos;TRANSITION_OUT&apos; =&amp;gt; 2 * progress - progress * progress,
+    _ =&amp;gt; progress,
+  };
+
+  return normalizeAngle(start.azimuth + delta * factor);
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;积分结束后，可使用向量闭合校正把计算终点与控制点对齐。采样步长和允许误差必须配置化，并跟随数据版本一起管理。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;5. 数据审计与日志边界&lt;/h3&gt;
+&lt;p&gt;导入完成后至少检查：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;平面控制点闭合差；&lt;/li&gt;
+&lt;li&gt;纵断面高程闭合差；&lt;/li&gt;
+&lt;li&gt;断链映射的单调性；&lt;/li&gt;
+&lt;li&gt;表格版本与坐标系统标识；&lt;/li&gt;
+&lt;li&gt;异常值是否超过当前项目配置的容差。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;日志只记录任务 ID、规则编号和误差等级；原始坐标、道路名称和设备序列号留在受控数据层，不进入普通应用日志。测试数据应单独生成，不能直接从生产图纸中截取。&lt;/p&gt;
+</content:encoded></item><item><title>控制面瞬时异常引发的 VRRP 倒换分析</title><link>https://blog.luozili.work/posts/vrrp-switchover-incident-analysis/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vrrp-switchover-incident-analysis/</guid><description>从状态计数、链路稳定性、时钟同步、平台告警与集中日志入手，复盘一次 VRRP 异常倒换的取证过程。</description><pubDate>Thu, 09 Jul 2026 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;在一次园区网络故障中，监控发现出口方向出现了短时连续丢包，随后由冗余协议自动恢复。&lt;/p&gt;
+&lt;p&gt;虽然业务自动恢复，但短时无征兆中断仍需要完整取证。本文围绕证据链和排查顺序展开，拓扑和日志字段统一使用通用代称。&lt;/p&gt;
+&lt;p&gt;今天就来复盘一下这次有些魔幻、且极具运维典型警示意义的故障排查过程。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;1. 业务拓扑与故障现象&lt;/h3&gt;
+&lt;p&gt;先用一张简化的出口拓扑说明关系：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;       [用户接入区]
+             |
+       [汇聚交换机]
+             |
+      [核心交换机]
+             |
+     +-------+-------+
+     |               |
+  [出口路由器-A]   [出口路由器-B]
+  (较高优先级)     (较低优先级)
+     |               |
+     +-------+-------+
+             |
+     [旁路下一代防火墙组]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;双出口路由器运行了专用网络操作系统，通过 &lt;strong&gt;VRRP（虚拟路由冗余协议）&lt;/strong&gt; 实现双机热备。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;上联虚拟组&lt;/strong&gt;连接核心交换机；&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;下联虚拟组&lt;/strong&gt;连接安全边界设备；&lt;/li&gt;
+&lt;li&gt;正常情况下，路由器 A 作为 Master 承载流量，路由器 B 作为 Backup 待命。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;监控显示异常窗口内出现连续超时，随后网络自动恢复。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;2. 排查难点：遭遇数百万条垃圾日志无情“洗板”&lt;/h3&gt;
+&lt;p&gt;在故障发生后，我们第一时间登录了处于拓扑枢纽的交换机，试图查看二层链路的状态。然而，让我们大跌眼镜的事情发生了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;核心交换机&lt;/strong&gt;：本地 Logbuffer 被大量高频终端通知覆盖；&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;汇聚交换机&lt;/strong&gt;：接口属性告警持续刷屏，故障窗口内的关键链路记录已经无法完整还原。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;运维警示&lt;/strong&gt;：没有外置 Syslog 集中日志分析平台，且本地日志未做级别抑制，一旦遭遇垃圾日志刷板，本地的内存 Logbuffer 在极短时间内就会被稀释冲刷掉。这直接导致我们失去了从交换机视角逆向观测物理端口行为的第一现场证据。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;3. 只读取证：剥茧抽丝定位根因&lt;/h3&gt;
+&lt;p&gt;既然交换机二层日志死无对证，我们只能将目标投向路由器 A 与 B 本身。通过只读取证分析，一条清晰的证据链被逐步拼接出来：&lt;/p&gt;
+&lt;h4&gt;证据一：主备切换状态计数被触发&lt;/h4&gt;
+&lt;p&gt;我们查看了备用路由器 B 的 VRRP 运行统计：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Interface : &amp;lt;UPLINK_INTERFACE&amp;gt;  VRID : &amp;lt;VRID&amp;gt;
+  Become Master           : &amp;lt;CURRENT_COUNT&amp;gt;
+  Adver Rcvd              : &amp;lt;CURRENT_COUNT&amp;gt;
+  Adver Sent              : &amp;lt;CURRENT_COUNT&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;统计显示，作为备机的路由器 B，其对应的 VRRP 组变为 Master 的次数曾经递增。同时它的 Logbuffer 中留存了历史倒换记录：
+&lt;code&gt;%VRRP/STATUS_CHANGE: IPv4 virtual router changed from Backup to Master: Master-down-timer expired.&lt;/code&gt;
+这说明主备倒换的直接原因，是备机在连续三个心跳周期内&lt;strong&gt;未收到主机的 VRRP 宣告报文（Adver Packet）&lt;/strong&gt;，导致 &lt;code&gt;Master-down-timer&lt;/code&gt; 定时器超时，从而触发强行抢占。&lt;/p&gt;
+&lt;h4&gt;证据二：链路并未闪断，排除二层震荡&lt;/h4&gt;
+&lt;p&gt;根据路由器 A 与 B 的端口统计，接口状态长期为 UP，丢包统计和 CRC 校验错误均为 0。汇聚交换机接口的 &lt;code&gt;Last link flapping&lt;/code&gt; 记录也显示接口长期稳定，排除了物理链路闪断触发切换的可能。&lt;/p&gt;
+&lt;h4&gt;证据三：主机时间戳不同步与固件老旧&lt;/h4&gt;
+&lt;p&gt;在比对日志时，我们发现路由器 A 与 B 的时钟存在偏差。查询显示：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;路由器 A 的 NTP 处于 &lt;code&gt;unsynchronized&lt;/code&gt; 状态，导致跨设备日志的时间关联可信度降低。&lt;/li&gt;
+&lt;li&gt;路由器 A 运行的专有操作系统版本非常老旧，编译于多年前，存在控制面偶发挂起等已知历史软件缺陷。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4&gt;证据四：致命的业务板卡故障历史&lt;/h4&gt;
+&lt;p&gt;通过深度物理诊断，我们发现路由器 A 承载关键物理上联/下联接口的&lt;strong&gt;某核心加速业务板卡&lt;/strong&gt;，其槽位在历史日志中曾有过短暂的状态故障报警反复：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;%PLATFORM/BOARD_STATUS: Board status changed to Fault on Slot X.
+%PLATFORM/BOARD_STATUS: Board status changed to Normal on Slot X.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;虽然故障发生时该板卡已恢复正常，但历史故障告警的存在为我们指明了方向。&lt;/p&gt;
+&lt;h4&gt;根因结论：&lt;/h4&gt;
+&lt;p&gt;综合现有证据，推定原因是&lt;strong&gt;主设备关键业务模块或控制面出现偶发性挂起&lt;/strong&gt;。这仍是基于多项间接证据形成的分析结论，不能替代设备侧诊断。&lt;/p&gt;
+&lt;p&gt;异常窗口内，控制面可能无法正常发送 VRRP 宣告，而物理接口仍保持 UP。上游设备因此继续向主设备转发流量，备机则在宣告超时后接管。主设备恢复并重新抢占时，又产生了一次状态切换。具体时间、优先级和设备行为应以受控环境中的日志为准。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;4. 改进与规避策略&lt;/h3&gt;
+&lt;p&gt;为了彻底规避这类复发风险，我们提出了以下整改方案：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;启用 VRRP 抢占延迟（Preempt Delay）&lt;/strong&gt;：在主设备上配置抢占延时。防止控制平面或板卡瞬间抖动恢复后立刻触发回切，对网络 MAC/ARP 表造成二次震荡冲击。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;日志分级与 Syslog 外发&lt;/strong&gt;：部署统一的 Syslog 服务器（远端采集），并且在核心层和汇聚层交换机上过滤和抑制大量的动态 IP 分配、端口属性不匹配等超高频日常通知日志，把宝贵的日志缓冲区留给链路、STP 和 VRRP 状态。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;时钟同步加固&lt;/strong&gt;：强制为出口设备配置 NTP 客户端同步，确保整个出口区域所有设备在同一时间线上，杜绝因时钟混乱导致的日志无法关联。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;系统升级与备品备件准备&lt;/strong&gt;：安排窗口时间升级路由器老旧的系统固件；持续监控相关物理业务板卡，若再次出现 Board Fault 告警，将立即予以硬件更换。&lt;/li&gt;
+&lt;/ol&gt;
+</content:encoded></item><item><title>内网运维与排查指南：跳板机配置、存活探测与网络拓扑推理</title><link>https://blog.luozili.work/posts/%E5%BA%94%E6%80%A5%E5%93%8D%E5%BA%94nat-%E4%B8%8E-dhcp-%E7%8E%AF%E5%A2%83%E4%B8%8B%E7%9A%84%E6%9C%A8%E9%A9%AC%E4%B8%BB%E6%9C%BA%E5%AE%9A%E4%BD%8D%E5%AE%9E%E6%88%98/</link><guid isPermaLink="true">https://blog.luozili.work/posts/%E5%BA%94%E6%80%A5%E5%93%8D%E5%BA%94nat-%E4%B8%8E-dhcp-%E7%8E%AF%E5%A2%83%E4%B8%8B%E7%9A%84%E6%9C%A8%E9%A9%AC%E4%B8%BB%E6%9C%BA%E5%AE%9A%E4%BD%8D%E5%AE%9E%E6%88%98/</guid><description>介绍 Windows OpenSSH 跳板机、授权网段存活探测，以及结合交换机、NAT 与 DHCP 日志定位网络终端的方法。</description><pubDate>Mon, 29 Jun 2026 11:28:44 GMT</pubDate><content:encoded>&lt;p&gt;在进行局域网内网运维、资产梳理或安全加固时，技术人员常常需要借助单台主机作为跳板进入内网，对复杂的局域网资产进行探测与拓扑分析。&lt;/p&gt;
+&lt;p&gt;但在实际场景中，多级 NAT 转换、DHCP 动态租期以及各种网络策略往往会给排查带来重重阻碍。&lt;/p&gt;
+&lt;p&gt;本文将这些排查定位过程拆解为数个独立的技术模块，分享在跳板机配置、内网存活资产探测以及网络拓扑推理等方面的实用技术手段。&lt;/p&gt;
+&lt;p&gt;本文仅适用于已取得明确授权的运维和安全加固环境。命令中的地址统一使用文档保留网段，设备名也使用通用代称。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;技术手段一：Windows 环境下 OpenSSH 跳板机的密钥登录配置&lt;/h2&gt;
+&lt;p&gt;在远程协助中，使用 Windows 操作系统作为内网跳板机是非常常见的方案。但在配置 Windows 自带的 OpenSSH 服务时，经常会遇到管理员账号（Administrators 组）公钥登录失效的问题。&lt;/p&gt;
+&lt;h3&gt;1.1 机制分析&lt;/h3&gt;
+&lt;p&gt;Windows 平台的 OpenSSH 实现与 Linux 存在关键差异：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;普通用户&lt;/strong&gt;：密钥读取其主目录下的 &lt;code&gt;~/.ssh/authorized_keys&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;管理员组（Administrators 组）用户&lt;/strong&gt;：OpenSSH 默认会读取全局配置文件 &lt;code&gt;C:\ProgramData\ssh\administrators_authorized_keys&lt;/code&gt;，而非用户个人的 &lt;code&gt;.ssh&lt;/code&gt; 目录。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;严格的 ACL 限制&lt;/strong&gt;：出于安全防护，Windows 对该全局授权文件的权限控制极为苛刻。若文件中包含了除 SYSTEM 和 Administrators 之外其他账户的任何读写权限，OpenSSH 服务将直接拒绝该公钥认证。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;1.2 配置步骤&lt;/h3&gt;
+&lt;p&gt;若要成功配置 Administrators 组用户的公钥登录，需使用管理员权限打开 PowerShell，并依次执行以下命令：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$adminKeys = &quot;C:\ProgramData\ssh\administrators_authorized_keys&quot;
+
+# 1. 写入 SSH 公钥
+&quot;ssh-ed25519 AAAAC3NzaC... your-comment&quot; | Out-File -Encoding utf8 -Append $adminKeys
+
+# 2. 移除普通已认证用户的访问权限 (防止因权限过宽被 OpenSSH 拒绝)
+icacls $adminKeys /remove &quot;NT AUTHORITY\Authenticated Users&quot;
+
+# 3. 禁用继承，确保仅 SYSTEM 和 Administrators 拥有完全控制权限
+icacls $adminKeys /inheritance:r
+icacls $adminKeys /grant &quot;SYSTEM:F&quot;
+icacls $adminKeys /grant &quot;Administrators:F&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;通过以上步骤，即可在不降低系统安全性的前提下，打通安全的 SSH 远程运维管理隧道。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;技术手段二：规避 SOCKS 代理缺陷的内网存活资产梳理&lt;/h2&gt;
+&lt;p&gt;在通过跳板机接入内网后，首要任务通常是梳理内网的存活 Windows 主机资产。此时，传统的远程网络扫描方式会受到代理协议的严重制约。&lt;/p&gt;
+&lt;h3&gt;2.1 代理协议局限性&lt;/h3&gt;
+&lt;p&gt;若直接通过远程建立的 SOCKS 代理运行网络扫描工具（如 Nmap）：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;SOCKS 代理只支持 TCP/UDP 传输，无法承载 ICMP 协议。这导致常规的 Ping 扫描直接失效。&lt;/li&gt;
+&lt;li&gt;当执行 TCP 端口扫描时，由于代理握手延迟和网络状态变化，会导致大量本已开放的端口被误报为关闭（&lt;code&gt;False Negative&lt;/code&gt;）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;2.2 解决方案：跳板机本地执行 PowerShell 扫描&lt;/h3&gt;
+&lt;p&gt;为保证数据精准度，应当使用轻量化的脚本上传至跳板机本地执行，利用跳板机本地网络栈直接进行 TCP 445 (SMB) 端口的快速扫描。&lt;/p&gt;
+&lt;p&gt;以下是一个简易的多线程/超时控制探测思路，配合 Windows 内置的 &lt;code&gt;nbtstat&lt;/code&gt; 命令，可以在短时间内精确抓取存活主机的 NetBIOS 名称，快速梳理资产：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;# 简易端口存活探测代码段
+$subnet = &quot;192.0.2.&quot; # RFC 5737 文档保留网段
+1..254 | ForEach-Object -Parallel {
+    $ip = &quot;$using:subnet$_&quot;
+    $tcpClient = New-Object System.Net.Sockets.TcpClient
+    $connection = $tcpClient.BeginConnect($ip, 445, $null, $null)
+    $wait = $connection.AsyncWaitHandle.WaitOne(150, $false) # 150ms 超时控制
+    if ($wait) {
+        $tcpClient.EndConnect($connection)
+        Write-Output &quot;[+] Active SMB Target: $ip&quot;
+        # 配合 nbtstat 抓取主机名
+        nbtstat -A $ip | Select-String &quot;UNIQUE&quot; | Select-Object -First 1
+    }
+    $tcpClient.Close()
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;通过在跳板机上本地执行此类轻量探测，可以完美避开远程 SOCKS 代理带来的漏报问题。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;技术手段三：局域网网络拓扑的逻辑推理与网关定位&lt;/h2&gt;
+&lt;p&gt;在没有网络拓扑图或网关管理凭据的陌生局域网环境中，利用网络行为特征反推拓扑关系是运维排查的一项核心技能。&lt;/p&gt;
+&lt;h3&gt;3.1 路由特征与 ICMP 行为特征推理&lt;/h3&gt;
+&lt;p&gt;在排查某些特定出口流量时，可能会遇到如下现象：
+对出口测试地址执行 &lt;code&gt;tracert&lt;/code&gt; 路由跟踪，发现跳数较少且时延明显低于远端链路。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;逻辑推理&lt;/strong&gt;：
+&lt;ul&gt;
+&lt;li&gt;较低时延表明出口设备可能位于较近的网络边界，但不能单独作为物理位置结论。&lt;/li&gt;
+&lt;li&gt;但若在本地 ARP 缓存表（&lt;code&gt;arp -a&lt;/code&gt;）中找不到该公网 IP 对应的 MAC 地址，则证明它并非处于同一二层网络直连。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;结论&lt;/strong&gt;：这通常意味着局域网的默认网关启用了 &lt;strong&gt;ICMP 代理&lt;/strong&gt;，或者网关设备在检测到目标为自身公网 IP 时，执行了本地 &lt;strong&gt;NAT Hairpin（发卡弯）&lt;/strong&gt; 环回路由。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;3.2 物理网关定位与流量反查协作手段&lt;/h3&gt;
+&lt;p&gt;当网关管理页面未开放（或因网络桥接等原因无法从当前网段远程访问），且需要精确定位具体物理设备与流量源头时，可采取如下物理-逻辑联动协作手段：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;MAC 地址反查物理端口&lt;/strong&gt;：
+在授权条件下登录核心二层交换机，查询示例 MAC（如 &lt;code&gt;02-00-00-00-00-01&lt;/code&gt;）对应的上联端口。实际排障记录只在受控渠道中流转。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;网关 NAT 连接日志反查&lt;/strong&gt;：
+在物理定位并获得网关管理权限后，提取网关设备的 NAT 映射/连接状态日志，通过过滤特定时间段、特定外部目标 IP，反查与其通信的内网源私有 IP（例如追溯某异常外部连接是由内网哪台 PC 发起）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;结合 DHCP 租约记录&lt;/strong&gt;：
+在 DHCP 环境下，IP 地址随时可能换租。因此在定位到内网源 IP 后，必须对照 DHCP 租约日志中的 MAC 地址分配历史，以防因 IP 换租导致误判，最终完成对物理终端的精确锁定。&lt;/li&gt;
+&lt;/ol&gt;
+</content:encoded></item><item><title>桌面端混合应用发布实践：Vite 相对路径如何解决 Electron 在 file 协议下的黑白屏</title><link>https://blog.luozili.work/posts/electron-spa-file-protocol-fix/</link><guid isPermaLink="true">https://blog.luozili.work/posts/electron-spa-file-protocol-fix/</guid><description>排查 Vite 单页应用在 Electron 的 file 协议下出现黑白屏的原因，并给出相对路径与受限自定义协议两种修复方案。</description><pubDate>Mon, 29 Jun 2026 10:00:00 GMT</pubDate><content:encoded>&lt;p&gt;在当下的全栈与前端开发中，使用跨平台框架（如 Electron 或 Tauri）将基于现代前端工具链（如 Vite + TypeScript + React/Vue）构建的单页 Web 应用（SPA）打包发布为桌面客户端，是一种极具性价比的交付方案。&lt;/p&gt;
+&lt;p&gt;然而，许多开发者在第一次使用 Electron 打包静态资源并运行安装包时，往往会面临一个冰冷、没有任何报错提示的“&lt;strong&gt;全白屏&lt;/strong&gt;”或“&lt;strong&gt;全黑屏&lt;/strong&gt;”窗口。&lt;/p&gt;
+&lt;p&gt;本文将深入剖析该问题的底层机制，并提供最简单、优雅的 Vite 相对路径一键纠偏方案。&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;一、 致命白屏/黑屏的根源：file:// 协议与绝对路径&lt;/h3&gt;
+&lt;p&gt;在本地开发模式（&lt;code&gt;npm run dev&lt;/code&gt;）下，Vite 会启动一个本地 HTTP/HTTPS 服务器（如 &lt;code&gt;http://localhost:5173&lt;/code&gt;），此时所有的静态资源都会在 Web 协议下安全传输。在默认配置中，Vite 打包出来的资源文件引用都是&lt;strong&gt;绝对路径&lt;/strong&gt;（以 &lt;code&gt;/&lt;/code&gt; 开头）：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&amp;lt;!-- Vite 默认打包的 index.html 引用格式 --&amp;gt;
+&amp;lt;script type=&quot;module&quot; crossorigin src=&quot;/assets/index-D7b39f.js&quot;&amp;gt;&amp;lt;/script&amp;gt;
+&amp;lt;link rel=&quot;stylesheet&quot; crossorigin href=&quot;/assets/index-C8a12b.css&quot;&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;而在生产环境下，出于网络隔离和性能考量，Electron 桌面壳通常是通过 &lt;code&gt;loadURL&lt;/code&gt; 或者是 &lt;code&gt;loadFile&lt;/code&gt;，利用浏览器的 &lt;strong&gt;&lt;code&gt;file://&lt;/code&gt; 协议&lt;/strong&gt; 直接读取并渲染本地的 &lt;code&gt;index.html&lt;/code&gt; 文件的：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// Electron 主进程中加载本地 HTML 的代码
+win.loadURL(`file://${__dirname}/../dist/index.html`);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;问题此时发生&lt;/strong&gt;：
+当浏览器内核（Chromium）在 &lt;code&gt;file://&lt;/code&gt; 协议下解析绝对路径 &lt;code&gt;/assets/index-D7b39f.js&lt;/code&gt; 时，会将其误判为&lt;strong&gt;当前操作系统根目录下的路径&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;在 Windows 下，它会被解析为 &lt;code&gt;file:///C:/assets/index-D7b39f.js&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;在 Linux/macOS 下，它会被解析为 &lt;code&gt;file:///assets/index-D7b39f.js&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;系统根目录下当然不存在这个资源文件。这会导致控制台瞬间报出&lt;strong&gt;大量 404 (Not Found) 错误&lt;/strong&gt;。由于 SPA 所有的逻辑与渲染全部由 JS 脚本驱动，核心脚本加载失败，桌面窗口就会彻底处于“白屏（未加载）”或“黑屏（框架阻塞）”的崩溃状态。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;二、 终极解决方案：Vite 相对路径配置&lt;/h3&gt;
+&lt;p&gt;要根除该问题，必须让 Vite 在打包静态文件时，将所有的资源引用路径重写为&lt;strong&gt;以当前 HTML 文件为基准的相对路径&lt;/strong&gt;（以 &lt;code&gt;./&lt;/code&gt; 或空字符串开头）。&lt;/p&gt;
+&lt;p&gt;我们仅需修改项目根目录下的 &lt;code&gt;vite.config.ts&lt;/code&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// vite.config.ts
+import { defineConfig } from &apos;vite&apos;;
+import vue from &apos;@vitejs/plugin-vue&apos;; // 以 Vue 为例
+import path from &apos;path&apos;;
+
+export default defineConfig({
+  plugins: [vue()],
+  
+  // 关键核心修改：将默认的 &apos;/&apos; 改为 &apos;./&apos; 或空字符串
+  // 这会强制编译引擎将所有的资源引用重写为相对路径
+  base: &apos;./&apos;, 
+
+  resolve: {
+    alias: {
+      &apos;@&apos;: path.resolve(__dirname, &apos;./src&apos;),
+    },
+  },
+  
+  build: {
+    outDir: &apos;dist&apos;,
+    assetsDir: &apos;assets&apos;,
+    // 针对 Electron 的 file:// 协议，建议关闭或优化 cssCodeSplit
+    // 确保 CSS 加载顺序与 DOM 挂载同步，减少界面闪烁
+    cssCodeSplit: true,
+  }
+});
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;配置完毕后重新执行 &lt;code&gt;npm run build&lt;/code&gt;，再次查看 &lt;code&gt;dist/index.html&lt;/code&gt;，可以发现资源引用已完美变更为相对路径：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&amp;lt;!-- 纠偏后的相对路径引用 --&amp;gt;
+&amp;lt;script type=&quot;module&quot; crossorigin src=&quot;./assets/index-D7b39f.js&quot;&amp;gt;&amp;lt;/script&amp;gt;
+&amp;lt;link rel=&quot;stylesheet&quot; crossorigin href=&quot;./assets/index-C8a12b.css&quot;&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;此时，Electron 通过 &lt;code&gt;file://&lt;/code&gt; 协议打开后，能顺利定位并加载位于当前 HTML 同级目录 &lt;code&gt;assets/&lt;/code&gt; 文件夹下的全部资源，应用即可平稳加载，黑屏彻底消除。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;三、 联动防踩坑指南&lt;/h3&gt;
+&lt;p&gt;仅修改 Vite 编译的相对路径还不够，在 SPA 打包桌面端时，还需要避开以下两个“连环坑”：&lt;/p&gt;
+&lt;h4&gt;1. 前端路由模式必须切换为 Hash 路由&lt;/h4&gt;
+&lt;p&gt;如果你的 SPA 项目使用了路由（如 Vue Router / React Router），在 Web 开发中常用的 &lt;strong&gt;HTML5 History 模式（&lt;code&gt;createWebHistory&lt;/code&gt;）在 &lt;code&gt;file://&lt;/code&gt; 协议下会彻底失效&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;因为 History 模式依赖于 Web 服务器将所有未匹配路径重写（Rewrite）指向 &lt;code&gt;index.html&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;file://&lt;/code&gt; 协议下没有任何 Web 服务器提供重写服务，用户一旦发生路由跳转或直接刷新，浏览器就会因直连物理文件失败报错 404。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;对策&lt;/strong&gt;：在打包桌面端时，必须将前端路由切换为 &lt;strong&gt;Hash 模式（&lt;code&gt;createWebHashHistory&lt;/code&gt;）&lt;/strong&gt;，利用 &lt;code&gt;#&lt;/code&gt; 锚点控制页面逻辑，这能完美兼容 &lt;code&gt;file://&lt;/code&gt; 本地访问。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;// router/index.ts
+import { createRouter, createWebHashHistory } from &apos;vue-router&apos;;
+
+const router = createRouter({
+  // 必须使用 Hash 路由，坚决不用 HTML5 History 路由
+  history: createWebHashHistory(),
+  routes: [
+    // ... 路由配置
+  ]
+});
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4&gt;2. 自定义本地资源加载协议（高级方案）&lt;/h4&gt;
+&lt;p&gt;如果因为特殊原因（如需要支持强隔离的 Cookie 或 Service Worker），项目必须使用标准的绝对路径进行资源引用，建议在 Electron 主进程中使用 &lt;code&gt;protocol&lt;/code&gt; 模块，&lt;strong&gt;自定义注册一个伪 HTTP 协议&lt;/strong&gt;，在内部拦截文件系统请求：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// main.js (Electron 主进程)
+const { app, BrowserWindow, net, protocol } = require(&apos;electron&apos;);
+const path = require(&apos;path&apos;);
+const { pathToFileURL } = require(&apos;url&apos;);
+
+const distRoot = path.resolve(__dirname, &apos;dist&apos;);
+
+// 必须在 app ready 之前注册特权协议
+protocol.registerSchemesAsPrivileged([
+  { scheme: &apos;app&apos;, privileges: { secure: true, standard: true } }
+]);
+
+app.whenReady().then(() =&amp;gt; {
+  // 只允许 app://bundle/ 下的资源映射到 dist
+  protocol.handle(&apos;app&apos;, (request) =&amp;gt; {
+    const url = new URL(request.url);
+    if (url.host !== &apos;bundle&apos;) {
+      return new Response(&apos;Not found&apos;, { status: 404 });
+    }
+
+    const relativePath = decodeURIComponent(url.pathname).replace(/^\/+/, &apos;&apos;) || &apos;index.html&apos;;
+    const filePath = path.resolve(distRoot, relativePath);
+    if (filePath !== distRoot &amp;amp;&amp;amp; !filePath.startsWith(`${distRoot}${path.sep}`)) {
+      return new Response(&apos;Forbidden&apos;, { status: 403 });
+    }
+
+    return net.fetch(pathToFileURL(filePath).toString());
+  });
+
+  const win = new BrowserWindow({ width: 800, height: 600 });
+  win.loadURL(&apos;app://bundle/index.html&apos;);
+});
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;通过这一层拦截，应用可以在受限的自定义协议下读取 &lt;code&gt;dist&lt;/code&gt; 资源，同时拒绝越过资源根目录的路径。对于一般项目，配置 &lt;strong&gt;Vite 相对路径 &lt;code&gt;base: &apos;./&apos;&lt;/code&gt;&lt;/strong&gt; 仍然是更简单的方案；需要 Cookie、Service Worker 或安全来源语义时，再考虑自定义协议。&lt;/p&gt;
+</content:encoded></item><item><title>物联网边缘计算的“空间感知”：无需敏感权限常开的传感器后台分析服务实践</title><link>https://blog.luozili.work/posts/android-sensor-presence-service/</link><guid isPermaLink="true">https://blog.luozili.work/posts/android-sensor-presence-service/</guid><description>以 Android 前台服务整合加速度计、陀螺仪和接近传感器，构建设备姿态与在场状态判断，并控制功耗和权限边界。</description><pubDate>Sun, 21 Jun 2026 10:00:00 GMT</pubDate><content:encoded>&lt;p&gt;在开发物联网智能终端、手持人机交互系统或移动端智能 Agent 应用时，提供生动且自然的“空间感知交互”是提升用户体验的核心抓手。例如：当用户拿起设备时自动亮屏、当手机扣在桌面上时自动静音、当遮挡手机屏幕时唤醒角色等。&lt;/p&gt;
+&lt;p&gt;为了捕捉这些交互契机，传统的做法是在后台拉起摄像头进行视觉识别，或者常开麦克风进行持续音频采集。但这种“简单粗暴”的技术方案在工业生产和大众消费市场中面临着严重的双重危机：一是&lt;strong&gt;极高的高频功耗&lt;/strong&gt;会导致设备电池在短短几小时内耗尽；二是&lt;strong&gt;触发敏感隐私红线&lt;/strong&gt;（后台偷听/偷拍），极难通过应用商城的合规审计。&lt;/p&gt;
+&lt;p&gt;本文将展示如何利用 Android 底层的&lt;strong&gt;非敏感低功耗运动与光电传感器&lt;/strong&gt;，设计一套免隐私权限的常驻后台空间感知前台服务。&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;一、 传感器选型与免敏感权限优势&lt;/h3&gt;
+&lt;p&gt;在 Android 系统权限框架中，读取麦克风（&lt;code&gt;RECORD_AUDIO&lt;/code&gt;）和摄像头（&lt;code&gt;CAMERA&lt;/code&gt;）属于高危（Dangerous）权限，必须在运行时由用户显式授予，且系统会在后台启动时给予醒目的隐私提示胶囊。&lt;/p&gt;
+&lt;p&gt;与之相反，读取底层的物理运动和光电传感器属于&lt;strong&gt;普通级（Normal）权限&lt;/strong&gt;，无需用户在系统弹窗中确认即可直接读取：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;三轴加速度计 (Accelerometer)&lt;/strong&gt;：测量三个物理轴向上的物理加速度，用于计算设备倾角、摇晃和运动状态。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;三轴陀螺仪 (Gyroscope)&lt;/strong&gt;：测量设备绕三个空间轴转动的角速度，捕捉设备被拿起或倾斜的细微动态。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;距离传感器 (Proximity Sensor)&lt;/strong&gt;：测量设备正面与物体的距离，常用于检测设备是否被贴耳、放入口袋或被手掌遮挡。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;环境光传感器 (Light Sensor)&lt;/strong&gt;：测量周围环境的光照强度（Lux 勒克斯），配合距离传感器可以极高精度地判定“设备处于封闭暗处”还是“屏幕被覆盖”。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这些传感器采用硬件级中断和低功耗总线设计，全部开启时的每秒功耗仅在数毫安级别，极其节能。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;二、 常驻后台前台服务 (Foreground Service) 架构&lt;/h3&gt;
+&lt;p&gt;为了在应用进入后台或系统休眠时仍能维持对交互动作的感知，我们必须将传感器监听逻辑放入一个 &lt;strong&gt;Android 前台服务（Foreground Service）&lt;/strong&gt; 中，配合保活通知，防止被系统低内存查杀机制（LMK）误杀。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// EdgePresenceService.java
+package com.example.edgeapp;
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.Service;
+import android.content.Intent;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.os.Build;
+import android.os.IBinder;
+import android.util.Log;
+import androidx.core.app.NotificationCompat;
+
+public class EdgePresenceService extends Service implements SensorEventListener {
+    private static final String CHANNEL_ID = &quot;EdgePresenceChannel&quot;;
+    private SensorManager mSensorManager;
+    private Sensor mAccelerometer;
+    private Sensor mProximity;
+    
+    // 摇晃动作判定阈值
+    private static final float SHAKE_THRESHOLD = 15.0f;
+    private long mLastShakeTime = 0;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        createNotificationChannel();
+        
+        // 绑定前台通知，声明为“环境空间感应服务”以符合 Android 14 规范
+        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle(&quot;智能感知引擎已启动&quot;)
+                .setContentText(&quot;正在通过物理运动传感器感知空间动作&quot;)
+                .setSmallIcon(android.R.drawable.ic_menu_compass)
+                .build();
+        startForeground(4202, notification);
+
+        // 注册系统级传感器管理器
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        if (mSensorManager != null) {
+            mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            mProximity = mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+            
+            // 使用低频采样模式 (SENSOR_DELAY_NORMAL)，最大程度节省电量
+            mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+            mSensorManager.registerListener(this, mProximity, SensorManager.SENSOR_DELAY_NORMAL);
+        }
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            handleAccelerometer(event.values);
+        } else if (event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
+            handleProximity(event.values[0]);
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // 精度变更回调，一般忽略
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return START_STICKY; // 异常退出后请求系统自动拉起恢复
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (mSensorManager != null) {
+            mSensorManager.unregisterListener(this); // 释放传感器占用
+        }
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null; // 不需要绑定
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT &amp;gt;= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    &quot;Edge Presence Service&quot;,
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
+        }
+    }
+    
+    // 后续动作解算逻辑...
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;三、 交互动作解算算法&lt;/h3&gt;
+&lt;p&gt;为了将物理传感器的数值转变成人机交互的业务指令，我们需要在 &lt;code&gt;EdgePresenceService&lt;/code&gt; 内部编写低复杂度的姿态解算模块：&lt;/p&gt;
+&lt;h4&gt;1. 摇晃动作 (Shake Detection)&lt;/h4&gt;
+&lt;p&gt;基于三个重力分量在滑动时间窗口内的均方根加速度波动，判定设备是否被摇动：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;private void handleAccelerometer(float[] values) {
+    float x = values[0];
+    float y = values[1];
+    float z = values[2];
+
+    // 去除标准重力 9.8m/s^2 后的动态加速度均值
+    double gForce = Math.sqrt(x*x + y*y + z*z) - SensorManager.GRAVITY_EARTH;
+    
+    if (gForce &amp;gt; SHAKE_THRESHOLD) {
+        long now = System.currentTimeMillis();
+        if (now - mLastShakeTime &amp;gt; 1500) { // 限制 1.5 秒判定一次，防抖动
+            mLastShakeTime = now;
+            onPresenceEventDetected(&quot;SHAKE_WAKE&quot;);
+        }
+    }
+
+    // 2. 扣机静音检测 (Face Down Detection)
+    // 当重力加速度全部加载在 Z 轴上，且数值为负时，说明屏幕完全朝下水平扣放
+    if (z &amp;lt; -8.5f &amp;amp;&amp;amp; Math.abs(x) &amp;lt; 2.0f &amp;amp;&amp;amp; Math.abs(y) &amp;lt; 2.0f) {
+        onPresenceEventDetected(&quot;FACE_DOWN_SILENT&quot;);
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4&gt;2. 贴近遮挡动作 (Proximity Near/Far)&lt;/h4&gt;
+&lt;p&gt;大部分距离传感器只输出两档离散值：&lt;code&gt;0.0&lt;/code&gt;（极近）或一个较大的常数如 &lt;code&gt;5.0&lt;/code&gt;（远）：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;private void handleProximity(float distance) {
+    if (distance &amp;lt; 1.0f) {
+        // 物体极其贴近屏幕正面，判定为“遮挡/掩盖”
+        onPresenceEventDetected(&quot;SCREEN_COVERED&quot;);
+    } else {
+        onPresenceEventDetected(&quot;SCREEN_EXPOSED&quot;);
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;四、 边缘计算与隐私保护的结合&lt;/h3&gt;
+&lt;p&gt;解算出的动作（如 &lt;code&gt;SHAKE_WAKE&lt;/code&gt; 或 &lt;code&gt;FACE_DOWN_SILENT&lt;/code&gt;）会被作为极轻量级的事件，通过本地 Broadcast 广播发送给主应用的 JS 层，进而驱动 Agent 的状态机（如唤醒看板娘、静音对话、开启监听）：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;不采集音视频&lt;/strong&gt;：服务只处理重力、距离等传感器事件，但仍应在产品说明中明确用途并允许用户关闭。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;资源负载更低&lt;/strong&gt;：相比持续运行摄像头或麦克风，低采样率传感器通常更省电；最终功耗需要在目标机型上通过 Battery Historian 等工具实测。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;按系统规则恢复&lt;/strong&gt;：可以使用 &lt;code&gt;EdgePresenceBootReceiver&lt;/code&gt; 接收 &lt;code&gt;BOOT_COMPLETED&lt;/code&gt;，但前台服务启动仍受 Android 版本、用户设置和后台限制约束，不能承诺永久常驻。&lt;/li&gt;
+&lt;/ol&gt;
+</content:encoded></item><item><title>二层风暴抑制与 BPDU 保护的白名单部署</title><link>https://blog.luozili.work/posts/network-storm-stp-guard/</link><guid isPermaLink="true">https://blog.luozili.work/posts/network-storm-stp-guard/</guid><description>根据端口类型、生成树角色与 LLDP 邻居建立白名单，再分批部署风暴抑制、边缘端口和 BPDU 保护。</description><pubDate>Sat, 13 Jun 2026 10:00:00 GMT</pubDate><content:encoded>&lt;p&gt;在大型园区局域网的日常运维中，用户私接廉价小交换机、Hub 或无线路由器导致物理自环的事件层出不穷。一旦发生自环，随之而来的广播风暴会在极短时间内消耗完核心和汇聚层交换机的全部带宽，导致全网大面积丢包。&lt;/p&gt;
+&lt;p&gt;为了将网络隐患扼杀在摇篮中，在接入层交换机上批量部署&lt;strong&gt;风暴抑制（Storm Control）&lt;/strong&gt;、&lt;strong&gt;边缘端口（Edged Port）&lt;/strong&gt; 和 &lt;strong&gt;BPDU 保护（BPDU Guard）&lt;/strong&gt; 是行之有效的行业标准操作。然而，大批量部署时最忌讳“一刀切”配置，一旦误将核心级 Trunk 上联口或接有重要无线 AP 的接口设为边缘口并开启 BPDU Guard，会导致骨干链路瞬间被系统强行关闭，造成更严重的业务瘫痪。&lt;/p&gt;
+&lt;p&gt;本文将分享如何在企业级交换机上，通过脚本化白名单检测，实现安全无误的二层网络自动化防御部署。&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;一、 防御风暴的三道防线&lt;/h3&gt;
+&lt;p&gt;要建立稳固的二层局域网防火墙，需要协同配置以下三项技术：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;风暴抑制 (Storm Suppression)&lt;/strong&gt;：按已审批的策略限制广播帧和未知组播帧，防止异常流量抢占正常业务带宽。阈值需要结合设备能力和业务基线确定。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;边缘端口 (Edged Port)&lt;/strong&gt;：将直接接在电脑、服务器上的 access 物理口配置为边缘口。此类接口在链路状态 UP 时，直接跳过生成树（STP）的 Listening 和 Learning 状态，瞬时进入 Forwarding 转发状态，且其状态抖动不发送 TC 拓扑变更。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;BPDU 保护 (BPDU Guard)&lt;/strong&gt;：配置在边缘端口上。由于边缘口预期连接的是终端（不应该发送 STP BPDU 数据包），一旦该接口意外收到了来自于外接小交换机的 BPDU 握手包，BPDU Guard 机制会瞬间介入，将该端口置为 &lt;strong&gt;Administratively DOWN（或 Error-Disabled）&lt;/strong&gt;，强行锁死端口，阻止环路形成。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr /&gt;
+&lt;h3&gt;二、 批量部署中的“误杀”风险&lt;/h3&gt;
+&lt;p&gt;在包含大量接入设备和物理接口的园区网中，如果人工逐台登录并执行配置，容易误将骨干 Trunk 口识别为终端端口。
+&lt;strong&gt;一旦骨干 Trunk 口收到了对端发送的正常 BPDU 数据，BPDU Guard 会直接将整条主干光纤通道 shutdown 锁死，全楼栋瞬间断网。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;因此，我们的批量部署脚本必须在下发命令前，严格根据接口的拓扑信息进行&lt;strong&gt;自动化免死白名单判定&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;三、 自动化扫描与排除白名单机制的设计&lt;/h3&gt;
+&lt;p&gt;在向某个物理接口下发 &lt;code&gt;stp edged-port&lt;/code&gt; 配置之前，脚本必须首先调用 SNMP 或者是 SSH CLI 读取并匹配以下排他性条件：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Trunk/Hybrid 端口排它&lt;/strong&gt;：只有 &lt;code&gt;Link-type: Access&lt;/code&gt; 接口才允许作为边缘口，Trunk 接口直接跳过。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;STP 根/上联口排它&lt;/strong&gt;：读取生成树状态，当前处于 &lt;code&gt;ROOT&lt;/code&gt;（根端口）或 &lt;code&gt;ALTE&lt;/code&gt;（备份端口）状态的物理端口，说明其承担着连接上游骨干交换机的重任，必须强制排除。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;LLDP 邻居排它&lt;/strong&gt;：检查接口的 LLDP 邻居列表（Link Layer Discovery Protocol）。如果接口显示对端连接着另一台交换机、路由器或无线 AP，直接将其列入免死白名单，严禁配置边缘端口。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr /&gt;
+&lt;h3&gt;四、 自动化部署脚本的核心伪代码 (Python 逻辑)&lt;/h3&gt;
+&lt;p&gt;以下是利用 Python 网工运维库（以 &lt;code&gt;netmiko&lt;/code&gt; 为例）实现的智能安全部署逻辑：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;from netmiko import ConnectHandler
+import re
+
+def build_switch_security_plan(switch_ip, username, password, policy):
+    device = {
+        &apos;device_type&apos;: policy[&apos;platform_driver&apos;],
+        &apos;ip&apos;: switch_ip,
+        &apos;username&apos;: username,
+        &apos;password&apos;: password,
+    }
+    
+    print(f&quot;正在登入交换机: {switch_ip} ...&quot;)
+    connection = ConnectHandler(**device)
+    
+    # 1. 采集全局 LLDP 信息，解析已连接其他交换机或 AP 的端口
+    lldp_output = connection.send_command(&quot;display lldp neighbor-information list&quot;)
+    # 端口格式由平台适配器提供
+    lldp_ports = policy[&apos;parse_lldp_ports&apos;](lldp_output)
+    
+    # 2. 采集生成树状态，找出根口和备份口
+    stp_output = connection.send_command(&quot;display stp brief&quot;)
+    stp_exclusion_ports = []
+    for line in stp_output.splitlines():
+        # 寻找角色为 ROOT 或 ALTE 的端口
+        if &quot;ROOT&quot; in line or &quot;ALTE&quot; in line:
+            port = line.split()[1]
+            stp_exclusion_ports.append(port)
+            
+    # 汇总免死白名单
+    whitelist_ports = set(lldp_ports + stp_exclusion_ports)
+    print(f&quot;免死白名单端口列表 (已自动排除连接交换机/AP/主上联口): {list(whitelist_ports)}&quot;)
+    
+    # 3. 采集所有 UP 状态的物理端口，执行安全加固
+    interface_brief = connection.send_command(&quot;display interface brief&quot;)
+    
+    # 进入系统配置视图
+    config_commands = [
+        &quot;system-view&quot;,
+        &quot;stp bpdu-protection&quot;, # 启用全局 BPDU 保护
+        f&quot;stp tc-protection threshold {policy[&apos;tc_limit&apos;]}&quot;
+    ]
+    
+    for line in interface_brief.splitlines():
+        # 匹配非白名单的千兆 Access 业务端口
+        match = policy[&apos;match_access_port&apos;](line.strip())
+        if match:
+            port_name = match.group(1)
+            
+            # 如果端口存在于白名单，绝对跳过，严禁配置
+            if port_name in whitelist_ports:
+                continue
+                
+            # 为普通业务 Access 端口批量写入风暴抑制和边缘口配置
+            config_commands.append(f&quot;interface {port_name}&quot;)
+            config_commands.append(
+                f&quot;broadcast-suppression {policy[&apos;broadcast_limit&apos;]}&quot;
+            )
+            config_commands.append(
+                f&quot;multicast-suppression {policy[&apos;multicast_limit&apos;]}&quot;
+            )
+            config_commands.append(&quot;stp edged-port&quot;) # 声明为边缘口，关联触发 BPDU 保护
+            
+    # 4. 返回待审批命令。生产环境不得在未复核时自动保存。
+    config_commands.append(&quot;quit&quot;)
+    connection.disconnect()
+    return config_commands
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;五、 总结与成效&lt;/h3&gt;
+&lt;p&gt;实施前应先在实验环境验证平台适配器和回退方案，再按小批量灰度推进：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;观察 BPDU Guard、风暴抑制与告警是否按预期触发；&lt;/li&gt;
+&lt;li&gt;统计误判并持续完善 LLDP、端口角色和人工豁免规则；&lt;/li&gt;
+&lt;li&gt;命令生成、审批、执行和保存分离，避免脚本直接修改全部生产设备；&lt;/li&gt;
+&lt;li&gt;审计日志只记录必要的设备标识、审批单号和执行结果，并限制访问权限。&lt;/li&gt;
+&lt;/ol&gt;
+</content:encoded></item><item><title>移动端定位避坑：弧度/度识别与配置化作业区校验</title><link>https://blog.luozili.work/posts/android-rtk-radians-fix/</link><guid isPermaLink="true">https://blog.luozili.work/posts/android-rtk-radians-fix/</guid><description>记录移动端接入 GNSS 数据时，如何自动识别弧度与角度、统一坐标单位，并通过配置化作业区校验提前拦截异常值。</description><pubDate>Fri, 05 Jun 2026 10:00:00 GMT</pubDate><content:encoded>&lt;p&gt;在高精度 GNSS 定位（如 RTK 厘米级定位）与物联网开发中，数据格式规范的绝对对齐是系统运行的基本底线。然而，由于物联网硬件设备涉及多个底层供应链，其输出的数据规格经常与开发手册的描述“南辕北辙”。&lt;/p&gt;
+&lt;p&gt;其中最典型、隐蔽性极强的一个痛点，就是&lt;strong&gt;经纬度单位的“弧度（Radians）”与“度（Degrees）”混乱&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;这篇文章记录一种配置化识别方法：先判断输入是否具备弧度特征，再结合授权作业区和设备状态决定是否转换。&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;一、 令人头疼的“单位罗生门”&lt;/h3&gt;
+&lt;p&gt;在标准定位应用中，经纬度通常采用十进制“度”，部分底层接口则可能返回弧度。&lt;/p&gt;
+&lt;p&gt;然而，某些厂商的定位控制终端在其安卓系统接口或专有蓝牙数据报文里，虽然其说明文档坚称返回值单位为“度”，但其实际输出的却是由内部 GPS/RTK 芯片计算出的&lt;strong&gt;弧度&lt;/strong&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果把弧度值直接当作“度”渲染，定位点会明显偏离授权作业区域。&lt;/li&gt;
+&lt;li&gt;如果我们在代码中写死“全盘做弧度到度的换算”，当用户换了一款“正常输出度数数据”的接收机时，正常的数据又会被二次放大成几千度，直接引发系统数值溢出或定位直接报错。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;因此，系统必须能够在数据源入口，具备动态判断“这串数据到底是弧度还是度”并自动实现纠偏的能力。&lt;/strong&gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;二、 自动纠偏算法的设计核心&lt;/h3&gt;
+&lt;p&gt;算法使用由受控配置注入的授权作业区边界，不把真实范围写入客户端源码或博客。&lt;/p&gt;
+&lt;h4&gt;1. 边界条件设定&lt;/h4&gt;
+&lt;p&gt;作业区边界由部署配置提供，测试环境使用独立的测试范围。应用日志只记录规则命中结果，不记录原始坐标。&lt;/p&gt;
+&lt;h4&gt;2. 逻辑判定法则&lt;/h4&gt;
+&lt;ol&gt;
+&lt;li&gt;传入经纬度的原始值 &lt;code&gt;lat&lt;/code&gt; 和 &lt;code&gt;lon&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;判定其数值范围：如果 &lt;code&gt;lat&lt;/code&gt; 绝对值在 $[-\pi/2, \pi/2]$ 之间，且 &lt;code&gt;lon&lt;/code&gt; 绝对值在 $[-\pi, \pi]$ 之间（这说明该数值&lt;strong&gt;具备是弧度数据的物理条件&lt;/strong&gt;）。&lt;/li&gt;
+&lt;li&gt;试探性将它们乘以 $\frac{180}{\pi}$ 转换为“度”：
+$$lat_{deg} = lat \times \frac{180}{\pi}$$
+$$lon_{deg} = lon \times \frac{180}{\pi}$$&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;核心防误判&lt;/strong&gt;：判定转换后的坐标是否落入当前授权作业区，并结合设备协议声明、历史样本与定位状态共同评分。单一边界条件不能作为绝对结论。&lt;/li&gt;
+&lt;li&gt;若转换后不落入，则判定该原始数据本来就是“度”，只是它的数值恰好比较小（如在赤道/格林威治子午线附近工作的正常数据），此时保持原样不做变换。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr /&gt;
+&lt;h3&gt;三、 算法的 Dart/TypeScript 代码实现&lt;/h3&gt;
+&lt;p&gt;以下是我们在高精度定位服务核心数据链路中使用的自适应纠偏过滤函数：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;import &apos;dart:math&apos; as math;
+
+enum CoordinateUnit { degrees, radiansConverted }
+
+class NormalizedCoordinates {
+  final double latitude;
+  final double longitude;
+  final CoordinateUnit detectedUnit;
+
+  const NormalizedCoordinates({
+    required this.latitude,
+    required this.longitude,
+    required this.detectedUnit,
+  });
+}
+
+class AllowedArea {
+  final double minLatitude;
+  final double maxLatitude;
+  final double minLongitude;
+  final double maxLongitude;
+
+  const AllowedArea({
+    required this.minLatitude,
+    required this.maxLatitude,
+    required this.minLongitude,
+    required this.maxLongitude,
+  });
+
+  bool contains(double latitude, double longitude) =&amp;gt;
+      latitude &amp;gt;= minLatitude &amp;amp;&amp;amp;
+      latitude &amp;lt;= maxLatitude &amp;amp;&amp;amp;
+      longitude &amp;gt;= minLongitude &amp;amp;&amp;amp;
+      longitude &amp;lt;= maxLongitude;
+}
+
+/**
+ * 自适应纠偏 NMEA/物联网定位坐标
+ */
+NormalizedCoordinates normalizeLocationCoordinates({
+  required double rawLatitude,
+  required double rawLongitude,
+  required AllowedArea allowedArea,
+}) {
+  // 缺省状态假设输入为正常的 &quot;度&quot;
+  var targetLatitude = rawLatitude;
+  var targetLongitude = rawLongitude;
+  var detectedUnit = CoordinateUnit.degrees;
+
+  if (rawLatitude.isFinite &amp;amp;&amp;amp; rawLongitude.isFinite) {
+    // 1. 判断是否落入合理的弧度物理上限区间
+    // 纬度绝对值不超过 pi/2 + 0.01 且经度绝对值不超过 pi + 0.01
+    final bool isPlausibleRadians = rawLatitude.abs() &amp;lt;= (math.pi / 2 + 0.01) &amp;amp;&amp;amp;
+                                    rawLongitude.abs() &amp;lt;= (math.pi + 0.01);
+
+    if (isPlausibleRadians) {
+      // 2. 尝试执行弧度转度的数学计算
+      final degreeLatitude = rawLatitude * 180 / math.pi;
+      final degreeLongitude = rawLongitude * 180 / math.pi;
+
+      // 3. 作业区来自受控配置，示例不包含真实边界
+      final bool isInsideAllowedArea =
+          allowedArea.contains(degreeLatitude, degreeLongitude);
+
+      if (isInsideAllowedArea) {
+        // 4. 符合全部判据，判定为异常输出的弧度数据，自动纠错
+        targetLatitude = degreeLatitude;
+        targetLongitude = degreeLongitude;
+        detectedUnit = CoordinateUnit.radiansConverted;
+        
+        print(&quot;&amp;gt;&amp;gt;&amp;gt; [纠偏警告] 探测到定位单位冲突，已按授权规则转换；坐标值不写入日志。&quot;);
+      }
+    }
+  }
+
+  return NormalizedCoordinates(
+    latitude: targetLatitude,
+    longitude: targetLongitude,
+    detectedUnit: detectedUnit,
+  );
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;四、 总结与最佳实践&lt;/h3&gt;
+&lt;p&gt;在市政道路测量与物联网项目中，防御式编程是数据链路的第一道防线。单位识别应结合协议声明、数学范围、授权作业区和历史状态，并保留人工复核入口。原始坐标、作业区边界和设备标识只在需要它们的受控数据层流转。&lt;/p&gt;
+</content:encoded></item><item><title>基于 Web Canvas 与 IndexedDB 的市政道路设施平面图编辑器</title><link>https://blog.luozili.work/posts/municipal-road-canvas-indexeddb-editor/</link><guid isPermaLink="true">https://blog.luozili.work/posts/municipal-road-canvas-indexeddb-editor/</guid><description>使用 HTML5 Canvas 与 IndexedDB 实现市政道路设施平面图编辑、工程坐标映射和本地草稿恢复。</description><pubDate>Thu, 28 May 2026 10:00:00 GMT</pubDate><content:encoded>&lt;p&gt;市政道路改造、地下管线协调和临时交通组织经常需要在一张平面图上维护道路中心线、路口、施工区与交通设施。这篇文章记录一个浏览器平面图编辑器的核心实现。&lt;/p&gt;
+&lt;p&gt;为了让现场网络不稳定时仍能继续编辑，方案采用 &lt;strong&gt;HTML5 Canvas&lt;/strong&gt; 负责高频绘制，使用 &lt;strong&gt;IndexedDB&lt;/strong&gt; 保存本地草稿和版本快照。&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;一、为什么选择 Canvas？&lt;/h3&gt;
+&lt;p&gt;当画布包含大量道路节点、管线交点、标志牌和施工区域时，使用大量 DOM 节点会带来明显的布局与重绘开销。Canvas 更适合这类连续缩放、平移和拖拽场景：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;集中绘制&lt;/strong&gt;：全部图元由统一渲染循环管理，避免频繁触发布局计算。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;坐标一致&lt;/strong&gt;：屏幕坐标可以稳定映射到工程坐标系。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数据解耦&lt;/strong&gt;：业务实体与绘制样式分离，便于独立调整数据模型和校验规则。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h3&gt;二、编辑器核心模型&lt;/h3&gt;
+&lt;p&gt;先把道路节点、连接关系和校验规则拆成独立模型：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;export type RoadNodeType = &apos;SIGNAL&apos; | &apos;JUNCTION&apos; | &apos;WORK_ZONE&apos;;
+
+export interface RoadNode {
+  id: string;
+  name: string;
+  type: RoadNodeType;
+  x: number;
+  y: number;
+  chainage: number;
+}
+
+export interface RoadLink {
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  laneClearance: number;
+}
+
+export interface SafetyRules {
+  minimumClearance: number;
+}
+
+export class MunicipalMapEditor {
+  private canvas: HTMLCanvasElement;
+  private ctx: CanvasRenderingContext2D;
+  private nodes: RoadNode[] = [];
+  private links: RoadLink[] = [];
+  private selectedNode: RoadNode | null = null;
+  private scale = 1;
+  private offsetX = 0;
+  private offsetY = 0;
+
+  constructor(canvas: HTMLCanvasElement, private rules: SafetyRules) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext(&apos;2d&apos;)!;
+    this.bindEvents();
+  }
+
+  private bindEvents() {
+    this.canvas.addEventListener(&apos;pointerdown&apos;, (event) =&amp;gt; {
+      const point = this.screenToWorld(event.clientX, event.clientY);
+      this.selectedNode = this.findNodeAt(point.x, point.y);
+    });
+
+    this.canvas.addEventListener(&apos;pointermove&apos;, (event) =&amp;gt; {
+      if (!this.selectedNode) return;
+      const point = this.screenToWorld(event.clientX, event.clientY);
+      this.selectedNode.x = point.x;
+      this.selectedNode.y = point.y;
+      this.render();
+    });
+
+    this.canvas.addEventListener(&apos;pointerup&apos;, async () =&amp;gt; {
+      this.selectedNode = null;
+      await this.saveLocalDraft();
+    });
+  }
+
+  private screenToWorld(screenX: number, screenY: number) {
+    const rect = this.canvas.getBoundingClientRect();
+    return {
+      x: (screenX - rect.left - this.offsetX) / this.scale,
+      y: (screenY - rect.top - this.offsetY) / this.scale,
+    };
+  }
+
+  private findNodeAt(x: number, y: number): RoadNode | null {
+    const radius = 15;
+    return this.nodes.find((node) =&amp;gt; Math.hypot(node.x - x, node.y - y) &amp;lt; radius) ?? null;
+  }
+
+  public render() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.save();
+    this.ctx.translate(this.offsetX, this.offsetY);
+    this.ctx.scale(this.scale, this.scale);
+
+    for (const link of this.links) {
+      const from = this.nodes.find((node) =&amp;gt; node.id === link.fromNodeId);
+      const to = this.nodes.find((node) =&amp;gt; node.id === link.toNodeId);
+      if (!from || !to) continue;
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(from.x, from.y);
+      this.ctx.lineTo(to.x, to.y);
+      this.ctx.strokeStyle =
+        link.laneClearance &amp;lt; this.rules.minimumClearance ? &apos;#ff4d4d&apos; : &apos;#4dabf7&apos;;
+      this.ctx.stroke();
+    }
+
+    for (const node of this.nodes) {
+      this.ctx.beginPath();
+      this.ctx.arc(node.x, node.y, 8, 0, Math.PI * 2);
+      this.ctx.fillStyle = node.type === &apos;WORK_ZONE&apos; ? &apos;#e67700&apos; : &apos;#37b24d&apos;;
+      this.ctx.fill();
+      this.ctx.fillText(node.name, node.x + 12, node.y + 4);
+    }
+
+    this.ctx.restore();
+  }
+
+  private async saveLocalDraft() {
+    await localDraftDB.saveDraft(&apos;municipal_map_draft&apos;, {
+      nodes: this.nodes,
+      links: this.links,
+      updatedAt: Date.now(),
+    });
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;净距阈值不应硬编码，而应由当前项目采用的规范和审批配置提供，这样可以减少业务耦合，也方便按场景切换规则。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;三、IndexedDB 本地草稿&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;export class LocalDraftDB {
+  private db: IDBDatabase | null = null;
+
+  async open() {
+    this.db = await new Promise&amp;lt;IDBDatabase&amp;gt;((resolve, reject) =&amp;gt; {
+      const request = indexedDB.open(&apos;MunicipalMapDemo&apos;, 1);
+      request.onupgradeneeded = () =&amp;gt; {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(&apos;drafts&apos;)) {
+          db.createObjectStore(&apos;drafts&apos;, { keyPath: &apos;key&apos; });
+        }
+      };
+      request.onsuccess = () =&amp;gt; resolve(request.result);
+      request.onerror = () =&amp;gt; reject(request.error);
+    });
+  }
+
+  async saveDraft(key: string, data: unknown) {
+    if (!this.db) throw new Error(&apos;Database is not ready&apos;);
+    const transaction = this.db.transaction(&apos;drafts&apos;, &apos;readwrite&apos;);
+    transaction.objectStore(&apos;drafts&apos;).put({ key, data });
+  }
+}
+
+export const localDraftDB = new LocalDraftDB();
+await localDraftDB.open();
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;生产环境还应补充数据版本号、异常恢复、容量限制、主动清理和草稿加密策略。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;四、实现要点&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;将道路、施工区和交通设施抽象为通用节点，降低绘制层与业务字段的耦合。&lt;/li&gt;
+&lt;li&gt;将净距、桩号格式和告警规则全部配置化，由受控数据源注入。&lt;/li&gt;
+&lt;li&gt;本地草稿仅存储编辑数据，敏感图纸应加密并设置生命周期。&lt;/li&gt;
+&lt;li&gt;导出文件和截图按用途保留必要图层，避免把无关业务字段一起带出。&lt;/li&gt;
+&lt;/ol&gt;
+</content:encoded></item><item><title>端侧轻量化大模型应用：基于多模块可选编译机制的离线语音识别构建工程设计</title><link>https://blog.luozili.work/posts/sherpa-onnx-gradle-build/</link><guid isPermaLink="true">https://blog.luozili.work/posts/sherpa-onnx-gradle-build/</guid><description>使用 Gradle 依赖探测、动态源集与反射注册，在同一 Android 代码库中输出云端轻量版和端侧语音识别版。</description><pubDate>Wed, 20 May 2026 10:00:00 GMT</pubDate><content:encoded>&lt;p&gt;随着人工智能技术的迅猛发展，将小参数量大模型（如轻量化语音识别模型 SenseVoice-ONNX、声学特征提取器等）直接部署在移动端侧，实现完全离线、低延迟的边缘计算（Edge Computing），已成为当下主流的开发设计方向。&lt;/p&gt;
+&lt;p&gt;然而，这类离线大模型和底层的 C++ 计算库体积庞大，往往会让打包出来的安装包（APK）从原本的 20MB~30MB 暴增至 300MB 以上。如果某些网络环境受限或对体积敏感的用户只想要轻量级版本，直接维护两套独立的代码分支往往会带来巨大的代码同步与维护灾难。&lt;/p&gt;
+&lt;p&gt;本文将分享如何通过巧妙的 Gradle 动态依赖配置与 Native 反射加载，设计一套“&lt;strong&gt;单一代码库、两用可选编译&lt;/strong&gt;”的移动端大模型打包方案。&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;一、 核心痛点与可选编译设计&lt;/h3&gt;
+&lt;p&gt;我们的项目基于混合跨平台工程。目标是实现：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;轻量版 (Cloud-only Build)&lt;/strong&gt;：包体积 $\approx 30\text{MB}$。由于缺少本地推理库和模型，语音识别（STT）通过 WebSocket 与云端网关长连接进行。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;重度离线版 (On-device Build)&lt;/strong&gt;：包体积 $\approx 300\text{MB}$。内置完全离线的 ONNX 推理底座和语言声学模型，优先端侧进行模型推理，仅在端侧引擎出错时 fallback 退回云端。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;为了避免代码拆分，我们在构建期设计了&lt;strong&gt;可选依赖文件探针机制&lt;/strong&gt;。Gradle 会在执行打包任务前，检测特定的模型包及 jar 包是否被放置在物理目录中。若存在则点亮离线版，若不存在则降级编译为轻量版。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;二、 Gradle 动态依赖机制的配置实现&lt;/h3&gt;
+&lt;p&gt;在 Android 项目根目录的 &lt;code&gt;app/build.gradle&lt;/code&gt; 中，我们通过检测物理文件存在性，决定是否将大体积 native 库依赖并入打包清单中，并同时向 Java 编译器传递编译环境标：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// app/build.gradle
+import java.io.File
+
+apply plugin: &apos;com.android.application&apos;
+
+// 定义大体积端侧推理库的物理探测路径
+def sherpaJar = file(&apos;libs/sherpa-onnx.jar&apos;)
+def hasSherpaOnnx = sherpaJar.exists()
+
+android {
+    namespace &quot;com.example.edgeapp&quot;
+    compileSdk 34
+
+    defaultConfig {
+        applicationId &quot;com.example.edgeapp&quot;
+        minSdk 22
+        targetSdk 34
+        versionCode 45
+        versionName &quot;4.5&quot;
+
+        // 将探测状态作为 BuildConfig 常量注入 Java 编译空间
+        buildConfigField &quot;boolean&quot;, &quot;HAS_SHERPA_ONNX&quot;, &quot;${hasSherpaOnnx}&quot;
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile(&apos;proguard-android-optimize.txt&apos;), &apos;proguard-rules.pro&apos;
+        }
+    }
+
+    // 针对大体积 ONNX 模型配置不压缩规则，防止模型加载时解压导致内存溢出
+    aaptOptions {
+        noCompress &apos;onnx&apos;
+    }
+
+    // 动态管理源集 (SourceSets)
+    sourceSets {
+        main {
+            // 如果具备本地推理库，则加入包含底层 C++ 调用封装类的 Java 源码文件夹
+            if (hasSherpaOnnx) {
+                java.srcDirs += &apos;src/ondevice/java&apos;
+            }
+        }
+    }
+}
+
+dependencies {
+    // 基础基础依赖
+    implementation &apos;androidx.appcompat:appcompat:1.6.1&apos;
+    implementation &apos;com.google.android.material:material:1.9.0&apos;
+    
+    // 动态依赖判定
+    if (hasSherpaOnnx) {
+        // 只有当文件存在时，才真正把大体积库引入依赖链
+        implementation files(&apos;libs/sherpa-onnx.jar&apos;)
+        // 仅在 arm64 架构设备上跑，过滤不必要的 ABI（如 x86）以减小体积
+        ndk {
+            abiFilters &quot;arm64-v8a&quot;
+        }
+        System.out.println(&quot;&amp;gt;&amp;gt;&amp;gt; 编译通知: 检测到本地 sherpa-onnx 推理库，已启用完全离线端侧 STT 构建方案。&quot;)
+    } else {
+        System.out.println(&quot;&amp;gt;&amp;gt;&amp;gt; 编译通知: 未找到本地推理库，自动降级为轻量化纯云端 STT 构建方案。&quot;)
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;三、 运行时动态加载与反射解耦设计&lt;/h3&gt;
+&lt;p&gt;因为轻量版在编译时排除了 &lt;code&gt;src/ondevice/java&lt;/code&gt;（即不包含离线语音识别类的定义），如果我们在主代码（如 &lt;code&gt;MainActivity&lt;/code&gt;）中直接静态引用该类，就会导致&lt;strong&gt;编译报错（Class Not Found）&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;为了使主工程能够与条件编译的代码完全解耦，我们在原生主入口中采用&lt;strong&gt;反射注入 (Reflection Register)&lt;/strong&gt; 机制来注册插件：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// MainActivity.java
+package com.example.edgeapp;
+
+import android.os.Bundle;
+import android.util.Log;
+import com.getcapacitor.BridgeActivity;
+
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // 利用 Gradle 注入的 BuildConfig 变量进行分支处理
+        if (BuildConfig.HAS_SHERPA_ONNX) {
+            try {
+                // 通过类名反射，加载仅在离线构建中才会被编译进包的插件类
+                Class&amp;lt;?&amp;gt; pluginClass = Class.forName(&quot;com.example.edgeapp.LocalSttPlugin&quot;);
+                registerPlugin((Class&amp;lt;? extends com.getcapacitor.Plugin&amp;gt;) pluginClass);
+                Log.i(&quot;DemoBoot&quot;, &quot;成功通过反射注册离线端侧推理插件。&quot;);
+            } catch (Exception e) {
+                Log.e(&quot;DemoBoot&quot;, &quot;反射注册离线语音插件失败: &quot; + e.getMessage());
+            }
+        } else {
+            Log.i(&quot;DemoBoot&quot;, &quot;当前为轻量版构建，已忽略端上离线语音初始化。&quot;);
+        }
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;四、 移动平台通道与运行时自适应&lt;/h3&gt;
+&lt;p&gt;在跨平台（如 TypeScript 网页端）逻辑中，应用运行时无需关心当前包体积大小。它只需要在启动时向平台通道发起一次探针查询：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;import { registerPlugin } from &apos;@capacitor/core&apos;;
+
+interface LocalSttPluginType {
+  isReady(): Promise&amp;lt;{ ready: boolean }&amp;gt;;
+}
+
+const LocalStt = registerPlugin&amp;lt;LocalSttPluginType&amp;gt;(&apos;LocalStt&apos;);
+
+async function initSpeechEngine() {
+  try {
+    // 1. 查询端侧离线插件是否已经被成功反射并就绪
+    const status = await LocalStt.isReady();
+    if (status.ready) {
+      console.log(&quot;端上离线 SenseVoice 引擎就绪，语音数据优先在端侧解码推理。&quot;);
+      enableLocalSpeechRoute();
+    } else {
+      useCloudFallbackRoute();
+    }
+  } catch (error) {
+    // 插件未被编译打包时，反射加载不成功，插件调用会报错，自动捕获并无缝回退到云端
+    console.log(&quot;设备离线插件不可用，自动使用云端 WebSocket Fallback 数据通道。&quot;);
+    useCloudFallbackRoute();
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;五、 总结&lt;/h3&gt;
+&lt;p&gt;通过上述的“&lt;strong&gt;Gradle 依赖探测 + 编译常量注入 + Java 源码动态源集扩展 + Java 反射动态实例化&lt;/strong&gt;”四重连环设计，我们做到了在不分裂 Git 代码分支的前提下，仅依靠本地开发人员是否下载大体积模型，即可输出两种体积明显不同的应用安装包，为移动端模型的可选构建提供了一种可维护的工程解法。&lt;/p&gt;
+</content:encoded></item><item><title>CRC 错包与速率协商降级引发的拓扑抖动</title><link>https://blog.luozili.work/posts/network-crc-stp-tc/</link><guid isPermaLink="true">https://blog.luozili.work/posts/network-crc-stp-tc/</guid><description>从 CRC 错包和速率协商降级出发，分析物理链路抖动如何触发 STP 拓扑变化与未知单播泛洪。</description><pubDate>Tue, 12 May 2026 10:00:00 GMT</pubDate><content:encoded>&lt;p&gt;在局域网排查中，网络管理员最怕的往往不是“链路彻底中断”（因为此类故障逻辑清晰，易于定位），而是“时断时续、局部丢包、无规律卡顿”的隐性故障。这类故障犹如人体血管中的“微血栓”，平时难以察觉，却能在关键时刻引发全网系统性瘫痪。&lt;/p&gt;
+&lt;p&gt;这次从一条不稳定的接入链路说起：物理接触不良可能导致速率协商降级并产生大量 CRC 错包，继而触发生成树频繁拓扑变更。下面使用通用接口名和趋势值梳理这条故障链。&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;一、 物理层隐形杀手：CRC 错包与速率退化协商&lt;/h3&gt;
+&lt;p&gt;在二层以太网中，网络设备在接收每个数据帧时，都会计算帧校验序列（FCS），并与帧尾的 &lt;strong&gt;CRC（循环冗余校验）&lt;/strong&gt; 值比对。如果不一致，就会把该帧判定为损坏并丢弃。&lt;/p&gt;
+&lt;h4&gt;1. CRC 错包产生的物理根源&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;线缆物理损伤&lt;/strong&gt;：网线被拉扯、弯折过度，导致内部铜芯受损或阻抗改变。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;接口氧化与接触不良&lt;/strong&gt;：水晶头弹片松动、交换机端口积灰或模块引脚氧化。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;强电磁干扰&lt;/strong&gt;：网线与高压强电线混排，导致高频电磁噪声耦合到数据线上。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4&gt;2. 训练失败后的速率回退&lt;/h4&gt;
+&lt;p&gt;自动协商本身是在双方通告的能力中选择共同模式，并不会根据“线缆好坏”统一执行某种固定降级策略。不过，部分 PHY 在千兆链路训练连续失败后会尝试较低速率，也可能直接表现为反复重协商或链路闪断。因此，端口从千兆异常落到百兆或十兆，只能作为物理层问题的线索，不能单独作为结论。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;二、 蝴蝶效应：从端口 Up/Down 到全网 STP TC 风暴&lt;/h3&gt;
+&lt;p&gt;一个接入链路故障为何可能让核心交换机 CPU 升高并影响大量终端？这与生成树协议的收敛刷新机制有关。&lt;/p&gt;
+&lt;h4&gt;1. 物理层抖动导致端口状态反复切换&lt;/h4&gt;
+&lt;p&gt;当端口处于 10Mbps 降级且伴随大量 CRC 错包时，链路极不稳定。端口会以秒级频率频繁发生 &lt;strong&gt;UP&lt;/strong&gt; 和 &lt;strong&gt;DOWN&lt;/strong&gt; 切换。&lt;/p&gt;
+&lt;h4&gt;2. 触发拓扑变更（Topology Change, TC）报文&lt;/h4&gt;
+&lt;p&gt;在生成树（STP/RSTP/MSTP）网络中，当任何一台交换机的非边缘端口（Non-edged Port）发生 UP/DOWN 切换时，交换机都会判定&lt;strong&gt;网络拓扑发生了变化&lt;/strong&gt;。
+设备会在 BPDU 中标记并向相邻桥传播拓扑变化。不同 STP 模式的通知与确认过程并不完全相同，因此排查时应结合当前运行的 STP/RSTP/MSTP 模式查看计数。&lt;/p&gt;
+&lt;h4&gt;3. MAC 地址表频繁老化，导致未知单播泛洪&lt;/h4&gt;
+&lt;p&gt;收到拓扑变化后，交换机会加速相关动态 MAC 表项的老化；传统 STP 常把老化时间收敛到 Forward Delay，而 RSTP/MSTP 和不同厂商实现可能直接刷新部分表项：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;表项快速老化后，交换机暂时无法确定部分目的 MAC 的出口。&lt;/li&gt;
+&lt;li&gt;此时，当正常的业务报文到达时，交换机由于在 MAC 表中找不到目的端口，不得不把报文以&lt;strong&gt;未知单播泛洪&lt;/strong&gt;的方式，向该 VLAN 的所有端口复制转发。&lt;/li&gt;
+&lt;li&gt;当局域网内存在频繁的 UP/DOWN 抖动时，设备可能陷入“&lt;strong&gt;持续传播 TC -&amp;gt; 动态表项反复老化 -&amp;gt; 未知单播增加&lt;/strong&gt;”的循环，进而造成带宽和控制面压力。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h3&gt;三、 故障排查与诊断方法&lt;/h3&gt;
+&lt;p&gt;当发现某区域网络出现偶发延迟抖动（如 Ping 网关正常，但访问系统间歇性卡顿）时，应按以下逻辑分析：&lt;/p&gt;
+&lt;h4&gt;1. 检查物理接口错包统计&lt;/h4&gt;
+&lt;p&gt;登录终端所连接的接入层交换机，查看可疑端口的流量计数与丢包情况：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[Access-Switch] display interface &amp;lt;ACCESS_PORT&amp;gt;
+...
+Port link-type: Access
+Port speed: 10Mbps, Duplex: Full  &amp;lt;-- 致命隐患：千兆口降级协商为 10Mbps
+Output flow: &amp;lt;CURRENT_RATE&amp;gt;
+Input flow: &amp;lt;CURRENT_RATE&amp;gt;
+Recent input statistics:
+ &amp;lt;INCREASING&amp;gt; CRC errors, &amp;lt;INCREASING&amp;gt; frame errors
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4&gt;2. 查看 STP 拓扑变更统计&lt;/h4&gt;
+&lt;p&gt;在交换机上观察生成树 TC 报文的计数变化：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[Access-Switch] display stp tc
+MSTID      Port                         Receive      Send
+0          &amp;lt;ROOT_PORT&amp;gt;                  &amp;lt;HIGH&amp;gt;       &amp;lt;LOW&amp;gt;
+0          &amp;lt;SUSPECT_PORT&amp;gt;               &amp;lt;LOW&amp;gt;        &amp;lt;HIGH&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;数据证实，正是由于该物理接口频繁的硬件断连和重连，使得它成为了全网 STP TC 风暴的“震源”。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;四、 解决方案与网络安全加固&lt;/h3&gt;
+&lt;h4&gt;1. 物理链路修补（断开病原）&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;第一时间在交换机后台对受损物理端口执行 &lt;code&gt;shutdown&lt;/code&gt; 强行关闭，切断链路层的物理抖动。&lt;/li&gt;
+&lt;li&gt;重新制作水晶头，必要时更换五类/六类跳线，重新插拔模块，直至速率稳定协商在 &lt;strong&gt;1000Mbps Full&lt;/strong&gt; 且 CRC 计数不再增加。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4&gt;2. 交换机防御策略加固&lt;/h4&gt;
+&lt;p&gt;为了防止未来单点物理链路损坏波及全网，建议在接入层交换机上进行两项标准化配置：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;配置边缘端口（Edged Port）&lt;/strong&gt;：
+将所有直接连接普通 PC/服务器的物理终端端口，全部显式配置为边缘端口。边缘端口在物理 UP/DOWN 时，&lt;strong&gt;不会触发 STP 拓扑变更，更不会向全网泛洪 TC 报文&lt;/strong&gt;。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[Access-Switch] interface range &amp;lt;AUTHORIZED_EDGE_PORTS&amp;gt;
+[Access-Switch-if-range] stp edged-port
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;开启 TC 保护阈值（TC Protection）&lt;/strong&gt;：
+限制交换机在单位时间内处理 TC 报文并刷新 MAC 地址表的最高次数，防止被非法 TC 报文频繁轰炸：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;# 阈值应根据设备能力和变更规范配置
+[Access-Switch] stp tc-protection threshold &amp;lt;APPROVED_LIMIT&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+</content:encoded></item><item><title>物联网设备指纹分类打分算法：基于蓝牙广播特征的智能匹配机制设计</title><link>https://blog.luozili.work/posts/rtk-device-fingerprint/</link><guid isPermaLink="true">https://blog.luozili.work/posts/rtk-device-fingerprint/</guid><description>从设备名、广播服务、传输类型与数据特征构建可配置的蓝牙设备分类打分模型，降低 GNSS 接收机接入门槛。</description><pubDate>Mon, 04 May 2026 10:00:00 GMT</pubDate><content:encoded>&lt;p&gt;在物联网（IoT）移动应用开发中，设备接入的碎片化是一个常见的棘手痛点。不同硬件厂商推出的设备，其蓝牙广播数据、主服务 UUID、控制协议各有千秋。如果要求最终用户在连接时手动选择“设备品牌-硬件型号-通信波特率”，会极大提高产品的使用门槛和客诉率。&lt;/p&gt;
+&lt;p&gt;为了实现“即开即扫、一键智能匹配设备协议”的流畅体验，我们需要在移动端设计一套高可用的&lt;strong&gt;设备指纹分类打分识别机制&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;本文将分享如何通过解析蓝牙扫描元数据，设计一套针对高精度工业级 GNSS 设备的指纹打分匹配算法。&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;一、 设备指纹提取源分析&lt;/h3&gt;
+&lt;p&gt;在蓝牙扫描阶段，移动端不需要与外部设备建立物理连接，即可直接获取广播包（Advertisement Data）。我们能够提取的核心特征元数据包括：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;设备显示名称 (Local Name / Advertisement Name)&lt;/strong&gt;：最直观的信息，但容易被修改或发生非标准裁剪。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;广播服务 UUIDs (Service UUIDs)&lt;/strong&gt;：设备对外宣称的主服务列表。工业串口透传设备通常会携带可由适配配置识别的服务 UUID。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;厂商自定义数据 (Manufacturer Specific Data)&lt;/strong&gt;：厂商独有的标识，包含公司代号（Company ID）和自定义载荷。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;底层物理信道类型 (Transport Type)&lt;/strong&gt;：如经典蓝牙 SPP 与低功耗蓝牙 BLE，不同的通道类型也暗示了不同的硬件设计代次。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr /&gt;
+&lt;h3&gt;二、 打分匹配算法的设计逻辑&lt;/h3&gt;
+&lt;p&gt;打分模型采用&lt;strong&gt;加权累加评分制（Weighted Score System）&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;设定一个初始信心值 &lt;code&gt;confidence = 0&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;当满足高置信度特征（如名称中包含专有厂商缩写且包含型号匹配）时，叠加高权重分数。&lt;/li&gt;
+&lt;li&gt;当满足辅助置信特征（如仅匹配了通用串口透穿 UUID 或符合特定格式的设备序列号）时，叠加中等权重分数。&lt;/li&gt;
+&lt;li&gt;汇总所有匹配证据，返回最高分数的设备归类文件；若得分低于安全阈值（如 50分），则归类为通用或未知设备。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h3&gt;三、 算法核心实现 (Dart 语言版)&lt;/h3&gt;
+&lt;p&gt;下面把设备分类打分逻辑整理成一段可配置的 Dart 示例：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;class DeviceProfile {
+  final String vendor; // 厂商/品牌
+  final String model;  // 设备型号
+  final int confidence; // 判定置信度得分 (0 - 100)
+  final String evidence; // 判定证据链列表
+  final bool isTargetGnss; // 是否为高精度 GNSS 设备
+
+  const DeviceProfile({
+    this.vendor = &apos;&apos;,
+    this.model = &apos;&apos;,
+    this.confidence = 0,
+    this.evidence = &apos;&apos;,
+    this.isTargetGnss = false,
+  });
+
+  String get label =&amp;gt; vendor.isEmpty ? &apos;未知设备&apos; : &apos;$vendor $model&apos;;
+}
+
+DeviceProfile classifyBluetoothDevice({
+  required String name,
+  required String id,
+  required String transportType, // &apos;BLE&apos; 或 &apos;CLASSIC&apos;
+  String serviceUuids = &apos;&apos;,      // 多主服务 UUID 拼接字串
+  Map&amp;lt;String, List&amp;lt;String&amp;gt;&amp;gt; vendorTokens = const {},
+  Set&amp;lt;String&amp;gt; serialServiceUuids = const {},
+}) {
+  final text = &apos;$name $id $serviceUuids&apos;.toLowerCase();
+  
+  String vendor = &apos;&apos;;
+  String model = &apos;&apos;;
+  int confidence = 0;
+  final List&amp;lt;String&amp;gt; evidenceList = [];
+
+  // 打分决策闭包
+  void hit(String hitVendor, int score, String reason, {String hitModel = &apos;&apos;}) {
+    if (score &amp;gt; confidence) {
+      vendor = hitVendor;
+      model = hitModel;
+      confidence = score;
+    } else if (hitModel.isNotEmpty &amp;amp;&amp;amp; vendor == hitVendor &amp;amp;&amp;amp; model.isEmpty) {
+      model = hitModel;
+    }
+    evidenceList.add(reason);
+  }
+
+  // 1. 厂商特征由设备适配配置注入
+  for (final rule in vendorTokens.entries) {
+    if (rule.value.any(text.contains)) {
+      hit(rule.key, 85, &apos;命中受控厂商规则&apos;);
+    }
+  }
+
+  // 2. 串行服务 UUID 同样由受控配置提供
+  final bool hasUartUuid =
+      serialServiceUuids.any((uuid) =&amp;gt; serviceUuids.contains(uuid));
+
+  // 3. 辅助特征匹配：只判断是否像序列号，不记录具体值
+  final bool isSerialLikeName = RegExp(r&apos;\d{6,}&apos;).hasMatch(name);
+
+  // 4. 综合打分裁决
+  final bool hasKeywords = [&apos;rtk&apos;, &apos;gnss&apos;, &apos;gps&apos;, &apos;nmea&apos;, &apos;receiver&apos;, &apos;rover&apos;].any(text.contains);
+  
+  if (hasKeywords || isSerialLikeName || hasUartUuid) {
+    String reason = hasKeywords 
+      ? &apos;包含定位终端关键词&apos; 
+      : (hasUartUuid ? &apos;包含标准UART服务UUID&apos; : &apos;名称符合设备序列号特征&apos;);
+    evidenceList.add(reason);
+    
+    // 如果没有任何强特品牌词匹配，但有辅助词，给予 55 分基准置信度
+    if (confidence == 0) {
+      confidence = 55;
+    }
+  }
+
+  // 5. 物理链路加分：经典蓝牙 SPP 用于透传数据的高频稳定性，作为加权依据
+  if (transportType == &apos;CLASSIC&apos; &amp;amp;&amp;amp; (hasKeywords || isSerialLikeName)) {
+    evidenceList.add(&apos;物理信道为SPP经典串口&apos;);
+    if (confidence &amp;lt; 65) {
+      confidence = 65; // 提高评估底线
+    }
+  }
+
+  return DeviceProfile(
+    vendor: vendor,
+    model: model,
+    confidence: confidence,
+    evidence: evidenceList.join(&apos;; &apos;),
+    isTargetGnss: confidence &amp;gt;= 50,
+  );
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;四、 识别机制在产品交互中的应用&lt;/h3&gt;
+&lt;p&gt;在移动端蓝牙设备扫描列表中，我们不再把所有蓝牙信号一股脑丢给用户选择，而是根据打分结果进行分流：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;自动过滤杂乱信号&lt;/strong&gt;：在发现设备列表的渲染层，默认只显示 &lt;code&gt;isTargetGnss == true&lt;/code&gt; 的设备，将用户的蓝牙列表干净化。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;高分设备高光提示&lt;/strong&gt;：对于达到高置信度阈值的已知设备，在列表中使用专用图标，并提示已经匹配到对应协议适配层。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;协议热切换自动化&lt;/strong&gt;：一旦用户点击连接，系统会根据识别出的 &lt;code&gt;DeviceProfile.vendor&lt;/code&gt;，在通信链路中动态装载对应的解析适配层（如适配二进制 RTK 状态协议，还是适配标准的 ASCII NMEA-0183 协议），全程无需用户在系统配置中做任何手动介入。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;静默背景比对&lt;/strong&gt;：当遇到完全未知命名的设备时，设备建立连接后，读取前 3 秒返回的原始字节流。若数据流符合典型的 &lt;code&gt;$GP&lt;/code&gt; / &lt;code&gt;$GN&lt;/code&gt; NMEA 报头，算法会自动重写设备库缓存，将置信度提升至 100% 并存入 IndexedDB 历史匹配，确保下一次开机即时连接。&lt;/li&gt;
+&lt;/ol&gt;
+</content:encoded></item><item><title>市政道路占道施工的多维时空冲突检测设计</title><link>https://blog.luozili.work/posts/municipal-road-work-window-conflict/</link><guid isPermaLink="true">https://blog.luozili.work/posts/municipal-road-work-window-conflict/</guid><description>将日期、时间、道路区段与交通资源组合成多维模型，实现市政道路占道施工的冲突检测。</description><pubDate>Sun, 26 Apr 2026 10:00:00 GMT</pubDate><content:encoded>&lt;p&gt;市政道路养护、管线开挖和交通设施施工通常需要共享有限的道路空间。多个作业任务如果在相同日期、相同时间和相同道路区段重叠，就可能造成交通组织冲突。&lt;/p&gt;
+&lt;p&gt;下面把日期、时间、空间区段和占用资源拆开建模，再组合成一套可扩展的冲突检测逻辑。&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;一、多维冲突模型&lt;/h3&gt;
+&lt;p&gt;将一个作业任务简化为四个维度：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;日期；&lt;/li&gt;
+&lt;li&gt;时间窗口；&lt;/li&gt;
+&lt;li&gt;道路区段；&lt;/li&gt;
+&lt;li&gt;占用资源，例如车道、路口或施工出入口。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;两个任务发生直接冲突，需要同时满足日期相同、时间重叠、桩号区间相交，并且占用了同一资源。&lt;/p&gt;
+&lt;p&gt;对于任意两个半开区间，重叠条件为：&lt;/p&gt;
+&lt;p&gt;$$\text{Overlap} = \max(Start_A, Start_B) &amp;lt; \min(End_A, End_B)$$&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;二、核心检测实现&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;export interface MunicipalWorkTask {
+  id: string;
+  name: string;
+  date: string;
+  startTime: number;
+  endTime: number;
+  startChainage: number;
+  endChainage: number;
+  roadId: string;
+  laneId: string;
+}
+
+export interface ConflictResult {
+  hasConflict: boolean;
+  conflictType?: &apos;TIME_SPACE_OVERLAP&apos; | &apos;RESOURCE_COLLISION&apos;;
+  targetTaskId?: string;
+  message?: string;
+}
+
+function isRangeOverlap(
+  startA: number,
+  endA: number,
+  startB: number,
+  endB: number,
+): boolean {
+  return Math.max(startA, startB) &amp;lt; Math.min(endA, endB);
+}
+
+export function checkWorkConflict(
+  incoming: MunicipalWorkTask,
+  existingTasks: MunicipalWorkTask[],
+): ConflictResult {
+  for (const current of existingTasks) {
+    if (incoming.date !== current.date) continue;
+    if (incoming.roadId !== current.roadId) continue;
+    if (incoming.laneId !== current.laneId) continue;
+
+    const timeOverlap = isRangeOverlap(
+      incoming.startTime,
+      incoming.endTime,
+      current.startTime,
+      current.endTime,
+    );
+    if (!timeOverlap) continue;
+
+    const spaceOverlap = isRangeOverlap(
+      incoming.startChainage,
+      incoming.endChainage,
+      current.startChainage,
+      current.endChainage,
+    );
+
+    if (spaceOverlap) {
+      return {
+        hasConflict: true,
+        conflictType: &apos;TIME_SPACE_OVERLAP&apos;,
+        targetTaskId: current.id,
+        message: `任务与现有作业发生时空冲突，请重新选择作业窗口。`,
+      };
+    }
+  }
+
+  return { hasConflict: false };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;应用日志只记录任务 ID 和冲突类型。面向用户的提示可以展示经权限校验后的业务信息，服务端再按访问级别保留审计字段。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;三、相邻施工区的安全扩展&lt;/h3&gt;
+&lt;p&gt;即使两个任务没有占用同一车道，大型机械回转、临时围挡或材料堆放也可能影响相邻施工区。可以建立通用的资源邻接关系：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;export interface RoadResourceTopology {
+  resourceId: string;
+  neighbors: Array&amp;lt;{
+    targetResourceId: string;
+    clearance: number;
+  }&amp;gt;;
+}
+
+export interface SafetyPolicy {
+  minimumClearance: number;
+}
+
+export function checkNeighborConflict(
+  incoming: MunicipalWorkTask,
+  existingTasks: MunicipalWorkTask[],
+  topology: RoadResourceTopology[],
+  policy: SafetyPolicy,
+): ConflictResult {
+  const relation = topology.find((item) =&amp;gt; item.resourceId === incoming.laneId);
+  if (!relation) return { hasConflict: false };
+
+  const affectedResources = relation.neighbors
+    .filter((item) =&amp;gt; item.clearance &amp;lt; policy.minimumClearance)
+    .map((item) =&amp;gt; item.targetResourceId);
+
+  for (const current of existingTasks) {
+    if (!affectedResources.includes(current.laneId)) continue;
+    if (incoming.date !== current.date) continue;
+
+    const timeOverlap = isRangeOverlap(
+      incoming.startTime,
+      incoming.endTime,
+      current.startTime,
+      current.endTime,
+    );
+    const spaceOverlap = isRangeOverlap(
+      incoming.startChainage,
+      incoming.endChainage,
+      current.startChainage,
+      current.endChainage,
+    );
+
+    if (timeOverlap &amp;amp;&amp;amp; spaceOverlap) {
+      return {
+        hasConflict: true,
+        conflictType: &apos;RESOURCE_COLLISION&apos;,
+        targetTaskId: current.id,
+        message: &apos;相邻施工资源存在安全距离冲突。&apos;,
+      };
+    }
+  }
+
+  return { hasConflict: false };
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;安全净距应由项目采用的规范、机械类型和审批方案动态提供，不在算法中写死。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;四、性能与数据安全建议&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;使用区间树按桩号区段检索，将大量任务的候选集提前缩小。&lt;/li&gt;
+&lt;li&gt;按业务网格编号建立空间索引，前端只获取当前任务需要的道路数据。&lt;/li&gt;
+&lt;li&gt;将批量校验放入 Web Worker，避免阻塞交互线程。&lt;/li&gt;
+&lt;li&gt;截图、导出文件、错误日志和埋点字段都遵循同一套数据最小化规则。&lt;/li&gt;
+&lt;li&gt;任务信息由鉴权后的接口按最小权限返回，缓存到期后及时清理。&lt;/li&gt;
+&lt;li&gt;入库前统一时区、日期格式和区间端点，并拒绝起点大于终点的任务，避免边界数据绕过冲突检测。&lt;/li&gt;
+&lt;/ul&gt;
+</content:encoded></item><item><title>跨平台混合架构实践：基于 WebGL 渲染截帧节流与移动端动态壁纸服务的同源镜像同步</title><link>https://blog.luozili.work/posts/capacitor-live2d-wallpaper/</link><guid isPermaLink="true">https://blog.luozili.work/posts/capacitor-live2d-wallpaper/</guid><description>在 Capacitor 混合应用中复用 WebGL Live2D 渲染结果，通过节流截帧和 Android 动态壁纸服务实现同源画面同步。</description><pubDate>Sat, 18 Apr 2026 10:00:00 GMT</pubDate><content:encoded>&lt;p&gt;在开发基于混合架构（如 Capacitor/Cordova + Vite + TS）的虚拟角色助手应用时，我们通常在前端使用成熟的 WebGL Live2D 库来展现生动的交互形象。然而，很多用户希望这个角色能够直接显示在手机的&lt;strong&gt;系统桌面动态壁纸&lt;/strong&gt;上。&lt;/p&gt;
+&lt;p&gt;直接在原生 Android 系统中重新用 C++ 或 OpenGL 编写一套复杂的 Live2D Cubism 渲染引擎往往成本极高。那么，有没有一种两全其美的混合方案，可以将前端 WebGL 渲染的角色镜像投射到原生动态壁纸服务中？&lt;/p&gt;
+&lt;p&gt;本文将揭秘如何利用 Canvas 高频截帧、JS-to-Native Bridge 节流同步以及 Android 原生动态壁纸（&lt;code&gt;WallpaperService&lt;/code&gt;）绘制，实现 Web 舞台形象到桌面壁纸的同源同步。&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;一、 整体系统架构设计&lt;/h3&gt;
+&lt;p&gt;为了把 Web 端的 Live2D 形象渲染到桌面上，我们打通了一条从 WebGL -&amp;gt; Base64 传递 -&amp;gt; Native 动态壁纸的镜像通道：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;+---------------------- Web App (Capacitor) --------------------+
+|                                                               |
+|  [ Live2D WebGL Canvas ]                                      |
+|          |                                                    |
+|     (Frame Export)                                            |
+|          v                                                    |
+|  [ toDataURL() / WebGL ReadPixels ]                           |
+|          |                                                    |
+|     (220ms Throttled Bridge)                                  |
+|          v                                                    |
++----------|----------------------------------------------------+
+           |  (Base64 Image Bytes via Bridge)
+           v
++---------------------- Native Android -------------------------+
+|                                                               |
+|  [ Presence Store (Cache Image) ]                             |
+|          |                                                    |
+|     (System Trigger Draw)                                     |
+|          v                                                    |
+|  [ WallpaperService ]                                         |
+|          |                                                    |
+|          +---&amp;gt; Draw Image + Render Canvas Animations (30fps)  |
+|                                                               |
++---------------------------------------------------------------+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;二、 Web 前端：WebGL 截帧与高频节流控制&lt;/h3&gt;
+&lt;p&gt;默认情况下，WebGL 画布的渲染数据在提交给 GPU 之后会被立即清空。为了能够使用 &lt;code&gt;.toDataURL()&lt;/code&gt; 导出画布帧，我们在初始化 WebGL 上下文时必须开启 &lt;code&gt;preserveDrawingBuffer&lt;/code&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;const gl = canvas.getContext(&quot;webgl&quot;, {
+  preserveDrawingBuffer: true // 关键：允许导出 WebGL 内容
+});
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;然而，如果每一个渲染帧都调用 &lt;code&gt;toDataURL&lt;/code&gt; 并通过桥接通道（Bridge）发送给 Java，极大的通信开销会导致主线程卡死、界面严重掉帧。我们必须引入**双向节流（Throttling）**机制：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// 220ms 节流锁，保证一秒最多传输 4~5 帧关键关键帧
+let lastSyncTime = 0;
+const SYNC_INTERVAL = 220; 
+
+function onLive2DRenderFrame() {
+  const now = Date.now();
+  if (now - lastSyncTime &amp;gt;= SYNC_INTERVAL) {
+    lastSyncTime = now;
+    
+    // 导出当前 Canvas 为 base64
+    const dataUrl = live2dCanvas.toDataURL(&quot;image/png&quot;);
+    
+    // 调用 Capacitor Native 插件将帧数据传递给原生系统
+    Capacitor.Plugins.PresencePlugin.setWallpaperFrame({ dataUrl });
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;三、 Native 侧：Android 动态壁纸服务&lt;/h3&gt;
+&lt;p&gt;在原生 Android 侧，我们首先创建一个 &lt;code&gt;PresenceStore&lt;/code&gt; 用于存储和更新 Web 发送过来的最后一帧图片数据。&lt;/p&gt;
+&lt;p&gt;随后，创建一个继承自 &lt;code&gt;WallpaperService&lt;/code&gt; 的服务，并在内部实现一个循环绘制引擎：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;public class DemoWallpaperService extends WallpaperService {
+    @Override
+    public Engine onCreateEngine() {
+        return new WallpaperEngine();
+    }
+
+    private class WallpaperEngine extends Engine {
+        private final Handler mHandler = new Handler(Looper.getMainLooper());
+        private final Runnable mDrawRunnable = this::drawFrame;
+        private boolean mVisible = false;
+        private Bitmap mCurrentFrameBitmap = null;
+
+        // 桌面刷新率节流锁（30fps，每 33ms 刷新一次）
+        private static final int FRAME_DURATION = 33; 
+
+        // 监听来自 Web 侧传入的 Bitmap 更新
+        private final FrameUpdateListener mListener = (bitmap) -&amp;gt; {
+            mCurrentFrameBitmap = bitmap;
+        };
+
+        @Override
+        public void onVisibilityChanged(boolean visible) {
+            mVisible = visible;
+            if (visible) {
+                mHandler.post(mDrawRunnable);
+            } else {
+                mHandler.removeCallbacks(mDrawRunnable);
+            }
+        }
+
+        private void drawFrame() {
+            if (!mVisible) return;
+
+            SurfaceHolder holder = getSurfaceHolder();
+            Canvas canvas = null;
+            try {
+                canvas = holder.lockCanvas();
+                if (canvas != null) {
+                    // 1. 清屏（绘制纯色背景或桌面壁纸）
+                    canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+                    canvas.drawColor(Color.parseColor(&quot;#1a1a2e&quot;)); // 暗色背景
+
+                    // 2. 绘制 WebGL 同步过来的角色镜像帧
+                    if (mCurrentFrameBitmap != null) {
+                        drawScaledCharacter(canvas, mCurrentFrameBitmap);
+                    }
+
+                    // 3. 在原生层叠加额外的视觉动效（如呼吸摇摆、粒子脉冲等）
+                    drawOverlayAnimations(canvas);
+                }
+            } finally {
+                if (canvas != null) {
+                    holder.unlockCanvasAndPost(canvas);
+                }
+            }
+
+            // 调度下一次绘制
+            mHandler.removeCallbacks(mDrawRunnable);
+            mHandler.postDelayed(mDrawRunnable, FRAME_DURATION);
+        }
+        
+        // 缩放角色比例以适应横竖屏显示
+        private void drawScaledCharacter(Canvas canvas, Bitmap bitmap) {
+            int viewWidth = canvas.getWidth();
+            int viewHeight = canvas.getHeight();
+            
+            float scale = (float) viewHeight / bitmap.getHeight();
+            int destWidth = (int) (bitmap.getWidth() * scale);
+            
+            int left = (viewWidth - destWidth) / 2;
+            Rect destRect = new Rect(left, 0, left + destWidth, viewHeight);
+            
+            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+            canvas.drawBitmap(bitmap, null, destRect, paint);
+        }
+        
+        private void drawOverlayAnimations(Canvas canvas) {
+            // 在这里可以使用原生 Java 绘制呼吸波纹、交互气泡等，提高动画连贯性
+        }
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;四、 性能与防呆处理&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;可见性挂起（Visibility Suspend）&lt;/strong&gt;：当用户进入其他 App 或者锁屏时，&lt;code&gt;onVisibilityChanged&lt;/code&gt; 会返回 &lt;code&gt;false&lt;/code&gt;。此时，&lt;code&gt;mHandler.removeCallbacks&lt;/code&gt; 会立刻切断绘制循环，同时 Native 会通知 Web 层停止截帧。这保证了壁纸服务在后台运行时为 &lt;strong&gt;0% 的 CPU 损耗&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;原生层缓动动画（Native Tweening）&lt;/strong&gt;：因为 Web 到 Native 的截帧传递是节流的（~4fps），在桌面上看如果只有 4 帧会显得卡顿。为了保证流畅度，我们在 Android 的 &lt;code&gt;drawFrame&lt;/code&gt; 中，利用 30fps 的绘制频率对 Bitmap 进行细微的&lt;strong&gt;上下起伏、呼吸缩放、小幅摇摆旋转的差值偏移&lt;/strong&gt;。这种“2D 截帧 + 原生伪 3D 浮动”的架构，在肉眼上给人一种 Live2D 以高帧率在桌面活动的奇妙流畅感。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;系统防掉线机制（Boot Restoration）&lt;/strong&gt;：在部分系统深度清理内存时，动态壁纸服务可能会被操作系统踢回默认壁纸。我们通过在 Web App 的入口处添加一个只读探针插件，在 App 返回前台时自动检查 &lt;code&gt;WallpaperManager.getWallpaperInfo()&lt;/code&gt;。若非本壁纸服务，可弹窗提醒用户“点击一键恢复角色桌面壁纸”。&lt;/li&gt;
+&lt;/ol&gt;
+</content:encoded></item><item><title>堆叠检测 VLAN 误透传引发的二层风暴</title><link>https://blog.luozili.work/posts/network-loop-mad-bfd/</link><guid isPermaLink="true">https://blog.luozili.work/posts/network-loop-mad-bfd/</guid><description>分析堆叠系统检测 VLAN 被错误透传后形成二层环路的原因，并给出只读排查顺序与配置收敛原则。</description><pubDate>Fri, 10 Apr 2026 10:00:00 GMT</pubDate><content:encoded>&lt;p&gt;在园区网络中，多台核心交换机可以通过堆叠技术形成一台逻辑设备。为了检测堆叠分裂，设备通常还会配置专用的多活检测链路。如果这个专用二层域被错误放行到业务 Trunk，就可能与直连检测链路构成不受生成树保护的环路。&lt;/p&gt;
+&lt;p&gt;这类问题最难受的地方在于：检测会话本身可能仍显示正常，但业务网已经被不该出现的二层流量拖垮。下面用简化拓扑梳理排查过程。&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;一、多活检测链路的边界&lt;/h3&gt;
+&lt;p&gt;典型设计包含以下约束：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;两个成员设备使用独立的检测 VLAN；&lt;/li&gt;
+&lt;li&gt;检测 VLAN 只存在于成员设备之间的专用直连口；&lt;/li&gt;
+&lt;li&gt;检测接口使用文档地址或链路本地机制建立会话；&lt;/li&gt;
+&lt;li&gt;检测 VLAN 不进入任何业务 Trunk 的允许列表；&lt;/li&gt;
+&lt;li&gt;相关端口与线缆有明确的配置和物理标签。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;某些实现会在检测端口关闭生成树，因此边界控制必须更加严格。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;二、错误配置如何形成环路&lt;/h3&gt;
+&lt;p&gt;问题通常来自过宽的 VLAN 放行规则：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;interface &amp;lt;UPLINK_AGGREGATION&amp;gt;
+ port link-type trunk
+ port trunk permit vlan all
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;当检测 VLAN 通过多个业务上联传播时，专用直连链路与业务 Trunk 之间可能形成新的二层闭环。广播、组播和未知单播会在环内持续复制，最终表现为：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;多条上联同时出现异常高的报文速率；&lt;/li&gt;
+&lt;li&gt;核心与汇聚设备 CPU 长时间处于高位；&lt;/li&gt;
+&lt;li&gt;管理连接迟缓，业务出现丢包和抖动；&lt;/li&gt;
+&lt;li&gt;抓包样本集中在同一个不应出现于业务网的 VLAN。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些现象只能说明存在二层放大，不能单凭一项指标直接认定根因。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;三、安全的只读排查顺序&lt;/h3&gt;
+&lt;h4&gt;1. 比较接口流量&lt;/h4&gt;
+&lt;p&gt;从仍可访问的设备开始，记录上联接口的报文速率和方向。此时先比较变化趋势，不必被某个瞬时绝对值带偏：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Interface: &amp;lt;UPLINK_AGGREGATION&amp;gt;
+Input packets/sec : &amp;lt;ABNORMAL_HIGH&amp;gt;
+Output packets/sec: &amp;lt;NORMAL_RANGE&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4&gt;2. 抽样确认二层标签&lt;/h4&gt;
+&lt;p&gt;使用端口镜像或设备自带采样功能，确认异常帧是否集中在专用检测 VLAN。抓包文件可能包含 MAC、IP 和业务载荷，不应上传到公开仓库。&lt;/p&gt;
+&lt;h4&gt;3. 核对检测会话&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;MAD status      : Normal
+Member A:
+ MAD BFD enabled: Yes
+ MAD IP address : 192.0.2.1 &amp;lt;DOC_MASK&amp;gt;
+Member B:
+ MAD BFD enabled: Yes
+ MAD IP address : 192.0.2.2 &amp;lt;DOC_MASK&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里使用 RFC 5737 文档保留地址。&lt;/p&gt;
+&lt;h4&gt;4. 检查 VLAN 传播范围&lt;/h4&gt;
+&lt;p&gt;重点检查检测 VLAN 是否出现在业务聚合口、汇聚上联或接入口的允许列表中。比对配置应在受控终端完成，导出文件只保留排障所需字段。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;四、处置与整改原则&lt;/h3&gt;
+&lt;h4&gt;临时止血&lt;/h4&gt;
+&lt;p&gt;在完成变更审批、确认堆叠状态并准备回退方案后，切断环路中的一条冗余路径。具体端口与命令必须根据现场拓扑决定，不能照搬固定接口配置。&lt;/p&gt;
+&lt;h4&gt;永久修复&lt;/h4&gt;
+&lt;p&gt;将业务 Trunk 改为最小允许列表，并显式排除检测 VLAN：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;interface &amp;lt;UPLINK_AGGREGATION&amp;gt;
+ undo port trunk permit vlan all
+ port trunk permit vlan &amp;lt;BUSINESS_VLAN_LIST&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;随后逐段验证 VLAN 表、生成树状态、检测会话和接口流量，确认没有新的环路路径。&lt;/p&gt;
+&lt;h4&gt;防复发&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;在配置模板中禁止业务 Trunk 使用全量 VLAN 放行；&lt;/li&gt;
+&lt;li&gt;对专用检测 VLAN 建立自动合规检查；&lt;/li&gt;
+&lt;li&gt;为检测端口、线缆和配线架建立一致的资产标签；&lt;/li&gt;
+&lt;li&gt;将广播速率、CPU 与拓扑变化纳入集中监控；&lt;/li&gt;
+&lt;li&gt;变更后复核检测 VLAN 的传播范围并留存基线。&lt;/li&gt;
+&lt;/ul&gt;
+</content:encoded></item><item><title>工业级高精度定位实践：跨平台移动端蓝牙双模（BLE/SPP）数据链通信与吞吐优化</title><link>https://blog.luozili.work/posts/flutter-rtk-bluetooth/</link><guid isPermaLink="true">https://blog.luozili.work/posts/flutter-rtk-bluetooth/</guid><description>设计 Flutter 移动端的 BLE/SPP 双模数据链，处理 GNSS 数据接收、RTCM 透传、分包重组、超时诊断与吞吐优化。</description><pubDate>Thu, 02 Apr 2026 10:00:00 GMT</pubDate><content:encoded>&lt;p&gt;在高精度 GNSS 定位（如厘米级 RTK）应用中，移动端设备通常需要通过蓝牙与外部定位接收机进行高频数据通信。在这个过程中，移动端不仅要接收每秒数次、包含数十条 NMEA 语句的巨大数据流，还需要向接收机反向透传差分改正数（RTCM 字节流）。&lt;/p&gt;
+&lt;p&gt;本文将从移动端架构师的视角，分享如何在使用跨平台框架（以 Flutter 为例）开发手簿应用时，适配经典蓝牙（SPP）与低功耗蓝牙（BLE），并解决在面对高吞吐量数据链时的通信瓶颈与粘包处理机制。&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;一、 经典蓝牙 (SPP) 与低功耗蓝牙 (BLE) 的对比与技术选型&lt;/h3&gt;
+&lt;p&gt;高精度定位接收机（以下简称接收机）在工业场景中主要通过两种蓝牙协议与手簿（手机/平板）通信：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;经典蓝牙 (RFCOMM / SPP Profile)&lt;/strong&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;优势&lt;/strong&gt;：吞吐量大（可达数 Mbps），不存在 MTU 限制，系统级流控，底层自动实现粘包拼接。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;劣势&lt;/strong&gt;：iOS 设备不支持（除通过 MFi 认证的设备外）；功耗相对较高。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;低功耗蓝牙 (BLE - GATT Profile)&lt;/strong&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;优势&lt;/strong&gt;：全平台通用（iOS/Android 体验一致），功耗极低。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;劣势&lt;/strong&gt;：单次传输大小受到 MTU（最大传输单元）严重限制，通常需要手动分包；无原生串口流控，在复杂电磁干扰的工业现场极易发生丢包和粘包。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;选型策略&lt;/strong&gt;：
+为了实现最大兼容性，移动端应用应当支持&lt;strong&gt;经典蓝牙与 BLE 双模通信&lt;/strong&gt;。在 Android 终端上，优先建议用户连接经典蓝牙 SPP 以获得极佳的数据吞吐量和稳定性；在 iOS 终端或硬件仅支持 BLE 时，自动切换到低功耗蓝牙数据链路。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;二、 跨平台（Flutter）蓝牙数据通道设计&lt;/h3&gt;
+&lt;p&gt;在 Flutter 中，我们通常使用 &lt;code&gt;flutter_blue_plus&lt;/code&gt; 进行 BLE 设备的扫描与连接，而经典蓝牙（Android 独占）则需要通过 MethodChannel 桥接到 Native 的 &lt;code&gt;BluetoothSocket&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;下面是我们的核心双模数据链架构抽象设计：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;abstract class GnssDataLink {
+  Stream&amp;lt;Uint8List&amp;gt; get dataStream;
+  Future&amp;lt;void&amp;gt; connect(String deviceId);
+  Future&amp;lt;void&amp;gt; write(Uint8List bytes);
+  Future&amp;lt;void&amp;gt; disconnect();
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;对于 BLE 通道，我们在建立连接后，必须经历 &lt;strong&gt;MTU 协商&lt;/strong&gt; 以及 &lt;strong&gt;特征值监听（Notify/Indicate）&lt;/strong&gt; 流程：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;class BleGnssLink implements GnssDataLink {
+  final BluetoothDevice device;
+  final Set&amp;lt;String&amp;gt; approvedSerialUuids;
+  BluetoothCharacteristic? _rxCharacteristic; // 接收数据特征值
+  BluetoothCharacteristic? _txCharacteristic; // 发送差分数据特征值
+  final _controller = StreamController&amp;lt;Uint8List&amp;gt;.broadcast();
+
+  BleGnssLink(this.device, this.approvedSerialUuids);
+
+  @override
+  Stream&amp;lt;Uint8List&amp;gt; get dataStream =&amp;gt; _controller.stream;
+
+  @override
+  Future&amp;lt;void&amp;gt; connect(String deviceId) async {
+    await device.connect();
+    
+    // 1. 协商最大 MTU（部分 Android 设备支持协商到 512 字节）
+    if (Platform.isAndroid) {
+      await device.requestMtu(512);
+    }
+
+    // 2. 发现服务并定位特征值
+    List&amp;lt;BluetoothService&amp;gt; services = await device.discoverServices();
+    for (var service in services) {
+      for (var char in service.characteristics) {
+        // 串口服务 UUID 由设备适配配置注入
+        if (approvedSerialUuids.contains(char.uuid.toString())) {
+          _rxCharacteristic = char;
+          _txCharacteristic = char; 
+          break;
+        }
+      }
+    }
+
+    if (_rxCharacteristic != null) {
+      // 3. 启用特征值通知
+      await _rxCharacteristic!.setNotifyValue(true);
+      _rxCharacteristic!.lastValueStream.listen((value) {
+        _controller.add(Uint8List.fromList(value));
+      });
+    }
+  }
+
+  @override
+  Future&amp;lt;void&amp;gt; write(Uint8List bytes) async {
+    if (_txCharacteristic == null) return;
+    // BLE 写入需要注意分包，每次写入大小不能超过 (MTU - 3) 字节
+    int mtu = device.mtuNow;
+    int chunkSize = mtu - 3;
+    for (int i = 0; i &amp;lt; bytes.length; i += chunkSize) {
+      int end = (i + chunkSize &amp;lt; bytes.length) ? i + chunkSize : bytes.length;
+      await _txCharacteristic!.write(
+        bytes.sublist(i, end),
+        withoutResponse: true, // 提升吞吐率，使用 Write Without Response
+      );
+    }
+  }
+
+  @override
+  Future&amp;lt;void&amp;gt; disconnect() async {
+    await device.disconnect();
+    await _controller.close();
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;三、 高频 NMEA 数据流的粘包与拼接优化&lt;/h3&gt;
+&lt;p&gt;当接收机以 5Hz 甚至 10Hz（每秒 5~10 次）的高频输出数据时，BLE 在传输过程中会频繁地将一条长文本（如一条完整的 &lt;code&gt;$GNGGA&lt;/code&gt; 语句，约 80 字节）切碎成多个 BLE 数据包。&lt;/p&gt;
+&lt;p&gt;如果我们直接将每次收到的 &lt;code&gt;Uint8List&lt;/code&gt; 转换为字符串解析，极易因为解析到半截的语句（如 &lt;code&gt;$GNGGA,0105,,,*42\r&lt;/code&gt; 后面丢失了 &lt;code&gt;\n&lt;/code&gt;）而导致解析错误。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;优化方案：双端换行符滑动窗口缓冲区&lt;/strong&gt;。
+我们设计了一个字节缓冲区（&lt;code&gt;BytesBuffer&lt;/code&gt;），将每次读到的数据存入队列，并在检测到代表 NMEA 语句结束的 &lt;code&gt;\r\n&lt;/code&gt; (0x0D, 0x0A) 时，才截取并派发一条完整的语句。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;class NmeaFrameDecoder {
+  final List&amp;lt;int&amp;gt; _buffer = [];
+  final _sentenceController = StreamController&amp;lt;String&amp;gt;.broadcast();
+
+  Stream&amp;lt;String&amp;gt; get sentenceStream =&amp;gt; _sentenceController.stream;
+
+  void appendRawData(Uint8List chunk) {
+    _buffer.addAll(chunk);
+    _parseBuffer();
+  }
+
+  void _parseBuffer() {
+    while (_buffer.length &amp;gt;= 2) {
+      int rnIndex = -1;
+      
+      // 在缓冲区中寻找 \r\n
+      for (int i = 0; i &amp;lt; _buffer.length - 1; i++) {
+        if (_buffer[i] == 0x0D &amp;amp;&amp;amp; _buffer[i + 1] == 0x0A) {
+          rnIndex = i;
+          break;
+        }
+      }
+
+      if (rnIndex != -1) {
+        // 提取一整行语句
+        final frameBytes = _buffer.sublist(0, rnIndex);
+        final sentence = utf8.decode(frameBytes, allowMalformed: true);
+        
+        // 派发语句
+        if (sentence.startsWith(r&apos;$&apos;)) {
+          _sentenceController.add(sentence);
+        }
+
+        // 清理已解析的缓冲区（包括 \r\n）
+        _buffer.removeRange(0, rnIndex + 2);
+      } else {
+        // 没有找到完整的 \r\n，等待下一次数据分包到达
+        break;
+      }
+    }
+
+    // 防止非标脏数据导致缓冲区无限膨胀，设定安全上限
+    if (_buffer.length &amp;gt; 2048) {
+      _buffer.clear(); 
+    }
+  }
+
+  void dispose() {
+    _sentenceController.close();
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr /&gt;
+&lt;h3&gt;四、 性能调优总结&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;多线程隔离（Isolate）&lt;/strong&gt;：在 Flutter 中，主线程还负责了每秒 60 帧的 UI 渲染。如果高频数据解析（包括 NMEA 校验和计算、坐标转换）全部放在主线程，容易引发界面微小卡顿。建议将 &lt;code&gt;NmeaFrameDecoder&lt;/code&gt; 放到独立的 &lt;code&gt;Isolate&lt;/code&gt; 中运行，解析出结构化坐标后再发送给主线程渲染。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;写无回复（Write Without Response）&lt;/strong&gt;：设备协议明确支持且应用具备流量控制时，可以减少逐包响应等待；不能把它当成所有接收机都适用的固定开关。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;心跳包探针&lt;/strong&gt;：部分蓝牙模块断开时不会及时触发状态回调。应用层应按数据频率配置超时，并在重连前区分暂时无数据、系统蓝牙关闭和真实链路断开。&lt;/li&gt;
+&lt;/ol&gt;
+</content:encoded></item><item><title>2026 AI 编程工具选型：IDE、CLI 与云端 Agent 怎么搭配</title><link>https://blog.luozili.work/posts/ai%E5%8E%82%E5%95%86%E5%AF%B9%E6%AF%94%E5%88%86%E6%9E%90/</link><guid isPermaLink="true">https://blog.luozili.work/posts/ai%E5%8E%82%E5%95%86%E5%AF%B9%E6%AF%94%E5%88%86%E6%9E%90/</guid><description>截至 2026 年 7 月，从执行位置、上下文、审批机制、验证能力和费用结构出发，对比 IDE、CLI、桌面端与云端 AI 编程工具。</description><pubDate>Wed, 25 Mar 2026 10:30:00 GMT</pubDate><content:encoded>&lt;h1&gt;2026 AI 编程工具选型&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;最后核对：2026-07-14。本文不再给工具排“天下第一”，而是比较它们把代码放在哪里、能执行什么、怎样审批以及如何验证结果。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;AI 编程工具已经从补全几行代码，发展到搜索仓库、修改多个文件、运行测试和提交 Pull Request。工具越能干，执行边界就越重要：它是在本机工作，还是在云端沙盒工作？修改前是否展示 diff？Shell 和网络操作是否需要确认？失败后能不能回滚？&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;一、先按工作表面分类&lt;/h2&gt;
+&lt;h3&gt;1. 编辑器与 IDE Agent&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;Cursor&lt;/strong&gt; 和 &lt;strong&gt;GitHub Copilot&lt;/strong&gt; 适合边写边改的交互式工作流。优势是上下文靠近编辑器，补全、对话、Agent 修改和代码审查可以在同一个界面完成。&lt;/p&gt;
+&lt;p&gt;这类工具适合：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;快速理解当前模块；&lt;/li&gt;
+&lt;li&gt;小步修改并立即查看 diff；&lt;/li&gt;
+&lt;li&gt;根据类型错误或测试结果继续迭代；&lt;/li&gt;
+&lt;li&gt;在人工持续观察下完成跨文件修改。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;需要注意的是，套餐通常同时包含订阅额度与按模型消耗的用量。文章里写死“每月能跑多少次”很快就会过期，实际使用前直接查看官方计费页。&lt;/p&gt;
+&lt;h3&gt;2. 终端 Agent&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;Claude Code&lt;/strong&gt;、&lt;strong&gt;OpenAI Codex CLI&lt;/strong&gt; 和 &lt;strong&gt;Google Antigravity CLI&lt;/strong&gt; 更接近完整的工程执行器：它们可以搜索文件、运行命令、调用工具，并围绕测试结果继续工作。&lt;/p&gt;
+&lt;p&gt;Google 已在 2026 年把原 Gemini CLI 的后续终端体验转向 Antigravity CLI，因此旧教程中的产品名、免费额度和认证方式需要重新核对。&lt;/p&gt;
+&lt;p&gt;终端 Agent 适合：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;大范围重构；&lt;/li&gt;
+&lt;li&gt;构建、测试和静态检查；&lt;/li&gt;
+&lt;li&gt;日志分析与重复性维护；&lt;/li&gt;
+&lt;li&gt;可以由命令行明确验证成败的任务。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;风险也更直接：一条错误命令可能修改大量文件或触达外部系统。应该检查它是否提供沙盒、可信目录、命令审批和网络控制，而不是只看模型能力。&lt;/p&gt;
+&lt;h3&gt;3. 桌面端与云端 Agent&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;Codex App&lt;/strong&gt;、&lt;strong&gt;Google Antigravity 2.0&lt;/strong&gt; 以及各类云端 coding agent 更适合长任务和并行任务。它们可以把构建、测试和探索放到独立环境中，减少本机资源占用，也更容易把多个任务拆开执行。&lt;/p&gt;
+&lt;p&gt;这类工具适合：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;多个相互独立的仓库任务；&lt;/li&gt;
+&lt;li&gt;耗时构建、回归测试和代码审查；&lt;/li&gt;
+&lt;li&gt;需要隔离依赖的实验性修改；&lt;/li&gt;
+&lt;li&gt;通过 PR 或补丁交付结果的异步工作。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;云端执行前必须确认源码上传范围、Secret 注入方式、日志保留、网络出口和产物清理策略。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;二、选型时真正要问的八个问题&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;问题&lt;/th&gt;
+&lt;th&gt;为什么重要&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;代码在哪里执行？&lt;/td&gt;
+&lt;td&gt;决定源码、依赖和日志会离开哪些边界&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;能访问哪些文件？&lt;/td&gt;
+&lt;td&gt;防止 Agent 读取无关仓库、密钥或个人目录&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;哪些命令需要批准？&lt;/td&gt;
+&lt;td&gt;控制删除、安装、部署和外部写操作&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;能否使用沙盒？&lt;/td&gt;
+&lt;td&gt;降低错误命令影响宿主系统的风险&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;如何展示修改？&lt;/td&gt;
+&lt;td&gt;清晰 diff 比一句“已经修好”更可信&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;如何验证完成？&lt;/td&gt;
+&lt;td&gt;测试、类型检查和构建结果必须可复现&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;失败如何恢复？&lt;/td&gt;
+&lt;td&gt;需要支持回滚、重试上限和中止机制&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;费用如何计算？&lt;/td&gt;
+&lt;td&gt;订阅、模型用量、云端算力和并行任务都可能计费&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr /&gt;
+&lt;h2&gt;三、一个更稳的日常工作流&lt;/h2&gt;
+&lt;h3&gt;第一步：让 Agent 先建立上下文&lt;/h3&gt;
+&lt;p&gt;先要求它读取仓库规则、相关模块和测试入口，说明准备修改哪些文件。对于陌生项目，这一步比立刻生成代码更重要。&lt;/p&gt;
+&lt;h3&gt;第二步：按风险决定自治程度&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;文档、格式和局部重构可以自动修改并测试；&lt;/li&gt;
+&lt;li&gt;依赖升级、数据库迁移和配置变更需要额外复核；&lt;/li&gt;
+&lt;li&gt;部署、付费、删除远端资源和发送外部消息必须单独授权。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;第三步：把完成条件写成命令&lt;/h3&gt;
+&lt;p&gt;例如：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;完成后运行：
+1. pnpm check
+2. pnpm test
+3. pnpm build
+
+任何一步失败都不要宣称完成，先报告失败命令和相关文件。
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;第四步：人工审查最终差异&lt;/h3&gt;
+&lt;p&gt;重点看权限边界、错误处理、日志内容、依赖变化和测试是否真的覆盖了新行为。Agent 生成的代码能通过编译，不代表业务假设一定正确。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;四、如何做自己的工具对比&lt;/h2&gt;
+&lt;p&gt;不要用“让它写一个贪吃蛇”决定生产工具。更有意义的测试集应该来自真实工作流：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;定位一个跨模块 Bug；&lt;/li&gt;
+&lt;li&gt;完成带测试的小功能；&lt;/li&gt;
+&lt;li&gt;重构重复逻辑但保持行为；&lt;/li&gt;
+&lt;li&gt;审查一段故意埋入边界问题的代码；&lt;/li&gt;
+&lt;li&gt;在缺少信息时正确停下并提问；&lt;/li&gt;
+&lt;li&gt;遇到失败命令时给出可验证的恢复方案。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;记录每次任务的成功率、人工干预次数、总耗时、无关改动、测试结果和最终费用。连续跑几轮之后，差异会比宣传页清楚得多。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;五、费用与套餐别写死在工作流里&lt;/h2&gt;
+&lt;p&gt;Cursor、GitHub Copilot、Claude、OpenAI 和 Google 的套餐都可能调整额度、可用模型和计费方式。项目配置里不要假设某个模型永远免费，也不要把某个预览型号写成永久默认值。&lt;/p&gt;
+&lt;p&gt;更稳妥的做法是：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;给每类任务设置预算和超时；&lt;/li&gt;
+&lt;li&gt;记录模型与工具版本；&lt;/li&gt;
+&lt;li&gt;为不可用或限流准备替代路径；&lt;/li&gt;
+&lt;li&gt;定期查看官方价格页和变更日志；&lt;/li&gt;
+&lt;li&gt;以“成功任务成本”而不是“单次请求价格”做比较。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h2&gt;六、我的搭配思路&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;日常小改动放在 IDE 里做，方便持续看 diff；&lt;/li&gt;
+&lt;li&gt;构建、测试、批量改动交给 CLI Agent，但保留命令审批；&lt;/li&gt;
+&lt;li&gt;长时间或并行任务放进隔离环境，最终以补丁或 PR 回收；&lt;/li&gt;
+&lt;li&gt;高风险系统不让 Agent 直接写入，先生成计划和待审批命令；&lt;/li&gt;
+&lt;li&gt;无论使用哪个工具，完成标准都由仓库测试和人工复核决定。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;工具会继续换名字、换模型、换套餐，但这套边界不会很快过时。&lt;/p&gt;
+&lt;h3&gt;官方资料&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://developers.openai.com/codex/&quot;&gt;OpenAI Codex 文档&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://docs.anthropic.com/en/docs/claude-code/getting-started&quot;&gt;Anthropic Claude Code 文档&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://blog.google/innovation-and-ai/technology/developers-tools/google-io-2026-developer-highlights/&quot;&gt;Google I/O 2026：Antigravity 与开发者工具&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://cursor.com/pricing&quot;&gt;Cursor 官方价格页&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/features/copilot/plans&quot;&gt;GitHub Copilot 官方套餐&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;相关阅读&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;/posts/ai%E5%8E%82%E5%95%86%E4%BB%8B%E7%BB%8D/&quot;&gt;2026 主流大模型选型笔记：别只看跑分和单价&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</content:encoded></item><item><title>2026 主流大模型选型笔记：别只看跑分和单价</title><link>https://blog.luozili.work/posts/ai%E5%8E%82%E5%95%86%E4%BB%8B%E7%BB%8D/</link><guid isPermaLink="true">https://blog.luozili.work/posts/ai%E5%8E%82%E5%95%86%E4%BB%8B%E7%BB%8D/</guid><description>截至 2026 年 7 月，从任务质量、延迟、上下文、工具调用、数据边界和实际成本六个维度，整理主流大模型的选型方法。</description><pubDate>Wed, 25 Mar 2026 10:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;2026 主流大模型选型笔记&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;最后核对：2026-07-14。模型版本、价格和可用区域变化很快，本文只保留官方资料能够支持的能力描述，实际接入前仍应复查各平台文档。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;大模型选型最容易掉进两个坑：一是拿一张跑分表决定所有业务，二是只比较每百万 Token 的标价。真正上线后，工具调用成功率、输出长度、重试次数、数据合规和端到端延迟，往往比单项分数更影响结果。&lt;/p&gt;
+&lt;p&gt;&amp;lt;!-- more --&amp;gt;&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;一、先看当前模型家族&lt;/h2&gt;
+&lt;h3&gt;OpenAI&lt;/h3&gt;
+&lt;p&gt;OpenAI 当前的主线是 &lt;strong&gt;GPT-5.6&lt;/strong&gt; 系列，官方按能力与成本拆分为 &lt;code&gt;sol&lt;/code&gt;、&lt;code&gt;terra&lt;/code&gt; 和 &lt;code&gt;luna&lt;/code&gt;。复杂生产工作优先从旗舰能力开始评测，高频、结构化或批处理任务再下探到更轻的型号。官方同时建议在工具调用和多轮工作流中优先评估 Responses API。&lt;/p&gt;
+&lt;p&gt;与其把“旗舰模型”理解成万能按钮，不如把 &lt;code&gt;reasoning.effort&lt;/code&gt;、工具集合和输出约束一起纳入测试。更高的推理力度不一定带来更低的总成本，因为它可能增加延迟和输出 Token。&lt;/p&gt;
+&lt;h3&gt;Anthropic&lt;/h3&gt;
+&lt;p&gt;Anthropic 当前的高端型号是 &lt;strong&gt;Claude Opus 4.8&lt;/strong&gt;，重点覆盖长时间 Agent 任务、代码工程和专业知识工作；&lt;strong&gt;Claude Sonnet 4.6&lt;/strong&gt; 则更适合作为质量与成本之间的常用档位。两者都不能只凭厂商跑分直接替代自己的代码库评测。&lt;/p&gt;
+&lt;p&gt;Computer Use 和长程 Agent 能力很强，但也会引入网页提示注入、误操作和权限放大的风险。涉及浏览器、Shell 或生产系统时，审批点和可回滚性必须由应用层控制。&lt;/p&gt;
+&lt;h3&gt;Google&lt;/h3&gt;
+&lt;p&gt;Google 当前提供 &lt;strong&gt;Gemini 3.5 Flash&lt;/strong&gt; 与 &lt;strong&gt;Gemini 3.1 Pro&lt;/strong&gt; 等型号。Gemini 3.1 Pro 官方标注为 Preview，支持文本、图片、音频、视频和 PDF 输入，并提供 1M 输入上下文；长上下文并不等于应该把所有资料一次性塞进去，检索质量和输入噪声仍会影响结果。&lt;/p&gt;
+&lt;p&gt;Google 的优势更适合从多模态、长上下文、搜索与 Google 生态集成几个方向评估，而不是简单写成“某项能力天下第一”。&lt;/p&gt;
+&lt;h3&gt;国内与其他服务商&lt;/h3&gt;
+&lt;p&gt;MiniMax、Kimi、GLM、Qwen、豆包等平台在中文、语音、区域可用性和计费方式上各有侧重。这里不再维护容易过期的型号与价格表。接入时直接查对应平台的模型列表、上下文限制、数据保留策略和最新账单规则，再用同一批业务样本横向测试。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;二、真正需要比较的六个维度&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;维度&lt;/th&gt;
+&lt;th&gt;要测什么&lt;/th&gt;
+&lt;th&gt;常见误区&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;任务质量&lt;/td&gt;
+&lt;td&gt;正确率、完整性、格式稳定性、拒答与幻觉&lt;/td&gt;
+&lt;td&gt;只看公开榜单，不测自己的输入&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;端到端延迟&lt;/td&gt;
+&lt;td&gt;首 Token、完整响应、工具往返和重试时间&lt;/td&gt;
+&lt;td&gt;只看模型生成速度&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;上下文&lt;/td&gt;
+&lt;td&gt;有效检索范围、长文定位和多轮一致性&lt;/td&gt;
+&lt;td&gt;把标称窗口当成有效记忆&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;工具调用&lt;/td&gt;
+&lt;td&gt;参数正确率、失败恢复、权限与幂等性&lt;/td&gt;
+&lt;td&gt;能调用工具就等于能可靠完成任务&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;数据边界&lt;/td&gt;
+&lt;td&gt;区域、保留期、训练选项、审计与删除能力&lt;/td&gt;
+&lt;td&gt;默认认为所有套餐策略一致&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;实际成本&lt;/td&gt;
+&lt;td&gt;输入、缓存、输出、工具费、重试和基础设施&lt;/td&gt;
+&lt;td&gt;只比较输入 Token 单价&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr /&gt;
+&lt;h2&gt;三、成本要按完整链路计算&lt;/h2&gt;
+&lt;p&gt;一个简单请求的模型成本可以写成：&lt;/p&gt;
+&lt;p&gt;$$
+Cost = C_{input} + C_{cached} + C_{output} + C_{tools} + C_{retry}
+$$&lt;/p&gt;
+&lt;p&gt;其中最容易被忽略的是输出和重试。某个模型输入单价低，但如果输出更长、工具参数更容易出错，最终账单未必更低。&lt;/p&gt;
+&lt;p&gt;建议至少记录这些指标：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;每类任务的输入、缓存命中和输出 Token；&lt;/li&gt;
+&lt;li&gt;工具调用次数、失败率与平均重试次数；&lt;/li&gt;
+&lt;li&gt;首 Token 和任务完成的 P50/P95 延迟；&lt;/li&gt;
+&lt;li&gt;人工返工时间；&lt;/li&gt;
+&lt;li&gt;单次成功任务的综合成本，而不是单次请求成本。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr /&gt;
+&lt;h2&gt;四、我现在更倾向的选型流程&lt;/h2&gt;
+&lt;h3&gt;1. 先做小型真实评测集&lt;/h3&gt;
+&lt;p&gt;从自己的工作流中抽取 20～50 个有代表性的任务，覆盖正常输入、缺失信息、冲突约束和工具失败。敏感数据使用独立测试样本，不直接复制生产记录。&lt;/p&gt;
+&lt;h3&gt;2. 固定提示词和工具版本&lt;/h3&gt;
+&lt;p&gt;同一轮比较中保持系统提示词、工具定义、温度、最大输出和重试策略一致。否则测到的往往是提示词差异，而不是模型差异。&lt;/p&gt;
+&lt;h3&gt;3. 分层路由&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;分类、抽取和简单改写交给低延迟型号；&lt;/li&gt;
+&lt;li&gt;代码审查、复杂推理和多工具任务使用更强型号；&lt;/li&gt;
+&lt;li&gt;高风险操作要求人工确认，不让任何模型直接决定付款、删除或生产变更；&lt;/li&gt;
+&lt;li&gt;失败后按错误类型决定重试、换模型或转人工，避免无限循环。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;4. 定期复测&lt;/h3&gt;
+&lt;p&gt;模型别名、计费和服务行为都可能变化。固定一套回归任务，在模型升级、提示词调整或工具变更后重新运行，才能知道更新究竟是进步还是回归。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h2&gt;五、数据与权限比模型排名更重要&lt;/h2&gt;
+&lt;p&gt;不论使用哪家模型，下面几条都应该由系统保证，而不是靠提示词提醒：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;API 密钥只保存在服务端 Secret 中；&lt;/li&gt;
+&lt;li&gt;工具使用最小权限，并为写操作设置审批点；&lt;/li&gt;
+&lt;li&gt;日志不记录原始凭据、完整业务文档和无关个人信息；&lt;/li&gt;
+&lt;li&gt;外部输入视为不可信数据，防范提示注入；&lt;/li&gt;
+&lt;li&gt;重要输出必须能够追溯到输入、工具结果和人工决策；&lt;/li&gt;
+&lt;li&gt;为超时、限流、模型下线和供应商故障准备降级路径。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr /&gt;
+&lt;h2&gt;六、当前结论&lt;/h2&gt;
+&lt;p&gt;不存在脱离业务场景的“最强模型”。我的做法是：先用高能力型号建立质量上限，再用评测数据寻找更便宜、更快的可替代档位；凡是涉及真实系统写操作，都把模型放在可审计、可回滚的执行框架里。&lt;/p&gt;
+&lt;h3&gt;官方资料&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://developers.openai.com/api/docs/guides/latest-model&quot;&gt;OpenAI：Latest model guide&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.anthropic.com/news/claude-opus-4-8&quot;&gt;Anthropic：Claude Opus 4.8&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.anthropic.com/news/claude-sonnet-4-6&quot;&gt;Anthropic：Claude Sonnet 4.6&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://deepmind.google/models/gemini/&quot;&gt;Google DeepMind：Gemini models&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://ai.google.dev/gemini-api/docs/models&quot;&gt;Google AI for Developers：Gemini models&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;相关阅读&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;/posts/ai%E5%8E%82%E5%95%86%E5%AF%B9%E6%AF%94%E5%88%86%E6%9E%90/&quot;&gt;2026 AI 编程工具选型：IDE、CLI 与云端 Agent 怎么搭配&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</content:encoded></item><item><title>Arch Linux 日常：从“折腾”到“生产力”的进化之旅</title><link>https://blog.luozili.work/posts/arch-linux-part3/</link><guid isPermaLink="true">https://blog.luozili.work/posts/arch-linux-part3/</guid><description>经过一段时间的高强度使用和调试，Arch 已经能覆盖开发、绘图、文档处理和日常沟通，正式从“玩具”变成了生产力工具。</description><pubDate>Mon, 09 Mar 2026 16:30:00 GMT</pubDate><content:encoded>&lt;p&gt;经过一段时间的高强度使用和调试，Arch 已经能够覆盖开发与市政道路现场的通用办公需求。&lt;/p&gt;
+&lt;h2&gt;这周我都折腾了什么？&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;环境与字体配置&lt;/strong&gt;：
+解决了最初中文字体发虚和缺失的问题，现在我的终端和浏览器里，等距字体和各类 Nerd Fonts 混杂得极为和谐，阅读代码简直是享受。
+孩子们，不会 Qt、没用过环境变量的真别急着把它当主力机。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;包管理 (&lt;code&gt;pacman&lt;/code&gt; &amp;amp; &lt;code&gt;yay&lt;/code&gt;) 的终极快感&lt;/strong&gt;：
+受够了去各种官网下载 &lt;code&gt;.exe&lt;/code&gt;，然后提防捆绑安装的日子。在 Arch 里，一句 &lt;code&gt;yay -S 软件名&lt;/code&gt;，几秒钟后软件就安静地待在启动器里了。无论是微信、Node.js 还是复杂的开发库，全都在掌控之中。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;工作流重建&lt;/strong&gt;：
+现场常见的基础办公任务也找到了替代品。文档、绘图和简单修图等需求，都能在开源社区找到轻量方案。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;系统维护：滚动的恐惧与刺激&lt;/strong&gt;：
+大家都说 Arch 是“滚挂”代名词。这周我确实遇到了一次因为特定包依赖冲突导致的无法启动 XWayland 的小问题。但是看报错日志、去论坛查疑、最终通过降级包修复成功的过程，让我学到了比用几年 Windows 还多的底层知识。
+实际上，现在arch已经很难滚挂了。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2&gt;给想跳坑朋友们的建议&lt;/h2&gt;
+&lt;p&gt;如果只是一时兴起，或者每天离不开大型网游、专业级 Adobe 全家桶，那请留在 Windows。
+但如果你有以下症状：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;重度代码强迫症&lt;/strong&gt;：见不得后台跑着莫名其妙的进程。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;极简主义&lt;/strong&gt;：希望系统里除了你需要的，什么都没有。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;热爱折腾&lt;/strong&gt;：愿意逐项理解并维护自己的工具链。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;懂环境配置&lt;/strong&gt;：没玩过 Linux 最好别急着碰这玩意，不然很容易找不着北；至少要能使用 SSH 和命令行排查问题。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;那 Arch 绝对是你最终的归宿。&lt;/p&gt;
+&lt;p&gt;试毒完成。目前看来，除了偶尔遇到点小麻烦需要自己阅读文档外，它已经完美地成为了我新的生产力平台。后续我还会在这里记录一些配置文件和踩坑记录，方便大家（或者以后的我）参考。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;生命不息，折腾不止！&lt;/strong&gt;&lt;/p&gt;
+</content:encoded></item><item><title>孩子们，我不做 Windows 人啦！</title><link>https://blog.luozili.work/posts/arch-linux-part2/</link><guid isPermaLink="true">https://blog.luozili.work/posts/arch-linux-part2/</guid><description>从清理旧系统分区开始，记录一次 Arch Linux 安装、桌面配置与日常软件迁移的真实折腾过程。</description><pubDate>Mon, 02 Mar 2026 21:15:00 GMT</pubDate><content:encoded>&lt;blockquote&gt;
+&lt;p&gt;&quot;Are you sure you want to format /dev/nvme0n1p3?&quot;
+&quot;Yes.&quot;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;就在 3 月 2 号的这个夜晚，我正式把装满了各种恶心管家、弹窗广告和强推组件的 Windows 分区，干！掉！了！&lt;/p&gt;
+&lt;p&gt;才怪，孩子们，grub双引导和windows原生的dx12还是不错的，但是在此之前，我得把环境和生态全部搬过来。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;孩子们，我不做 Windows 人啦！(Jojo 脸.jpg)&lt;/strong&gt;&lt;/p&gt;
+&lt;h2&gt;桌面与美化：从简陋黑框到酷炫极客&lt;/h2&gt;
+&lt;p&gt;Arch 的安装这回轻车熟路了（感谢 &lt;code&gt;archinstall&lt;/code&gt; 脚本的辅助，终于不用一行行敲命令了）。
+装完系统才是真正折腾的开始。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;窗口管理器 (WM)&lt;/strong&gt;：没有选择臃肿的 KDE 或者 GNOME，我头铁地选了 &lt;code&gt;Hyprland&lt;/code&gt;。基于 Wayland 的平铺式窗口管理器。刚进去的时候一片漆黑，但配置好动画和快捷键后，那种丝滑和高效，真的是用了就回不去。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;终端 (Terminal)&lt;/strong&gt;：换上了 &lt;code&gt;Alacritty&lt;/code&gt; + &lt;code&gt;Tmux&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;状态栏&lt;/strong&gt;：自己从头配了 &lt;code&gt;Waybar&lt;/code&gt;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;目前的极简桌面大概长这样：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/%E6%A1%8C%E9%9D%A2%E7%BE%8E%E5%8C%96.png&quot; alt=&quot;桌面效果&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;现在的屏幕：一块透明模糊终端占据左边，右边跑着系统监视器，按下 &lt;code&gt;Super + Enter&lt;/code&gt; 瞬间新开一个格子。敲击键盘的声音在深夜显得格外清脆。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/%E6%B5%8F%E8%A7%88%E5%99%A8%E5%92%8C%E7%AA%97%E5%8F%A3%E6%95%88%E6%9E%9C.png&quot; alt=&quot;浏览器与窗口渲染效果&quot; /&gt;&lt;/p&gt;
+&lt;h2&gt;市政道路现场的软件替代方案&lt;/h2&gt;
+&lt;p&gt;最大的顾虑其实是生产力软件。
+对于市政道路现场的通用办公需求，看图、整理报表和编写记录都是刚需：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;看图/ CAD&lt;/strong&gt;：发现了好几款开源的看图软件，轻量又快速，虽然没法做深度编辑，但也足够应付。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;沟通&lt;/strong&gt;：微信和 QQ 直接用debtab一把梭，我从来没有那么感谢过国产信创提供的软件环境。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;开发&lt;/strong&gt;：不用说，Linux 就是代码的最佳归宿。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;今晚配置到凌晨两点，看着终于跑起来的完整桌面系统，有一种看着自己亲手浇筑的混凝土结构封顶的成就感。
+明天起，迎接全新的生产力环境！&lt;/p&gt;
+</content:encoded></item><item><title>Arch Linux 试毒：初探邪教的诱惑</title><link>https://blog.luozili.work/posts/arch-linux-part1/</link><guid isPermaLink="true">https://blog.luozili.work/posts/arch-linux-part1/</guid><description>“Arch Linux 是邪教，千万别碰！”这句玩笑最终没能阻止我开始一次桌面系统迁移，也由此开启了从安装到日用的连续折腾。</description><pubDate>Wed, 25 Feb 2026 20:30:00 GMT</pubDate><content:encoded>&lt;p&gt;&lt;strong&gt;“Arch Linux 是邪教，千万别碰！”&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这句在技术圈流传甚广的玩笑，最终还是被我抛到了脑后。面对日益臃肿的桌面环境和不合时宜的系统更新，我决定尝试一个更可控的 Linux 工作站。&lt;/p&gt;
+&lt;p&gt;今天（2月25日），我正式开始了 Arch Linux 的“试毒”之旅。&lt;/p&gt;
+&lt;h2&gt;为什么是 Arch？&lt;/h2&gt;
+&lt;p&gt;其实我也考虑过 Ubuntu 或者 Manjaro，但骨子里那种“要想懂，就得从零开始手搓”的工程师强迫症犯了。Arch 的哲学——KISS (Keep It Simple, Stupid) 简直太吸引人了。你需要什么，就装什么；系统里没有一行代码是多余的。&lt;/p&gt;
+&lt;p&gt;这更像搭建一套工程工具链：基础组件需要逐项确认，后续行为也更可控。&lt;/p&gt;
+&lt;h3&gt;第一次安装：被黑框框支配的恐惧&lt;/h3&gt;
+&lt;p&gt;没有图形化安装界面？纯命令行？
+讲真，看着屏幕上闪烁的光标，我有一瞬间怀疑自己是不是自虐。&lt;/p&gt;
+&lt;p&gt;跟着 Arch Wiki 一步步：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;联网&lt;/strong&gt; (&lt;code&gt;iwctl&lt;/code&gt;) - 这一步就卡了我半小时，因为宿舍网卡的驱动有点奇葩，最后我直接换数据了。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;分区与格式化&lt;/strong&gt; (&lt;code&gt;fdisk&lt;/code&gt;, &lt;code&gt;mkfs&lt;/code&gt;) - 小心翼翼，生怕把用来吃饭的 Windows 数据盘给格了，但是还好之前预留好了空间，直接放在最后一个分区美滋滋。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;挂载与基础包安装&lt;/strong&gt; (&lt;code&gt;pacstrap&lt;/code&gt;) - 这一步跑起来的时候，看着那些包一个接一个飞过，心里竟然有点莫名的爽快？&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;翻车记录（第一季）&lt;/h3&gt;
+&lt;p&gt;就在我以为一切顺利，执行完 &lt;code&gt;arch-chroot&lt;/code&gt; 准备收尾时，引导程序 &lt;code&gt;GRUB&lt;/code&gt; 装崩了……但谢天谢地，实际上 GRUB 没崩，只是 Arch Linux 的引导项没有被主板 BIOS 正确识别，手动补上引导路径后就恢复了。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/%E6%A1%8C%E9%9D%A2%E5%BC%95%E5%AF%BC%E7%BE%8E%E5%8C%96.jpg&quot; alt=&quot;修复引导并美化大成功&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;孩子们，终于进去的，呃，kde怎么看起来像某银河麒麟。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/%E7%99%BB%E5%BD%95%E7%95%8C%E9%9D%A2%E7%BE%8E%E5%8C%96.jpg&quot; alt=&quot;登录界面预览&quot; /&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;📌 &lt;strong&gt;今日感悟&lt;/strong&gt;：Arch 就像一个盲盒，你永远不知道下一个命令敲下去是惊喜还是崩盘。但这种掌控一切（或者被一切掌控）的感觉，属实有点上头。&lt;/p&gt;
+&lt;/blockquote&gt;
+</content:encoded></item><item><title>彻底放弃：拥抱 Vibe Code，AI 才是亲爹</title><link>https://blog.luozili.work/posts/vue-learning-15/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-15/</guid><description>Vue 学习系列的阶段总结：把 AI 编程纳入工作流，但保留需求拆解、代码审查和验证能力。</description><pubDate>Sat, 24 Jan 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;最终章：拥抱未来&lt;/h1&gt;
+&lt;p&gt;这是我《Vue 学习之路》系列的最后一篇文章。因为，这路我不走了。&lt;/p&gt;
+&lt;h2&gt;为什么放弃？&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;效率差距&lt;/strong&gt;：我写个增删改查页面要几小时，AI 可能几十秒就给出第一版；真正可用还要我补需求、测试和边界。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;知识焦虑&lt;/strong&gt;：前端技术栈爆炸，学不完。AI 至少能先帮我找到相关文档和代码入口。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;幸福感&lt;/strong&gt;：写代码是为了创造产品，不是为了修 Bug。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2&gt;Vibe Code 体验&lt;/h2&gt;
+&lt;p&gt;打开 Vibe Code，输入：“做一个博客首页，要有毛玻璃效果，基于 Hexo Butterfly 主题风格”。
+然后，啪！第一版代码出来了，屏幕上看起来还真像那么回事。再跑类型检查和生产构建，细节问题当然还是一个没少。&lt;/p&gt;
+&lt;p&gt;那一刻，我感觉自己之前的努力就像个笑话。&lt;/p&gt;
+&lt;h2&gt;拥抱变化&lt;/h2&gt;
+&lt;p&gt;从今天起，我不再执着于每一行都从空白手敲。让 AI 起草重复代码，我负责把需求说清楚、审查改动、跑测试，再把不靠谱的地方揪出来。&lt;/p&gt;
+&lt;p&gt;框架还会继续更新，焦虑也不会凭空消失。但我不需要背完全部 API，只要守住基础原理和验证能力，剩下的可以边做边查。&lt;/p&gt;
+&lt;p&gt;再见了，所有的未定义变量，再见了所有的代码不规范，&lt;code&gt;node_modules&lt;/code&gt;。你好，DeepSeek。&lt;/p&gt;
+&lt;p&gt;真香！&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/site_bg_v2.jpg&quot; alt=&quot;真香&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>我累了：试图理解源码，结果被源码理解了</title><link>https://blog.luozili.work/posts/vue-learning-14/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-14/</guid><description>记录第一次阅读 Vue 3 响应式和渲染器源码时，从建立入口地图到被 PatchFlags 劝退的过程。</description><pubDate>Fri, 23 Jan 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;源码阅读：从入门到放弃&lt;/h1&gt;
+&lt;p&gt;为了提升自己，我决定阅读 Vue 3 源码。打开 &lt;code&gt;core&lt;/code&gt; 仓库，看到那几万行 TS 代码，我陷入了沉思。&lt;/p&gt;
+&lt;h2&gt;晦涩的渲染器&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;renderer.ts&lt;/code&gt;，几千行的 switch case，各种位运算标记（PatchFlags）。我看了一行，脑子就过载了。这就是大神的思维世界吗？&lt;/p&gt;
+&lt;p&gt;我意识到，我可能这辈子都达不到这个水平了。我只是一个 API Consumer，一个熟练的搬砖工。&lt;/p&gt;
+&lt;h2&gt;转折点&lt;/h2&gt;
+&lt;p&gt;就在我绝望的时候，我接触到了现在的 AI 编程工具。&lt;/p&gt;
+&lt;h2&gt;AI 才是未来&lt;/h2&gt;
+&lt;p&gt;不装了，我摊牌了。手写代码是上个世纪的事情了。&lt;/p&gt;
+&lt;h2&gt;AI 降维打击&lt;/h2&gt;
+&lt;p&gt;今天我试了一下 Vibe Code，只需一句话，它就生成了我折腾了三天都没写出来的功能。那一刻，我释然了。我为什么要跟机器比速度？我为什么要跟编译器较劲？&lt;/p&gt;
+&lt;p&gt;AI 能帮我解释调用链、补测试和定位入口，但它生成的结论同样要回到源码和运行结果验证。源码还是难读，只是现在终于有了一个不会嫌我问题太碎的陪练。&lt;/p&gt;
+&lt;p&gt;真香！&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/040.jpg&quot; alt=&quot;源码&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>逐渐暴躁：为什么前端框架更新这么快？！</title><link>https://blog.luozili.work/posts/vue-learning-13/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-13/</guid><description>一篇关于前端生态快速迭代、知识焦虑和如何选择学习重点的阶段性吐槽。</description><pubDate>Thu, 22 Jan 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;永远学不完&lt;/h1&gt;
+&lt;p&gt;每次打开 Vue 的 Release Notes，都能看到新的 API、性能改进和实验方向。Vapor Mode？无虚拟 DOM？&lt;/p&gt;
+&lt;p&gt;求求了，先别催。我上一个版本的文档还没看完呢。&lt;/p&gt;
+&lt;h2&gt;疲惫感&lt;/h2&gt;
+&lt;p&gt;每次打开 GitHub Trending，都是一堆新轮子。React Server Components, SolidJS, Svelte, Qwik... 每一个都号称颠覆前端。我累了，真的累了。&lt;/p&gt;
+&lt;p&gt;作为一名追求极致体验的开发者，我深知持续学习的重要性。但是... 真的需要学这么多吗？&lt;/p&gt;
+&lt;h2&gt;AI 才是未来&lt;/h2&gt;
+&lt;p&gt;不装了，我摊牌了。手写代码是上个世纪的事情了。今天我试了一下 Vibe Code，只需一句话，它就生成了我折腾了三天都没写出来的功能。那一刻，我释然了。我为什么要跟机器比速度？我为什么要跟编译器较劲？&lt;/p&gt;
+&lt;h2&gt;拥抱变化&lt;/h2&gt;
+&lt;p&gt;回想起刚开始接触 Vue 的时候，那时候的快乐是纯粹的。写一个 &lt;code&gt;{{ message }}&lt;/code&gt; 就能看到页面变化，那种成就感无与伦比。而现在，我们要处理复杂的依赖关系、难以捉摸的类型定义、层出不穷的构建工具配置。难道这就是成长的代价吗？&lt;/p&gt;
+&lt;p&gt;真香！&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/016.jpg&quot; alt=&quot;吐槽&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>深坑记录：响应式丢失的那一夜</title><link>https://blog.luozili.work/posts/vue-learning-12/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-12/</guid><description>复盘一次保存成功但列表不更新的问题，定位对象解构导致的 Vue 响应式丢失，并总结排查顺序。</description><pubDate>Wed, 21 Jan 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;那个让我通宵的 Bug&lt;/h1&gt;
+&lt;p&gt;那是周五的晚上，本该是快乐的周末开始。但是测试报了一个致命 Bug：用户点完保存，列表数据没有更新，必须刷新页面才行。&lt;/p&gt;
+&lt;h2&gt;排查过程&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;查接口&lt;/strong&gt;：后端接口返回的数据是新的，没问题。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;查 Vue DevTools&lt;/strong&gt;：发现 store 里的数据确实可以更新，但是组件里的数据没变。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;定位代码&lt;/strong&gt;：&lt;/li&gt;
+&lt;/ol&gt;
+&lt;pre&gt;&lt;code&gt;// store.js
+state: () =&amp;gt; ({ list: [] })
+
+// component.vue
+const { list } = userStore
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;就是这行解构！在 Options API 里习惯了 &lt;code&gt;this.list&lt;/code&gt;，在 Setup 里直接解构 store，导致 &lt;code&gt;list&lt;/code&gt; 变成了一个普通的数组，失去了响应性连接。&lt;/p&gt;
+&lt;h2&gt;心态崩了&lt;/h2&gt;
+&lt;p&gt;毁灭吧，赶紧的。累了。&lt;/p&gt;
+&lt;p&gt;修复方式是保留 &lt;code&gt;userStore.list&lt;/code&gt; 的直接访问，或者使用 &lt;code&gt;storeToRefs(userStore)&lt;/code&gt; 再解构。真正费时间的不是这行代码，而是接口、Store 和组件三边看起来都“有数据”，只有响应式连接悄悄断了。&lt;/p&gt;
+&lt;h2&gt;为什么这么难？&lt;/h2&gt;
+&lt;p&gt;前端不就是画画界面调调接口吗？为什么要搞这么复杂？Webpack 还没整明白，Vite 又来了；Vue 2 刚熟练，Vue 3 又变了。学不动了，真的学不动了。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/008.png&quot; alt=&quot;踩坑&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>前端性能优化：只要我跑得够快，Bug 就追不上我</title><link>https://blog.luozili.work/posts/vue-learning-11/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-11/</guid><description>从一个包含 Three.js 和大量数据的页面出发，逐项记录代码分割、资源压缩、缓存与渲染优化。</description><pubDate>Thu, 15 Jan 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;性能优化：无底洞&lt;/h1&gt;
+&lt;p&gt;说页面加载太慢，要优化。好，我优化。&lt;/p&gt;
+&lt;p&gt;你知道的，一个 Three.js 地图，配上一大堆数据，想靠改两个配置就秒开基本不现实。&lt;/p&gt;
+&lt;h2&gt;漫漫长路&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先测量&lt;/strong&gt;：用 Performance、Network 和构建分析确认时间到底花在下载、解析、主线程还是 GPU。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;代码分割&lt;/strong&gt;：路由懒加载，地图模块延后加载，先让正文和操作区可用。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;资源分级&lt;/strong&gt;：图片生成缩略图，模型和大数据按视口或交互加载，静态资源设置长期缓存。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;减少每帧工作量&lt;/strong&gt;：合并几何体、降低不必要的重绘，按设备能力调整像素比。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;检查产物&lt;/strong&gt;：确认 Tree Shaking 是否生效，避免整包引入只用到一小部分的库。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2&gt;结果呢？&lt;/h2&gt;
+&lt;p&gt;首屏快了一些，但拖动地图反而更卡。原因是我只优化了下载体积，没有解决每帧的渲染和数据更新开销。&lt;/p&gt;
+&lt;h2&gt;心态崩了&lt;/h2&gt;
+&lt;p&gt;毁灭吧，赶紧的。累了。&lt;/p&gt;
+&lt;h2&gt;为什么这么难？&lt;/h2&gt;
+&lt;p&gt;性能优化最折磨人的地方，是每一项指标都可能来自不同瓶颈。没有基线数据时，“上 WebP”“加懒加载”都只是抽卡；先测量、一次改一项、再对比，至少能知道头发掉在哪里。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/006.png&quot; alt=&quot;性能&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>Vite：快！太快了！由于速度太快我跟不上了</title><link>https://blog.luozili.work/posts/vue-learning-10/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-10/</guid><description>记录 Vite 开发服务器的速度优势，以及生产构建、依赖预构建、路径和插件兼容问题带来的反差。</description><pubDate>Sat, 10 Jan 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;Vite：这也太快了吧... 还有报错&lt;/h1&gt;
+&lt;p&gt;Vite 的开发服务器确实快，尤其是项目变大以后，按需转换模块比每次先打完整包舒服得多。&lt;/p&gt;
+&lt;h2&gt;开发爽，打包火葬场&lt;/h2&gt;
+&lt;p&gt;开发环境按需提供 ES Modules，生产环境则需要输出优化后的静态资源。Vite 早期的生产构建使用 Rollup，现在的工具链已经迁移到 Rolldown；无论底层版本如何变化，开发和生产仍然不是完全相同的执行路径。
+这也留下了一个经典问题：&lt;strong&gt;开发环境跑得好好的，一打包上线就报错！&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;有些老依赖同时混着 CommonJS、条件导出和运行时动态加载，开发阶段被依赖预构建兜住，生产构建却可能走到另一条入口。我曾经为了一个老旧加密库折腾了整整两天。最后的经验不是乱加配置，而是先确认包的 &lt;code&gt;exports&lt;/code&gt;、浏览器兼容性和实际构建入口，再决定升级、替换还是写一个很小的适配插件。&lt;/p&gt;
+&lt;h2&gt;心态崩了&lt;/h2&gt;
+&lt;p&gt;毁灭吧，赶紧的。累了。&lt;/p&gt;
+&lt;p&gt;现在遇到这类问题，我会先跑一次干净的生产构建，再看解析到的依赖入口和产物，而不是拿开发服务器正常当作上线保证。快是真的快，该补的构建验证也一个都不能少。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/029.jpg&quot; alt=&quot;Vite&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>TypeScript：给代码穿上防弹衣 (虽然很重)</title><link>https://blog.luozili.work/posts/vue-learning-9/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-9/</guid><description>从一串类型报错出发，记录 Vue 3 项目接入 TypeScript 后的学习成本、常见问题和实际收益。</description><pubDate>Wed, 07 Jan 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;TypeScript：心态崩了&lt;/h1&gt;
+&lt;p&gt;毁灭吧，赶紧的。累了。&lt;/p&gt;
+&lt;h2&gt;无尽的报错&lt;/h2&gt;
+&lt;p&gt;TypeScript 说是给代码穿上防弹衣，防止低级错误。但实际上，它更像是给我的手戴上了镣铐。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;Type &apos;string | null&apos; is not assignable to type &apos;string&apos;.&lt;/code&gt;
+&lt;code&gt;Property &apos;xyz&apos; does not exist on type &apos;ABC&apos;.&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;我知道！我知道它是 null！我明明加了判断，但一进异步回调或经过一次可变引用，类型收窄又失效了。直接写 &lt;code&gt;as string&lt;/code&gt; 或 &lt;code&gt;!&lt;/code&gt; 虽然能让红线消失，却也可能把真正的空值问题一起藏起来。&lt;/p&gt;
+&lt;p&gt;尤其是在 Vue 组件的 Props 定义里，结合 &lt;code&gt;defineProps&lt;/code&gt; 和泛型，写起来那叫一个酸爽。为了解决一个类型报错，我可能要写几十行的 interface 定义。这到底是写业务逻辑，还是在做类型体操？&lt;/p&gt;
+&lt;h2&gt;为什么这么难？&lt;/h2&gt;
+&lt;p&gt;这类报错最容易让我彻底破防。后来我给自己定了个顺序：先把外部输入收窄成可靠类型，再处理业务逻辑；能改类型定义就不强制断言，确实不可能为空时才用非空断言。红线没有立刻少很多，但运行时的惊喜少了。&lt;/p&gt;
+&lt;p&gt;前端不就是画画界面调调接口吗？为什么要搞这么复杂？Webpack 还没整明白，Vite 又来了；Vue 3 又变了。学不动了，真的学不动了。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/site_bg_v2.jpg&quot; alt=&quot;TS&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>Composition API：逻辑复用的快乐与痛苦</title><link>https://blog.luozili.work/posts/vue-learning-8/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-8/</guid><description>记录用 Composable 提取 Vue 3 业务逻辑时的收益、边界，以及逻辑复用过度后出现的新复杂度。</description><pubDate>Mon, 05 Jan 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;组合式 API：双刃剑&lt;/h1&gt;
+&lt;p&gt;Composition API 是 Vue 3 的灵魂。它允许我们将逻辑通过 Hooks（Composables）的方式进行提取和复用。&lt;/p&gt;
+&lt;h2&gt;理想很丰满&lt;/h2&gt;
+&lt;p&gt;我想象中的代码：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;const { user } = useUser()
+const { articles } = useArticles()
+const { loading } = useLoading()
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;清爽、干净、模块化。&lt;/p&gt;
+&lt;h2&gt;现实很骨感&lt;/h2&gt;
+&lt;p&gt;实际写出来的代码：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;const { user, loading: userLoading, error: userError } = useUser()
+const { articles, loading: articleLoading, error: articleError } = useArticles()
+// 命名冲突！到处重命名！
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;而且，如果你把所有逻辑都堆在 &lt;code&gt;setup&lt;/code&gt; 里，不加以拆分，它就会变成一个巨大的面条代码（Spaghetti Code），比 Options API 还要难以维护。因为 Options API 至少强制你分开了 data 和 methods。严格来说实际上只要你不在乎史山代码，你完全可以不在乎getter和setter，全放在utils里面，所有的state变量都塞在一个const里面。&lt;/p&gt;
+&lt;h2&gt;令人头秃的细节&lt;/h2&gt;
+&lt;p&gt;Composable 不是独立组件，它在调用方的 &lt;code&gt;setup&lt;/code&gt; 阶段同步执行，里面注册的 &lt;code&gt;onMounted&lt;/code&gt; 也属于调用它的那个组件。异步任务则要自己暴露 &lt;code&gt;loading&lt;/code&gt;、&lt;code&gt;error&lt;/code&gt; 和取消逻辑，不能靠调用顺序猜完成时间。我以前写 C++ 更多，被异步状态狠狠摆过一道；后来把“注册副作用”和“等待结果”分开看，脑子终于顺了。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/092.jpg&quot; alt=&quot;API&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>组件通信：Props 传值传到手抽筋</title><link>https://blog.luozili.work/posts/vue-learning-7/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-7/</guid><description>对比 Props/Emit、v-model、Provide/Inject 与全局状态等组件通信方式，避免把简单关系写成事件迷宫。</description><pubDate>Wed, 31 Dec 2025 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;Props, Emit, Provide, Inject...&lt;/h1&gt;
+&lt;p&gt;Vue 的组件通信方式不少。父子通信用 Props/Emit，跨层级用 Provide/Inject，松散事件可以用 mitt，全局共享状态再考虑 Pinia。&lt;/p&gt;
+&lt;h2&gt;传值的痛苦&lt;/h2&gt;
+&lt;p&gt;当你有 5 层组件嵌套，最外层的组件想传个 ID 给最里面的组件。
+Props Drilling（属性透传）简直是灾难。&lt;/p&gt;
+&lt;p&gt;Parent -&amp;gt; Child -&amp;gt; GrandChild -&amp;gt; GreatGrandChild -&amp;gt; Target&lt;/p&gt;
+&lt;p&gt;每一层都要声明 Props，写得我想吐。虽说可以用 &lt;code&gt;provide/inject&lt;/code&gt;，但不仅失去了类型推断的便利（TS 还要额外定义 InjectionKey），而且数据流变得难以追踪。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/078.png&quot; alt=&quot;通信&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>Pinia：Vuex 的继任者，好吃又好用</title><link>https://blog.luozili.work/posts/vue-learning-6/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-6/</guid><description>从 Vuex 迁移到 Pinia，梳理 state、getter、action、持久化与组合式 Store 的基本用法。</description><pubDate>Tue, 30 Dec 2025 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;菠萝（Pinia）真好吃&lt;/h1&gt;
+&lt;p&gt;Vuex 复杂的 mutation, action, getter 曾让人头大。Pinia 的出现，简直是清流。&lt;/p&gt;
+&lt;h2&gt;为什么是 Pinia？&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;没有 Mutation&lt;/strong&gt;：终于不用为了改个状态写那繁琐的模板代码了，直接在 Action 里改，或者直接改！&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;TypeScript 友好&lt;/strong&gt;：完美的类型推断，不用像 Vuex 那样写一堆泛型接口。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;极简 API&lt;/strong&gt;：&lt;code&gt;defineStore&lt;/code&gt; 一把梭。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2&gt;逐渐掉光的头发&lt;/h2&gt;
+&lt;p&gt;随着学习的深入，我发现事情并不像我想象的那么简单。Pinia 这个知识点，简直是我的噩梦。&lt;/p&gt;
+&lt;p&gt;文档里写得轻描淡写，实际用起来坑巨多。比如，我在 store 里解构 state，结果响应性丢了！&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;const store = useUserStore()
+const { name } = store // ❌ 响应性丢失
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;必须用 &lt;code&gt;storeToRefs(store)&lt;/code&gt;。这种细节，一旦不知道，就是一下午的调试时间。&lt;/p&gt;
+&lt;h2&gt;令人头秃的细节&lt;/h2&gt;
+&lt;p&gt;在这个快速发展的前端时代，技术的更新迭代速度简直让人窒息。每一次框架的更新，不仅带来了新的特性，也带来了新的焦虑。作为一名追求极致体验的开发者，我深知持续学习的重要性。但是，Pinia 的某些行为真的很迷。&lt;/p&gt;
+&lt;p&gt;服务端渲染并不是 Pinia 天生就会翻车：按官方方式在 &lt;code&gt;setup&lt;/code&gt; 顶层创建 Store，基础 SSR 可以直接工作。真正需要小心的是把请求间状态隔离开、序列化初始状态，以及在组件外使用 Store 时传对当前应用的 Pinia 实例。问题从“玄学 hydration”拆成这三项后，排查就清楚多了。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/049.png&quot; alt=&quot;Pinia&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>样式设计：CSS 也就是随便写写... (并没有)</title><link>https://blog.luozili.work/posts/vue-learning-5/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-5/</guid><description>记录 Vue 单文件组件中 scoped CSS、深度选择器、CSS Modules 与响应式布局的实践和踩坑。</description><pubDate>Thu, 25 Dec 2025 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;CSS 的痛与乐&lt;/h1&gt;
+&lt;p&gt;作为一个前端，最怕的不是写 JS 逻辑，而是调 CSS 样式。居中？对齐？适配？每一个词都能让猛男落泪。&lt;/p&gt;
+&lt;h2&gt;Vue 中的 Scoped CSS&lt;/h2&gt;
+&lt;p&gt;Vue 提供了 &lt;code&gt;&amp;lt;style scoped&amp;gt;&lt;/code&gt;，这简直是防止样式污染的神器。它通过给元素添加唯一的 data-v-xxx 属性，确保你的样式只在这个组件内生效。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.example[data-v-f3f3eg9] {
+  color: red;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;但是！当你试图修改子组件的样式时（比如修改 Element Plus 的组件样式），&lt;code&gt;scoped&lt;/code&gt; 就变成了拦路虎。这时候你就得用深度选择器 &lt;code&gt;:deep()&lt;/code&gt;。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.parent :deep(.child) {
+  /* 这样才能穿透过去 */
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;之前不知道这个，我傻傻地去写全局样式，结果污染了整个项目，被组长骂了一顿。&lt;/p&gt;
+&lt;h2&gt;动态样式&lt;/h2&gt;
+&lt;p&gt;Vue 3 允许我们在 CSS 中绑定 JS 变量：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.text {
+  color: v-bind(color)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;太酷了！这才是现代化开发嘛！&lt;/p&gt;
+&lt;p&gt;样式设计看似简单，实则深不可测。Flexbox, Grid, CSS Variables, Tailwind... 学不完，根本学不完。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/047.png&quot; alt=&quot;CSS&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>生命周期钩子：生老病死，Vue 组件的一生</title><link>https://blog.luozili.work/posts/vue-learning-4/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-4/</guid><description>按创建、挂载、更新和卸载阶段梳理 Vue 3 组件生命周期，以及各类钩子的典型使用场景。</description><pubDate>Sun, 14 Dec 2025 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;组件的一生&lt;/h1&gt;
+&lt;p&gt;万物皆有灵，Vue 组件也不例外。它们从被创建（Creation），到挂载（Mounting），到更新（Updating），最后销毁（Unmounting），走完了一生。而我们开发者，就是那个掌握生杀大权的神。&lt;/p&gt;
+&lt;h2&gt;Vue 3 的变化&lt;/h2&gt;
+&lt;p&gt;在 Vue 2 中，我们熟悉的是 &lt;code&gt;created&lt;/code&gt;, &lt;code&gt;mounted&lt;/code&gt;, &lt;code&gt;destroyed&lt;/code&gt;。在 Vue 3 的 Composition API 中，这些变成了 &lt;code&gt;onMounted&lt;/code&gt;, &lt;code&gt;onUnmounted&lt;/code&gt; 等等。&lt;/p&gt;
+&lt;p&gt;最让我困惑的是 &lt;code&gt;setup()&lt;/code&gt;。它在 &lt;code&gt;beforeCreate&lt;/code&gt; 和 &lt;code&gt;created&lt;/code&gt; 之前执行。这意味着在 &lt;code&gt;setup&lt;/code&gt; 里面，我们不需要写这一类的钩子了，直接写逻辑就行。&lt;/p&gt;
+&lt;h2&gt;实际应用中的坑&lt;/h2&gt;
+&lt;p&gt;我曾经遇到过一个 Bug，在 &lt;code&gt;onMounted&lt;/code&gt; 里面去获取 DOM 元素的高宽。理论上这时候 DOM 已经渲染好了，对吧？&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;onMounted&lt;/code&gt; 能保证当前组件的 DOM 已经插入，并等待同步子组件挂载，但不会替你等待异步组件或网络数据。&lt;code&gt;nextTick&lt;/code&gt; 只等待当前这轮 DOM 更新；如果尺寸依赖异步内容，更稳妥的做法是监听数据完成、让子组件发出 ready 事件，或者使用 &lt;code&gt;ResizeObserver&lt;/code&gt;。&lt;/p&gt;
+&lt;h2&gt;为什么会这样？&lt;/h2&gt;
+&lt;p&gt;真正让我绕晕的不是钩子名字，而是“谁在等谁”：父组件、同步子组件、异步组件和数据请求有各自的完成时机。把依赖条件写清楚，比在所有地方补一个 &lt;code&gt;nextTick&lt;/code&gt; 靠谱得多。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/040.jpg&quot; alt=&quot;生老病死&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>路由守卫：你是谁？你去哪？有通行证吗？</title><link>https://blog.luozili.work/posts/vue-learning-3/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-3/</guid><description>用门卫比喻梳理 Vue Router 的全局、路由独享和组件内守卫，并记录异步鉴权中的常见问题。</description><pubDate>Fri, 05 Dec 2025 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;前端的保安：Vue Router&lt;/h1&gt;
+&lt;p&gt;做单页应用（SPA），路由管理是绕不开的一环。而“路由守卫”（Navigation Guards）则是其中最精彩（也最容易出 Bug）的部分。&lt;/p&gt;
+&lt;h2&gt;全局前置守卫：beforeEach&lt;/h2&gt;
+&lt;p&gt;这就好比小区门口的保安大爷，不管你是谁，进门先查证。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;router.beforeEach((to) =&amp;gt; {
+  if (to.name !== &apos;Login&apos; &amp;amp;&amp;amp; !isAuthenticated) {
+    return { name: &apos;Login&apos; }
+  }
+})
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;看起来逻辑天衣无缝？只要没登录，就踢回登录页。但是！如果你的逻辑写得稍微有一点漏洞，就会陷入&lt;strong&gt;无限循环&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;比如，你忘记判断 &lt;code&gt;to.name !== &apos;Login&apos;&lt;/code&gt;，那么用户被重定向到 Login 页，再次触发 &lt;code&gt;beforeEach&lt;/code&gt;，再次重定向……浏览器直接卡死，你也懵逼了。旧式的 &lt;code&gt;next&lt;/code&gt; 参数仍受支持，但每条逻辑路径都必须且只能调用一次，直接返回目标路由更不容易写错。&lt;/p&gt;
+&lt;h2&gt;组件内的守卫&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;beforeRouteEnter&lt;/code&gt;、&lt;code&gt;beforeRouteUpdate&lt;/code&gt;、&lt;code&gt;beforeRouteLeave&lt;/code&gt;。这些钩子函数让我们可以精确控制组件级的路由行为。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;beforeRouteEnter&lt;/strong&gt;：在渲染该组件的对应路由被 confirm 前调用。注意！此时组件实例还没被创建，所以你不能用 &lt;code&gt;this&lt;/code&gt;！这又是 Vue 新手的一大坑。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;beforeRouteLeave&lt;/strong&gt;：通常用来禁止用户在未保存修改前突然离开。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;遇到的困难与思考&lt;/h2&gt;
+&lt;p&gt;路由守卫不能替代后端鉴权：后端仍要验证 Token 和资源权限，前端守卫负责提前拦截无权限页面、保存未提交状态或补齐跳转上下文。两边职责不同，不能因为已经用了 JWT 就把其中一边省掉。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/016.jpg&quot; alt=&quot;保安&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>Ref vs Reactive：响应式的哲学思考 (头秃篇)</title><link>https://blog.luozili.work/posts/vue-learning-2/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-2/</guid><description>对比 Vue 3 中 ref 与 reactive 的使用边界，以及解构、替换对象和模板自动解包时容易踩到的坑。</description><pubDate>Sun, 30 Nov 2025 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;响应式的哲学&lt;/h1&gt;
+&lt;p&gt;在深入学习 Vue 3 的过程中，不管是新手还是老鸟，都会遇到一个经典问题：&lt;code&gt;ref&lt;/code&gt; 和 &lt;code&gt;reactive&lt;/code&gt; 到底用哪个？&lt;/p&gt;
+&lt;h2&gt;官方的定义&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;ref&lt;/code&gt;：接受一个内部值并返回一个响应式且可变的 ref 对象。ref 对象仅有一个 &lt;code&gt;.value&lt;/code&gt; property，指向该内部值。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;reactive&lt;/code&gt;：返回对象的响应式副本。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;看起来很简单，对吧？&lt;code&gt;ref&lt;/code&gt; 处理基本类型，&lt;code&gt;reactive&lt;/code&gt; 处理对象。但是在实际开发中，情况远比这复杂。&lt;/p&gt;
+&lt;h2&gt;踩坑实录&lt;/h2&gt;
+&lt;p&gt;我曾经试图用 &lt;code&gt;reactive&lt;/code&gt; 去定义一个数组，结果发现直接重新赋值会丢失响应性！&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;let list = reactive([])
+// ... 异步获取数据后
+list = newData // ❌ 响应性丢失！界面不更新！
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;为什么？因为 &lt;code&gt;reactive&lt;/code&gt; 返回的是一个 Proxy 对象，直接赋值 &lt;code&gt;list = newData&lt;/code&gt; 只是修改了变量 &lt;code&gt;list&lt;/code&gt; 的引用，并没有修改原来的 Proxy 对象。&lt;/p&gt;
+&lt;p&gt;正确做法是用 &lt;code&gt;ref&lt;/code&gt;，或者用 &lt;code&gt;list.push(...newData)&lt;/code&gt;。但是 &lt;code&gt;ref&lt;/code&gt; 每次都要写 &lt;code&gt;.value&lt;/code&gt;，真的好烦啊！在模板里倒是会自动解包，但在 JS 逻辑里，少写一个 &lt;code&gt;.value&lt;/code&gt; 就能让你调试半天。&lt;/p&gt;
+&lt;h2&gt;深入思考&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;ref&lt;/code&gt; 更像是“指针”，明确地告诉我们这里有一个需要被追踪的值；而 &lt;code&gt;reactive&lt;/code&gt; 则更贴近原生对象的直觉。&lt;/p&gt;
+&lt;p&gt;Vue 官方现在也更推荐优先用 &lt;code&gt;ref&lt;/code&gt; 声明响应式状态，原因正是 &lt;code&gt;reactive&lt;/code&gt; 不能直接替换整个对象、解构后又容易断开响应式连接。对象结构稳定、需要成组修改时我仍会用 &lt;code&gt;reactive&lt;/code&gt;，其余情况先用 &lt;code&gt;ref&lt;/code&gt;，规则反而更好记。&lt;/p&gt;
+&lt;p&gt;也许，与其每次临场纠结，不如先统一用 &lt;code&gt;ref&lt;/code&gt;？毕竟，显式地使用 &lt;code&gt;.value&lt;/code&gt; 虽然繁琐，但至少心安。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/008.png&quot; alt=&quot;思考&quot; /&gt;&lt;/p&gt;
+</content:encoded></item><item><title>Vue 3 启航</title><link>https://blog.luozili.work/posts/vue-learning-1/</link><guid isPermaLink="true">https://blog.luozili.work/posts/vue-learning-1/</guid><description>从 jQuery 时代的回忆出发，记录第一次系统学习 Vue 3、Vite 与组合式 API 的过程。</description><pubDate>Sat, 15 Nov 2025 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;梦开始的地方&lt;/h1&gt;
+&lt;p&gt;记得刚接触前端的时候，大家还在用 jQuery 一把梭。那时候的代码充满了 &lt;code&gt;$&lt;/code&gt; 符号，回调地狱更是家常便饭，三件套东一块西一块是常态。后来 React 和 Vue 横空出世，带给了我们全新的组件化开发体验。而今天，我正式决定投入 Vue 3 的怀抱。&lt;/p&gt;
+&lt;h2&gt;为什么选择 Vue 3？&lt;/h2&gt;
+&lt;p&gt;有人说 React 更灵活，有人说 Angular 更规范。但在我看来，Vue 3 找到了优雅与性能的完美平衡点。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;响应式系统&lt;/strong&gt;：Vue 3 的响应式对象使用 Proxy，不再受 Vue 2 中新增属性和数组索引监听方式的限制。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Composition API&lt;/strong&gt;：在 Options API 时代，一个功能的逻辑往往分散在 &lt;code&gt;data&lt;/code&gt;、&lt;code&gt;methods&lt;/code&gt;、&lt;code&gt;computed&lt;/code&gt; 里，维护起来像是在玩“找你妹”。现在可以像写原生 JS 一样，把同一件事的状态和方法放在一起。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;TypeScript 支持&lt;/strong&gt;：Vue 3 从设计阶段就把 TypeScript 纳入核心 API，组件、Props 和模板的类型推断比早期方案顺手得多，终于不用到处补 &lt;code&gt;any&lt;/code&gt; 了。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2&gt;我的第一个 Vue 3 Demo&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;import { ref, onMounted } from &apos;vue&apos;
+
+export default {
+  setup() {
+    const count = ref(0)
+    function increment() {
+      count.value++
+    }
+  
+    onMounted(() =&amp;gt; {
+      console.log(&apos;组件挂载完成！&apos;)
+    })
+
+    return { count, increment }
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;看着这简洁的代码，我仿佛看到了光明的未来。没有了 &lt;code&gt;this&lt;/code&gt; 的困扰，一切都变得那么直观。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;https://blog.luozili.work/img/006.png&quot; alt=&quot;激动&quot; /&gt;&lt;/p&gt;
+</content:encoded></item></channel></rss>

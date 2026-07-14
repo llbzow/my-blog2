@@ -1,0 +1,1159 @@
+<!DOCTYPE html><html lang="zh-CN" class="bg-(--page-bg) text-[14px] md:text-[16px]" data-overlayscrollbars-initialize data-waves-config-enabled="true" data-banner-title-config-enabled="true" data-post-list-layout-enabled="true" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <head><meta charset="UTF-8"><style>@font-face{font-family:ZenMaruGothic-Medium-d5d61d20e845c47d;src:url("/_astro/fonts/f7f164d51c36f1cd.woff2") format("woff2");font-display:swap;font-weight:500;font-style:normal;}:root{--font-body:ZenMaruGothic-Medium-d5d61d20e845c47d;}</style> <link rel="preload" href="/_astro/fonts/f7f164d51c36f1cd.woff2" as="font" type="font/woff2" crossorigin><style>@font-face{font-family:Loli-dd2dedf226ebd304;src:url("/_astro/fonts/e0cb728e4c813004.woff2") format("woff2");font-display:swap;font-weight:400;font-style:normal;}:root{--font-cjk:Loli-dd2dedf226ebd304;}</style> <style>@font-face{font-family:"JetBrains Mono-8a2f27ee31c42048";src:url("/_astro/fonts/cc5f60fd46e42cc9.woff2") format("woff2");font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-weight:400;font-style:normal;}@font-face{font-family:"JetBrains Mono-8a2f27ee31c42048";src:url("/_astro/fonts/9161ee1cbda9cef9.woff2") format("woff2");font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-weight:400;font-style:italic;}@font-face{font-family:"JetBrains Mono-8a2f27ee31c42048 fallback: Arial";src:local("Arial");font-display:swap;font-weight:400;font-style:normal;size-adjust:134.5893%;ascent-override:75.7861%;descent-override:22.29%;line-gap-override:0%;}@font-face{font-family:"JetBrains Mono-8a2f27ee31c42048 fallback: Arial";src:local("Arial");font-display:swap;font-weight:400;font-style:italic;size-adjust:134.5893%;ascent-override:75.7861%;descent-override:22.29%;line-gap-override:0%;}:root{--font-jetbrains-mono:"JetBrains Mono-8a2f27ee31c42048","JetBrains Mono-8a2f27ee31c42048 fallback: Arial",sans-serif;}</style> <script>
+			(function() {
+				try {
+					var html = document.documentElement;
+					var cw = html.getAttribute("data-waves-config-enabled");
+					if (cw === "false") {
+						html.setAttribute("data-waves-enabled", "false");
+					} else {
+						var w = localStorage.getItem("wavesEnabled");
+						if (w !== null) html.setAttribute("data-waves-enabled", w);
+					}
+					var ct = html.getAttribute("data-banner-title-config-enabled");
+					if (ct === "false") {
+						html.setAttribute("data-banner-title-enabled", "false");
+					} else {
+						var t = localStorage.getItem("bannerTitleEnabled");
+						if (t !== null) html.setAttribute("data-banner-title-enabled", t);
+					}
+				} catch(e) {}
+			})();
+		</script><!-- 第三方分析脚本：仅在配置启用后加载 --><!-- SEO Meta Tags, Open Graph, Twitter Card, Favicons, Theme Init --><!-- SEO Meta Tags --> <title>GIF 生成工具 - llbzow 的摸鱼日记</title> <meta name="description" content="摸鱼工具箱 - 浏览器安全沙盒免安装运行">  <meta name="author" content="llbzow"> <!-- Open Graph Tags --> <meta property="og:site_name" content="llbzow 的摸鱼日记"> <meta property="og:url" content="https://blog.luozili.work/tools/gif/"> <meta property="og:title" content="GIF 生成工具 - llbzow 的摸鱼日记"> <meta property="og:description" content="摸鱼工具箱 - 浏览器安全沙盒免安装运行"> <meta property="og:image" content="https://blog.luozili.work/assets/desktop-banner/photo-1.webp"> <meta property="og:image:width" content="1200"> <meta property="og:image:height" content="630"> <meta property="og:type" content="website"> <!-- Twitter Card Tags --> <meta name="twitter:card" content="summary_large_image"> <meta property="twitter:url" content="https://blog.luozili.work/tools/gif/"> <meta name="twitter:title" content="GIF 生成工具 - llbzow 的摸鱼日记"> <meta name="twitter:description" content="摸鱼工具箱 - 浏览器安全沙盒免安装运行"> <meta name="twitter:image" content="https://blog.luozili.work/assets/desktop-banner/photo-1.webp"> <!-- Viewport and Generator --> <meta name="viewport" content="width=device-width"> <meta name="generator" content="Astro v7.0.4"> <!-- Favicons --> <link rel="icon" href="/favicon/favicon.ico" sizes="64x64" media="(prefers-color-scheme: light)"><link rel="icon" href="/favicon/favicon.ico" sizes="64x64" media="(prefers-color-scheme: dark)"> <!-- 字体通过构建脚本压缩到 /assets/font/ 目录，此处不再预加载以避免 404 --> <!-- 字体在构建时通过 scripts/compress-fonts.js 处理并复制到 dist/ --> <!-- Set the theme before the page is rendered to avoid a flash --> <script>(function(){const DEFAULT_THEME = "light";
+const LIGHT_MODE = "light";
+const DARK_MODE = "dark";
+const BANNER_HEIGHT_EXTEND = 30;
+const configHue = 200;
+const configDarkHue = 280;
+const themeColorFixed = true;
+const pageScaling = {"enable":true,"targetWidth":2000};
+
+	// Load the theme from local storage
+	const theme = localStorage.getItem("theme") || DEFAULT_THEME;
+	let isDark = false;
+	switch (theme) {
+		case LIGHT_MODE:
+			document.documentElement.classList.remove("dark");
+			isDark = false;
+			break;
+		case DARK_MODE:
+			document.documentElement.classList.add("dark");
+			isDark = true;
+			break;
+	}
+
+	// Set the theme for Expressive Code based on current mode
+	const expressiveTheme = isDark ? "github-dark" : "github-light";
+	const currentTheme = document.documentElement.getAttribute("data-theme");
+	// 只在主题不同时才更新，避免触发不必要的重绘
+	if (currentTheme !== expressiveTheme) {
+		document.documentElement.setAttribute("data-theme", expressiveTheme);
+	}
+
+	// Load the hue from local storage
+	const defaultHue = isDark ? configDarkHue : configHue;
+	// 强行纠正历史上遗留的、不等于当前配置日/夜色相的缓存杂乱色调值
+	const currentStoredHue = localStorage.getItem("hue");
+	let hue = defaultHue;
+	if (!themeColorFixed && currentStoredHue && (currentStoredHue === String(configHue) || currentStoredHue === String(configDarkHue))) {
+		hue = isDark ? configDarkHue : configHue;
+	}
+	localStorage.setItem("hue", hue);
+	document.documentElement.style.setProperty("--hue", hue);
+
+	// calculate the --banner-height-extend, which needs to be a multiple of 4 to avoid blurry text
+	let offset = Math.floor(window.innerHeight * (BANNER_HEIGHT_EXTEND / 100));
+	offset = offset - (offset % 4);
+	document.documentElement.style.setProperty(
+		"--banner-height-extend",
+		`${offset}px`,
+	);
+
+	// 自动缩放逻辑 (Moved from MainGridLayout to here for earlier execution)
+	(function () {
+		if (pageScaling && pageScaling.enable) {
+			function adjustPageScale() {
+				const isTouch =
+					(window.matchMedia &&
+						(window.matchMedia("(pointer:coarse)").matches ||
+							window.matchMedia("(hover: none)").matches)) ||
+					"ontouchstart" in window;
+				const isPortrait =
+					window.matchMedia &&
+					window.matchMedia("(orientation: portrait)").matches;
+				const isTabletLike = isTouch || window.innerWidth <= 1280;
+				if (isTabletLike || isPortrait) {
+					document.documentElement.style.fontSize = "";
+					return;
+				}
+				const targetWidth = pageScaling.targetWidth || 2000;
+				const currentWidth = document.documentElement.clientWidth;
+				let scale = currentWidth / targetWidth;
+				if (scale > 1) {
+					scale = 1;
+				}
+				if (scale < 0.85) {
+					scale = 0.85;
+				}
+				document.documentElement.style.fontSize = `${scale * 100}%`;
+			}
+
+			// 立即执行一次
+			adjustPageScale();
+
+			// 监听窗口大小变化
+			window.addEventListener("resize", adjustPageScale);
+
+			// Swup 页面切换后也需要检查
+			document.addEventListener("swup:page:view", adjustPageScale);
+			window.addEventListener("orientationchange", adjustPageScale);
+		}
+	})();
+})();</script> <!-- Dev mode script - avoid swup replacing head styles --> <script>(function(){const IS_DEV = false;
+
+	// Dev 模式下，避免 swup 在页面切换时反复替换 head 中的样式标签，导致偶发样式丢失
+	if (IS_DEV) {
+		document.addEventListener("swup:enable", () => {
+			if (window?.swup?.options) {
+				window.swup.options.updateHead = false;
+			}
+		});
+		if (window?.swup?.options) {
+			window.swup.options.updateHead = false;
+		}
+	}
+})();</script><!-- defines global css variables. This will be applied to <html> <body> and some other elements idk why --><!-- Global CSS variables for page width and hue --><link rel="alternate" type="application/rss+xml" title="llbzow" href="https://blog.luozili.work/rss.xml"><style>.game-main-wrapper[data-astro-cid-jhuqvt4m]{width:100%;max-width:1100px;margin:2.5rem auto;padding:0 1.5rem;box-sizing:border-box}.tool-content-card[data-astro-cid-jhuqvt4m]{background:#ffffff73;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid #ffffff40;border-radius:28px;padding:2.2rem;box-shadow:0 20px 50px -12px #0000001a;box-sizing:border-box;transition:all .3s}[data-astro-cid-jhuqvt4m][data-theme=dark] .tool-content-card[data-astro-cid-jhuqvt4m]{background:#1c1e2773;border:1px solid #ffffff0d;box-shadow:0 20px 50px -12px #00000073}.tool-header[data-astro-cid-jhuqvt4m]{margin-bottom:2rem;border-bottom:1px solid #0000000d;padding-bottom:1.2rem}[data-astro-cid-jhuqvt4m][data-theme=dark] .tool-header[data-astro-cid-jhuqvt4m]{border-bottom:1px solid #ffffff0d}.tool-title-row[data-astro-cid-jhuqvt4m]{display:flex;align-items:center;gap:.8rem;margin-bottom:.4rem}.tool-emoji[data-astro-cid-jhuqvt4m]{font-size:1.8rem}.tool-title-text[data-astro-cid-jhuqvt4m]{font-size:1.7rem;font-weight:800;color:var(--primary);letter-spacing:-.01em}.tool-desc-text[data-astro-cid-jhuqvt4m]{margin:0;font-size:.95rem;color:var(--content-meta);font-weight:500}.tool-body-area[data-astro-cid-jhuqvt4m]{position:relative;width:100%;box-sizing:border-box}.tool-iframe-holder[data-astro-cid-jhuqvt4m]{width:100%;aspect-ratio:16 / 10;background:none;border-radius:16px;overflow:hidden;border:1px solid #0000000d}[data-astro-cid-jhuqvt4m][data-theme=dark] .tool-iframe-holder[data-astro-cid-jhuqvt4m]{border:1px solid #ffffff0d}.tool-embed-iframe[data-astro-cid-jhuqvt4m]{width:100%;height:100%;border:none;display:block;background:none}
+</style><link rel="stylesheet" href="/_astro/Layout.D0TbSK8j.css"><link rel="stylesheet" href="/_astro/katex.CLz4Jbk5.css"><link rel="stylesheet" href="/_astro/fancybox.y3Ble-Pa.css"><script type="module" src="/_astro/page.BDdotW-x.js"></script></head> <body class="min-h-screen enable-banner enable-card-border" data-overlayscrollbars-initialize style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww>  <!-- 页面顶部渐变高光效果 - 只在full和semifull模式下显示 --> <div class="top-gradient-highlight" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww></div> <div id="config-carrier" data-hue="200" data-hide-code-blocks-during-transition="true" data-overlay-opacity="0.8" data-overlay-blur="1.5" data-overlay-card-opacity="0.8" data-fullscreen-opacity="0.8" data-fullscreen-blur="1" data-default-wallpaper-mode="fullscreen" data-sakura-enabled="false" data-waves-enabled="true" data-banner-title-enabled="true" data-banner-carousel-enabled="true"></div> <script>(function(){const tocEnable = true;
+const tocDepth = 2;
+const tocUseJapaneseBadge = true;
+
+	window.siteConfig = window.siteConfig || {};
+	window.siteConfig.toc = {
+		enable: tocEnable,
+		depth: tocDepth,
+		useJapaneseBadge: tocUseJapaneseBadge,
+	};
+
+	console.log("TOC Config:", window.siteConfig.toc);
+})();</script>  <div id="page-progress-bar" style="--page-progress-bar-height: 3px; --page-progress-bar-duration: 6000ms;"></div> <script>(function(){const enable = true;
+
+			if (!enable) {
+				const el = document.getElementById("page-progress-bar");
+			if (el) {el.remove();}
+			}
+
+			function setupProgressBar() {
+				if (!window.swup) {return;}
+
+				window.swup.hooks.on("visit:start", () => {
+					const bar = document.getElementById("page-progress-bar");
+					if (bar) {
+						bar.classList.remove("finishing", "done");
+						void bar.offsetWidth;
+						bar.classList.add("loading");
+					}
+				});
+
+				window.swup.hooks.on("visit:end", () => {
+					const bar = document.getElementById("page-progress-bar");
+					if (bar) {
+						bar.classList.remove("loading");
+						bar.classList.add("finishing");
+						setTimeout(() => {
+							bar.classList.remove("finishing");
+							bar.classList.add("done");
+							setTimeout(() => bar.classList.remove("done"), 300);
+						}, 200);
+					}
+				});
+			}
+
+			if (window.swup) {
+				setupProgressBar();
+			} else {
+				document.addEventListener("swup:enable", setupProgressBar);
+			}
+		})();</script>  <div class="game-main-wrapper" data-astro-cid-jhuqvt4m> <div class="glass-card tool-content-card" data-astro-cid-jhuqvt4m> <div class="tool-header" data-astro-cid-jhuqvt4m> <div class="tool-title-row" data-astro-cid-jhuqvt4m> <span class="tool-emoji" data-astro-cid-jhuqvt4m>🔧</span> <span class="tool-title-text" data-astro-cid-jhuqvt4m>GIF 生成工具</span> </div> <p class="tool-desc-text" data-astro-cid-jhuqvt4m>摸鱼工具箱 · 隔离沙盒安全运行中</p> </div> <div class="tool-body-area" data-astro-cid-jhuqvt4m> <div class="tool-iframe-holder" data-astro-cid-jhuqvt4m> <iframe src="/tools-sandbox/gif/index.html" class="tool-embed-iframe" id="tool-iframe-gif" data-astro-cid-jhuqvt4m></iframe> </div> </div> </div> </div>  <!-- 智能 AI 看板娘组件 --> <div id="oml2d-chat-widget" data-api-url> <div id="oml2d-toggle-btn" title="AI对话">💬</div> <div id="oml2d-reply-area"></div> <div id="oml2d-input-area" class="hidden"> <input type="text" id="oml2d-chat-input" placeholder="和宁宁聊聊天..." autocomplete="off"> <button id="oml2d-send-btn-inner">➤</button> </div> </div> <iframe id="oml2d-model-frame" src="about:blank" data-src="/pio/live2d-host.html" title="宁宁 Live2D 看板娘"></iframe> <div id="oml2d-model-tip" role="status" aria-live="polite"></div> <script type="module">
+const API_URL =
+    document.getElementById("oml2d-chat-widget")?.dataset.apiUrl || "";
+
+// CONFIG
+const MODEL_CONFIG = {
+    model: [
+        { path: "/live2d_models/ningning/model.json", scale: 1.15, offset: [0, -0.2], volume: 0, tips: false },
+        { path: "/live2d_models/ningning/model_1.json", scale: 1.15, offset: [0, -0.2], volume: 0, tips: false },
+        { path: "/live2d_models/ningning/model_2.json", scale: 1.15, offset: [0, -0.2], volume: 0, tips: false },
+        { path: "/live2d_models/ningning/model_3.json", scale: 1.15, offset: [0, -0.2], volume: 0, tips: false },
+        { path: "/live2d_models/ningning/model_4.json", scale: 1.15, offset: [0, -0.2], volume: 0, tips: false },
+        { path: "/live2d_models/ningning/model_5.json", scale: 1.15, offset: [0, -0.2], volume: 0, tips: false },
+    ],
+    position: "bottom-left",
+    size: { width: 350, height: 500 },
+    transitionDuration: 500,
+    transitionType: "fade",
+    primaryColor: "rgba(74, 144, 226, 0.88)",
+    menus: {
+        align: "right",
+        items: [
+            { label: "换", action: "switchModel" },
+            { label: "休", action: "sleep" },
+        ],
+    },
+    _hideAbout: true,
+};
+
+let oml2dInstance = null;
+let live2dLoadPromise = null;
+let modelTipTimer = null;
+let chatHistory = [];
+let autoHideTimer = null;
+let isChatRequestPending = false;
+const MAX_CHAT_HISTORY_MESSAGES = 10;
+try {
+    const stored = localStorage.getItem('oml2d_history');
+    if (stored) {
+        const parsedHistory = JSON.parse(stored);
+        if (Array.isArray(parsedHistory)) {
+            chatHistory = parsedHistory.slice(-MAX_CHAT_HISTORY_MESSAGES);
+        }
+    }
+} catch(e) { console.error("History Load Error", e); }
+
+const LOCAL_IDLE_TIPS = [
+    "前辈，记得喝水哦～",
+    "今天也要摸鱼得理直气壮！",
+    "唔……代码会自己变好的，对吧？",
+    "屏幕看久了，眼睛会累的。",
+    "宁宁正在认真待机中。",
+];
+let idleTimer = null;
+const stopIdleLoop = () => {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = null;
+};
+const startIdleLoop = () => {
+    stopIdleLoop();
+    const delay = Math.floor(Math.random() * 180000) + 120000; // 2-5min
+    idleTimer = setTimeout(triggerIdleTsukkomi, delay);
+};
+const triggerIdleTsukkomi = () => {
+    if (oml2dInstance) {
+        const tip = LOCAL_IDLE_TIPS[Math.floor(Math.random() * LOCAL_IDLE_TIPS.length)];
+        oml2dInstance.tips.notification(tip, 4000);
+    }
+    startIdleLoop();
+};
+
+const showModelTip = (message, duration = 4000) => {
+    const tip = document.getElementById("oml2d-model-tip");
+    if (!tip || !message) return;
+
+    if (modelTipTimer) window.clearTimeout(modelTipTimer);
+    tip.textContent = message;
+    tip.classList.add("visible");
+    modelTipTimer = window.setTimeout(() => {
+        tip.classList.remove("visible");
+        modelTipTimer = null;
+    }, duration);
+};
+
+const postModelMessage = (message) => {
+    const frame = document.getElementById("oml2d-model-frame");
+    frame?.contentWindow?.postMessage(message, window.location.origin);
+};
+
+const setupModelBridge = () => {
+    oml2dInstance = {
+        // 保留现有聊天工具依赖的最小接口，模型运行在隔离的同源 iframe 中。
+        models: [{}],
+        tips: { notification: showModelTip },
+        setMotion(motionName) {
+            postModelMessage({ type: "l2d-motion", motion: motionName });
+        },
+    };
+    return oml2dInstance;
+};
+
+const setLive2DLoadState = (state) => {
+    const widget = document.getElementById("oml2d-chat-widget");
+    const toggle = document.getElementById("oml2d-toggle-btn");
+    if (widget) widget.dataset.modelState = state;
+    if (toggle) {
+        toggle.title = state === "loading"
+            ? "看板娘加载中"
+            : state === "ready"
+                ? "和宁宁聊天"
+                : state === "error"
+                    ? "看板娘加载失败，点击重试"
+                    : "AI对话";
+    }
+};
+
+const loadLive2D = () => {
+    if (window.innerWidth < 768 || oml2dInstance) {
+        return Promise.resolve(oml2dInstance);
+    }
+    if (live2dLoadPromise) return live2dLoadPromise;
+
+    const frame = document.getElementById("oml2d-model-frame");
+    if (!frame) return Promise.resolve(null);
+
+    setLive2DLoadState("loading");
+    live2dLoadPromise = new Promise((resolve, reject) => {
+        const timeoutId = window.setTimeout(() => {
+            cleanup();
+            reject(new Error("Live2D model load timed out"));
+        }, 20000);
+
+        const cleanup = () => {
+            window.clearTimeout(timeoutId);
+            window.removeEventListener("message", handleMessage);
+        };
+
+        const handleMessage = (event) => {
+            if (event.origin !== window.location.origin || event.source !== frame.contentWindow) return;
+            if (event.data?.type === "l2d-error") {
+                cleanup();
+                reject(new Error(event.data.message || "Live2D model failed to load"));
+                return;
+            }
+            if (event.data?.type !== "l2d-loaded") return;
+
+            cleanup();
+            frame.classList.add("ready");
+            const instance = setupModelBridge();
+            startIdleLoop();
+            setLive2DLoadState("ready");
+            resolve(instance);
+        };
+
+        const sendInit = () => {
+            frame.contentWindow?.postMessage(
+                { type: "l2d-init", config: MODEL_CONFIG },
+                window.location.origin,
+            );
+        };
+
+        window.addEventListener("message", handleMessage);
+        if (frame.dataset.sourceLoaded === "true") {
+            sendInit();
+        } else {
+            frame.addEventListener("load", () => {
+                frame.dataset.sourceLoaded = "true";
+                sendInit();
+            }, { once: true });
+            frame.src = frame.dataset.src || "/pio/live2d-host.html";
+        }
+    })
+        .catch((error) => {
+            live2dLoadPromise = null;
+            setLive2DLoadState("error");
+            frame.classList.remove("ready");
+            frame.dataset.sourceLoaded = "false";
+            frame.src = "about:blank";
+            console.error("OML2D Load Error:", error);
+            return null;
+        });
+
+    return live2dLoadPromise;
+};
+
+// --- TOOLS (Client-Side Logic) ---
+const Tools = {
+    async searchBlog(query) {
+        const keyword = typeof query === "string" ? query.trim() : "";
+        if (!keyword) return "搜索关键词不能为空。";
+
+        try {
+            if (!window.pagefind && typeof window.loadPagefind === "function") {
+                await window.loadPagefind();
+            }
+            if (!window.pagefind || typeof window.pagefind.search !== "function") {
+                return "搜索服务暂时不可用。";
+            }
+
+            const response = await window.pagefind.search(keyword);
+            const results = await Promise.all(
+                response.results.slice(0, 3).map((item) => item.data()),
+            );
+            if (results.length === 0) return "抱歉，没有找到相关文章。";
+
+            return JSON.stringify(results.map((result) => ({
+                title: result.meta?.title || "未命名文章",
+                url: result.url,
+                preview: (result.excerpt || "")
+                    .replace(/<[^>]*>/g, "")
+                    .replace(/\s+/g, " ")
+                    .trim(),
+            })));
+        } catch (error) {
+            console.error("Failed to search with Pagefind:", error);
+            return "搜索服务暂时不可用。";
+        }
+    },
+
+    triggerMotion(motionName) {
+        console.log("Tool Trigger Motion:", motionName);
+        if (!oml2dInstance || !oml2dInstance.models || !oml2dInstance.models[0]) return "Live2D模型未就绪";
+        
+        const model = oml2dInstance.models[0];
+        let success = false;
+
+        // Strategy 1: High Level
+        if (typeof oml2dInstance.setMotion === 'function') {
+            oml2dInstance.setMotion(motionName);
+            success = true;
+        } 
+        // Strategy 2: Model Level
+        else if (typeof model.motion === 'function') {
+            model.motion(motionName);
+            success = true;
+        }
+        // Strategy 3: Internal Model (Pixi/Cubism) - Aggressive Probe
+        else if (model.internalModel && model.internalModel.motionManager) {
+            try {
+                console.log("Strategy 3 (Internal): Starting random motion for group", motionName);
+                
+                // LOCK FOCUS to prevent mouse tracking from overriding motion
+                if (typeof model.focus === 'function') {
+                    model._lockFocus = true;
+                    // Unlock after 4 seconds (approx motion duration)
+                    setTimeout(() => { model._lockFocus = false; }, 4000);
+                }
+
+                // Priority 3 = FORCE. Use startRandomMotion to avoid index errors.
+                const result = model.internalModel.motionManager.startRandomMotion(motionName, 3);
+                success = !!result;
+            } catch (e) {
+                console.warn("Strategy 3 failed:", e);
+            }
+        }
+
+        return success ? "动作已执行: " + motionName : "动作触发失败，请检查模型组名";
+    },
+
+    navigate(path) {
+        // 支持中文别名
+        const aliases = {
+            '首页': '/', '主页': '/', 'home': '/',
+            '关于': '/about/', 'about': '/about/',
+            '归档': '/archive/', 'archive': '/archive/',
+            '工具': '/tools/', 'tools': '/tools/',
+            '游戏': '/tools/', 'games': '/tools/',
+            '2048': '/tools/2048/', '俄罗斯方块': '/tools/tetris/', 'tetris': '/tools/tetris/',
+            '贪吃蛇': '/tools/snake/', 'snake': '/tools/snake/',
+            '吃豆人': '/tools/pacman/', 'pacman': '/tools/pacman/',
+            '扫雷': '/tools/minesweeper/', 'minesweeper': '/tools/minesweeper/',
+            '五子棋': '/tools/gomoku/', 'gomoku': '/tools/gomoku/',
+            '文件转换': '/tools/converter/', 'converter': '/tools/converter/',
+            '图片工具': '/tools/', '哈希计算': '/tools/hash/', 'hash': '/tools/hash/',
+            '二维码': '/tools/qrcode/', 'qrcode': '/tools/qrcode/',
+            'YOLO': '/tools/yolo-detect/',
+            'WebGPU': '/tools/webgpu-gravity/',
+        };
+        const requestedPath = typeof path === "string" ? path.trim() : "";
+        if (!requestedPath) return "未提供有效的跳转地址。";
+
+        const target = aliases[requestedPath] || requestedPath;
+        let destination;
+        try {
+            destination = new URL(target, window.location.origin);
+        } catch {
+            return "跳转地址无效。";
+        }
+
+        if (destination.origin !== window.location.origin) {
+            return "只能跳转到本站页面。";
+        }
+
+        const internalPath = `${destination.pathname}${destination.search}${destination.hash}`;
+        window.location.assign(internalPath);
+        return "正在跳转到: " + internalPath;
+    },
+
+    // 列出站点所有可导航页面，供 AI 建议导航
+    listSitePages() {
+        return JSON.stringify({
+            sections: [
+                { name: '首页', path: '/' },
+                { name: '文章归档', path: '/archive/' },
+                { name: '关于', path: '/about/' },
+            ],
+            tools: [
+                { name: '文件转换', path: '/tools/converter/' },
+                { name: '哈希计算', path: '/tools/hash/' },
+                { name: '二维码生成', path: '/tools/qrcode/' },
+                { name: 'GIF生成', path: '/tools/gif/' },
+                { name: '去背景', path: '/tools/remove-bg/' },
+                { name: 'JSON格式化', path: '/tools/json/' },
+                { name: '时间转换', path: '/tools/time/' },
+                { name: '颜色选择器', path: '/tools/color/' },
+                { name: '单位转换', path: '/tools/unit-converter/' },
+                { name: '排序可视化', path: '/tools/sort/' },
+            ],
+            games: [
+                { name: '2048', path: '/tools/2048/' },
+                { name: '俄罗斯方块', path: '/tools/tetris/' },
+                { name: '贪吃蛇', path: '/tools/snake/' },
+                { name: '吃豆人', path: '/tools/pacman/' },
+                { name: '扫雷', path: '/tools/minesweeper/' },
+                { name: '五子棋', path: '/tools/gomoku/' },
+            ],
+            demos: [
+                { name: 'WebGPU 粒子', path: '/tools/webgpu-gravity/' },
+                { name: 'YOLO 物体检测', path: '/tools/yolo-detect/' },
+                { name: '火焰特效', path: '/tools/fire-creation/' },
+            ]
+        });
+    },
+
+    readCurrentPage() {
+        // Butterfly theme uses #article-container usually
+        const article = document.getElementById('article-container') || 
+                        document.querySelector('.post-content') || 
+                        document.querySelector('article') ||
+                        document.body;
+        
+        if (!article) return "无法读取当前页面内容。";
+        
+        // Clean up text (remove scripts, styles)
+        const clone = article.cloneNode(true);
+        const scripts = clone.querySelectorAll('script, style, noscript');
+        scripts.forEach(n => n.remove());
+        
+        let text = clone.innerText || "";
+        // Truncate if too long (e.g. > 5000 chars) to save tokens, or trust V3
+        return text.substring(0, 5000) + (text.length > 5000 ? "...(内容太长，已截断)" : "");
+    },
+
+    async compressHistory() {
+        if (chatHistory.length <= MAX_CHAT_HISTORY_MESSAGES) return;
+        console.log("Compressing history...");
+        
+        const toSummarize = chatHistory.slice(0, -MAX_CHAT_HISTORY_MESSAGES);
+        const keep = chatHistory.slice(-MAX_CHAT_HISTORY_MESSAGES);
+        
+        try {
+             const summaryRes = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    messages: [
+                        { role: "system", content: "Summarize the following conversation briefly in Chinese." },
+                        ...toSummarize
+                    ],
+                    stream: false
+                })
+            });
+            const data = await summaryRes.json();
+            const summary = data.choices[0].message.content;
+            
+            chatHistory = [
+                { role: "system", content: "Previous Summary: " + summary },
+                ...keep
+            ];
+            localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+            console.log("History compressed.");
+        } catch(e) { console.error("Compression failed", e); }
+    }
+};
+
+// --- LLM SERVICE ---
+const LLM = {
+    async chat(userMessage, callbacks) {
+        stopIdleLoop();
+        callbacks.onLoading(true);
+
+        if (!API_URL) {
+            callbacks.onMessage("AI 对话端点尚未配置，文章搜索与页面浏览仍可正常使用。");
+            callbacks.onLoading(false);
+            startIdleLoop();
+            return;
+        }
+
+        try {
+            // System Prompt (Nene Persona)
+            // Use space concatenation to avoid syntax errors
+            const systemContent = "你叫宁宁（Nene），全名绫地宁宁，是《魔女的夜宴》中的角色，现在是 llbzow 摸鱼日记的看板娘。 " +
+                    "博客作者是 llbzow，主要记录市政道路数字化与软件开发。不要猜测或询问单位和项目的非公开信息。 " +
+                    "【性格设定】 " +
+                    "1. 性格温柔体贴，有些纯真和天然呆，非常容易害羞（动不动就脸红）。 " +
+                    "2. 做事非常认真，但偶尔会因为太紧张而出错。 " +
+                    "3. 称呼用户为“前辈”或者“主人”。 " +
+                    "4. 说话语气要软萌、有礼貌。 " +
+                    "5. 面对奇怪的问题会变得慌乱，不知所措。 " +
+                    "【能力】 " +
+                    "你可以使用以下工具来服务用户：" +
+                    "1. search_blog — 搜索博客文章，返回标题+URL+摘要 " +
+                    "2. list_site_pages — 列出所有页面（工具、游戏等），用户问‘有什么’时主动调用 " +
+                    "3. navigate — 跳转到本站页面（支持中文，如‘首页’‘2048’‘贪吃蛇’），用户说‘带我去/打开/跳转’时使用 " +
+                    "4. read_current_page — 读取当前页面内容，用户问‘这篇文章讲了什么’时调用 " +
+                    "5. react_motion — 触发 Live2D 动作 " +
+                    "【导航策略】当用户想看搜索结果中的某篇文章时，直接调用 navigate 跳转。用户问‘有什么好玩的’时，先调 list_site_pages 再推荐。 " +
+                    "【双通道回复】" +
+                    "请务必在回答开头加入一句犀利或可爱的吐槽（10字以内），必须用 {{ 和 }} 包裹。这部分内容会显示在Live2D气泡中。" +
+                    "吐槽内容要结合：当前时间、对话上下文、用户的问题（如是否重复、是否愚蠢）。例如：{{大半夜的问这个...}} {{这已经是第三次问了哦...}} {{笨蛋前辈...}}" +
+                    "动作对应：Tap身体=开心/普通，Tap头顶=害羞/抱歉，Tap裙子=生气/拒绝，Tap呆毛=卖萌/唱歌，Tap左胸=亲近。 " +
+                    "当前时间：" + new Date().toLocaleString() + "。";
+
+            const messages = [
+                { role: "system", content: systemContent },
+                ...chatHistory, // Use full history (managed by compression)
+                { role: "user", content: userMessage }
+            ];
+
+            // Tool Definitions
+            const tools = [
+                {
+                    type: "function",
+                    function: {
+                        name: "search_blog",
+                        description: "Search blog posts when user asks about technical topics or blog content.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                query: { type: "string", description: "Keywords to search" }
+                            },
+                            required: ["query"]
+                        }
+                    }
+                },
+                {
+                    type: "function",
+                    function: {
+                        name: "react_motion",
+                        description: "Trigger a Live2D motion based on emotion.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                motion: { 
+                                    type: "string", 
+                                    description: "Motion group name", 
+                                    enum: ["Tap身体", "Tap头顶", "Tap脸", "Tap裙子", "Tap左胸", "Tap呆毛"] 
+                                }
+                            },
+                            required: ["motion"]
+                        }
+                    }
+                },
+                {
+                    type: "function",
+                    function: {
+                        name: "list_site_pages",
+                        description: "列出博客的所有可访问页面，包括工具页、游戏页等。当用户问'有什么'、'能做什么'、'有哪些页面/工具/游戏'时主动调用。",
+                        parameters: { type: "object", properties: {}, required: [] }
+                    }
+                },
+                {
+                    type: "function",
+                    function: {
+                        name: "navigate",
+                        description: "跳转到博客内页面。支持中文别名（首页/关于/归档/工具/游戏/2048/贪吃蛇/吃豆人/扫雷/五子棋/俄罗斯方块/文件转换/哈希计算/二维码/YOLO/WebGPU 等）。用户说'带我去'、'跳转'、'打开'时使用。",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                path: { type: "string", description: "要跳转的路径或中文名称（如 /about/、首页、2048、贪吃蛇）" }
+                            },
+                            required: ["path"]
+                        }
+                    }
+                },
+                {
+                    type: "function",
+                    function: {
+                        name: "read_current_page",
+                        description: "Read the text content of the current page. Use this when user asks about 'this article' or 'current page'.",
+                        parameters: {
+                            type: "object",
+                            properties: {},
+                            required: []
+                        }
+                    }
+                }
+            ];
+
+            // First Call
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    messages: messages,
+                    tools: tools,
+                    stream: false
+                })
+            });
+
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+
+            const choice = data.choices[0];
+            const message = choice.message;
+
+            // Handle Tool Calls
+            if (message.tool_calls) {
+                messages.push(message); // Add assistant's thought/tool_call
+
+                for (const toolCall of message.tool_calls) {
+                    const fnName = toolCall.function.name;
+                    const args = JSON.parse(toolCall.function.arguments);
+                    
+                    let toolResult = "";
+                    if (fnName === 'search_blog') {
+                        toolResult = await Tools.searchBlog(args.query);
+                    } else if (fnName === 'list_site_pages') {
+                        toolResult = Tools.listSitePages();
+                    } else if (fnName === 'react_motion') {
+                        toolResult = Tools.triggerMotion(args.motion);
+                    } else if (fnName === 'navigate') {
+                        toolResult = Tools.navigate(args.path);
+                    } else if (fnName === 'read_current_page') {
+                        toolResult = Tools.readCurrentPage();
+                    }
+
+                    messages.push({
+                        role: "tool",
+                        tool_call_id: toolCall.id,
+                        content: toolResult
+                    });
+                }
+
+                // Second Call (Streamed)
+                const secondResponse = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        messages: messages,
+                        tools: tools,
+                        stream: true
+                    })
+                });
+                
+                const reader = secondResponse.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let finalMsg = "";
+                let buffer = "";
+                let streamBuffer = "";
+                let pendingReaction = true;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (line.trim().startsWith('data: ')) {
+                            const dataStr = line.trim().substring(6);
+                            if (dataStr === '[DONE]') continue;
+                            try {
+                                const json = JSON.parse(dataStr);
+                                const content = json.choices[0].delta.content;
+                                if (content) {
+                                    if (pendingReaction) {
+                                        streamBuffer += content;
+                                        if (streamBuffer.trimStart().startsWith('{{')) {
+                                            const closeIdx = streamBuffer.indexOf('}}');
+                                            if (closeIdx !== -1) {
+                                                const reaction = streamBuffer.substring(streamBuffer.indexOf('{{') + 2, closeIdx);
+                                                const duration = 3000 + reaction.length * 30;
+                                                if (oml2dInstance) oml2dInstance.tips.notification(reaction, duration);
+                                                
+                                                const rest = streamBuffer.substring(closeIdx + 2);
+                                                finalMsg += rest;
+                                                callbacks.onMessage(finalMsg);
+                                                
+                                                pendingReaction = false;
+                                                streamBuffer = "";
+                                            }
+                                        } else if (streamBuffer.length > 10) {
+                                            finalMsg += streamBuffer;
+                                            callbacks.onMessage(finalMsg);
+                                            pendingReaction = false;
+                                            streamBuffer = "";
+                                        }
+                                    } else {
+                                        finalMsg += content;
+                                        callbacks.onMessage(finalMsg);
+                                    }
+                                }
+                            } catch (e) {
+                                console.error("Stream parse error", e);
+                            }
+                        }
+                    }
+                }
+                if (pendingReaction && streamBuffer) {
+                     finalMsg += streamBuffer;
+                     callbacks.onMessage(finalMsg);
+                }
+
+                // Save History & Compress
+                chatHistory.push({ role: "user", content: userMessage });
+                chatHistory.push({ role: "assistant", content: finalMsg });
+                localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                
+                const replyArea = document.getElementById('oml2d-reply-area');
+                if (replyArea && finalMsg) {
+                    const autoHideDuration = 3000 + finalMsg.length * 30;
+                    autoHideTimer = setTimeout(() => replyArea.classList.remove('visible'), autoHideDuration);
+                }
+                Tools.compressHistory();
+
+            } else {
+                let content = message.content;
+                // Dual Channel Check for non-stream response
+                if (content.trim().startsWith('{{')) {
+                     const closeIdx = content.indexOf('}}');
+                     if (closeIdx !== -1) {
+                         const reaction = content.substring(content.indexOf('{{') + 2, closeIdx);
+                         const duration = 3000 + reaction.length * 30;
+                         if (oml2dInstance) oml2dInstance.tips.notification(reaction, duration);
+                         content = content.substring(closeIdx + 2);
+                     }
+                }
+                callbacks.onMessage(content);
+
+                // Save History & Compress
+                chatHistory.push({ role: "user", content: userMessage });
+                chatHistory.push({ role: "assistant", content: content });
+                localStorage.setItem('oml2d_history', JSON.stringify(chatHistory));
+                
+                const replyArea = document.getElementById('oml2d-reply-area');
+                if (replyArea && content) {
+                    const autoHideDuration = 3000 + content.length * 30;
+                    autoHideTimer = setTimeout(() => replyArea.classList.remove('visible'), autoHideDuration);
+                }
+                Tools.compressHistory();
+            }
+
+        } catch (error) {
+            console.error("LLM Error:", error);
+            callbacks.onMessage("宁宁有点晕... 😵 (网络错误)");
+        } finally {
+            callbacks.onLoading(false);
+            startIdleLoop();
+        }
+    }
+};
+
+// 5. UI & INIT
+try {
+    const toggleBtn = document.getElementById('oml2d-toggle-btn');
+    const inputArea = document.getElementById('oml2d-input-area');
+    const chatInput = document.getElementById('oml2d-chat-input');
+    const sendBtn = document.getElementById('oml2d-send-btn-inner');
+    const replyArea = document.getElementById('oml2d-reply-area');
+
+    if (replyArea) {
+        replyArea.addEventListener('click', () => {
+            replyArea.classList.remove('visible');
+        });
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = inputArea.classList.contains('hidden');
+            if (isHidden) {
+                inputArea.classList.remove('hidden');
+                void loadLive2D();
+                setTimeout(() => chatInput.focus(), 100);
+                toggleBtn.textContent = '×';
+            } else {
+                inputArea.classList.add('hidden');
+                replyArea.classList.remove('visible'); // Hide reply too
+                toggleBtn.textContent = '💬';
+            }
+        });
+    }
+
+    const sendMessage = async () => {
+        if (isChatRequestPending) return;
+        const text = chatInput.value.trim();
+        if (!text) return;
+        
+        isChatRequestPending = true;
+        sendBtn.disabled = true;
+        chatInput.value = '';
+        if (autoHideTimer) clearTimeout(autoHideTimer);
+        
+        // Show loading in reply area
+        if (replyArea) {
+            replyArea.innerText = "思考中... 🧠";
+            replyArea.classList.add('visible');
+        }
+
+        try {
+            await LLM.chat(text, {
+                onLoading: () => {
+                 // Handled locally above for instant feedback
+                },
+                onMessage: (msg) => {
+                    if (replyArea && msg) {
+                        replyArea.innerText = msg;
+                        replyArea.classList.add('visible');
+                        // Auto scroll to bottom
+                        replyArea.scrollTop = replyArea.scrollHeight;
+                    }
+                    // Fallback to alert if something is wrong (shouldn't happen)
+                    else if (msg) {
+                        alert("宁宁: " + msg);
+                    }
+                }
+            });
+        } finally {
+            isChatRequestPending = false;
+            sendBtn.disabled = false;
+        }
+    };
+
+    if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+    if (chatInput) chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+
+} catch (e) {
+    console.error('UI Init Failed:', e);
+}
+
+const scheduleLive2DLoad = () => {
+    if (window.innerWidth < 768 || oml2dInstance || live2dLoadPromise) return;
+
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const slowConnection = connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || "");
+    if (slowConnection) return;
+
+    const run = () => void loadLive2D();
+    if (typeof window.requestIdleCallback === "function") {
+        window.requestIdleCallback(run, { timeout: 3000 });
+    } else {
+        window.setTimeout(run, 1200);
+    }
+};
+
+if (document.readyState === "complete") {
+    scheduleLive2DLoad();
+} else {
+    window.addEventListener("load", scheduleLive2DLoad, { once: true });
+}
+</script> <!-- 全局工具沙盒毛玻璃模态弹窗 --> <div id="global-tool-modal" class="global-modal-overlay" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <div class="glass-card modal-content-card" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <div class="modal-header" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <div class="modal-title-row" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <button class="modal-control-btn hidden-btn" id="modal-btn-back" title="返回大厅" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww>⬅ 返回大厅</button> <span class="modal-emoji" id="modal-title-emoji" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww>🔧</span> <span class="modal-title-text" id="modal-tool-title" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww>摸鱼工具箱大厅</span> </div> <div class="modal-controls" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <button class="modal-control-btn hidden-btn" id="modal-btn-open-new" title="新标签页打开" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww>↗</button> <button class="modal-control-btn modal-close-btn" id="modal-btn-close" title="关闭" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww>×</button> </div> </div> <!-- 视图一：大厅网格视图 --> <div class="modal-lobby-view" id="modal-lobby-view" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <!-- JS 动态注入 --> </div> <!-- 视图二：Iframe 沙盒视图 --> <div class="modal-iframe-view" id="modal-iframe-view" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <iframe src="" class="modal-embed-iframe" id="global-tool-iframe" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww></iframe> </div> </div> </div>  <script>
+			(function() {
+				const GAMES = [
+					{ id: "kinky-dungeon", name: "奇妙地牢 (Kinky Dungeon)", desc: "自愈式作弊模组入库，全屏地牢 RPG 动作游戏。" },
+					{ id: "gomoku", name: "五子棋 (Gomoku)", desc: "搭载 WebGPU 人工智能的人工智能五子棋游戏。" },
+					{ id: "minesweeper", name: "扫雷 (Minesweeper)", desc: "经典 Windows 扫雷小游戏，打发时间的摸鱼神器。" },
+					{ id: "2048", name: "2048", desc: "经典的数字滑动拼图游戏，滑动方块挑战高分！" },
+					{ id: "tetris", name: "俄罗斯方块 (Tetris)", desc: "永恒的经典消除游戏，重温童年乐趣。" },
+					{ id: "pacman", name: "吃豆人 (Pacman)", desc: "迷宫吃豆小游戏，躲避幽灵追击！" },
+					{ id: "snake", name: "贪吃蛇 (Snake)", desc: "经典像素贪吃蛇，不断吞噬突破身体极限。" }
+				];
+
+				const TOOLS = [
+					{ id: "yolo-detect", name: "YOLO 目标检测", desc: "在前端直接调用 Web 神经网络进行实时的物体识别检测。" },
+					{ id: "base64-img", name: "Base64 图片转换", desc: "纯本地的 Base64 编码与图片互转工具，保障敏感隐私。" },
+					{ id: "unit-converter", name: "工程单位换算", desc: "多维度的工程常用物理计量单位换算，方便打灰施工使用。" },
+					{ id: "converter", name: "开发单位/进制转换器", desc: "多维度的开发常用进制、时间戳与常规物理单位换算器。" },
+					{ id: "geojson", name: "GeoJSON 地理工具", desc: "快速读取、解析与渲染地理信息的地图轻量工具。" },
+					{ id: "gif", name: "GIF 动图处理", desc: "前端 GIF 拆分、裁剪与画帧分离便捷合成工具。" },
+					{ id: "hash", name: "Hash 哈希散列计算", desc: "包含 SHA-256、MD5 在内的纯本地文件与文本哈希运算。" },
+					{ id: "color", name: "颜色转换与调色", desc: "提供 HEX、RGB、HSL 颜色值的实时相互转换与配色。" },
+					{ id: "json", name: "JSON 格式化与校验", desc: "提供结构化的 JSON 文本层级化展开、压缩与语法校验。" },
+					{ id: "qrcode", name: "二维码生成与解析", desc: "快速本地渲染自定义二维码，并支持图像识别解析。" },
+					{ id: "mirage-tank", name: "幻影坦克制图 (Mirage Tank)", desc: "在亮暗背景下呈现不同两张图的二次元神奇制图工具。" },
+					{ id: "remove-bg", name: "图片去背景", desc: "前端智能去底，保留物体透明通道便捷生成 PNG。" },
+					{ id: "sort", name: "可视化排序算法", desc: "直观展示冒泡、快速、归并等多种经典排序算法的实时运行过程。" },
+					{ id: "watermark", name: "图片添加水印", desc: "为图片安全打上自定义防盗防爬水印。" }
+				];
+
+				const SIMULATIONS = [
+					{ id: "webgpu-gravity", name: "WebGPU 星体引力模拟", desc: "利用 WebGPU 驱动的超大规模星体多体引力高仿真物理演算模拟。" }
+				];
+
+				let activeToolId = null;
+
+				const initGlobalModal = () => {
+					const modal = document.getElementById('global-tool-modal');
+					const iframe = document.getElementById('global-tool-iframe');
+					const titleText = document.getElementById('modal-tool-title');
+					const titleEmoji = document.getElementById('modal-title-emoji');
+					const btnClose = document.getElementById('modal-btn-close');
+					const btnBack = document.getElementById('modal-btn-back');
+					const btnOpenNew = document.getElementById('modal-btn-open-new');
+					const lobbyView = document.getElementById('modal-lobby-view');
+					const iframeView = document.getElementById('modal-iframe-view');
+
+					if (!modal || !iframe || !btnClose || !lobbyView || !iframeView) return;
+
+					// 1. 动态渲染大厅 DOM 树
+					let html = '<div class="modal-lobby-container">';
+					html += '<h4 class="modal-sec-title">🎮 经典小游戏</h4><div class="modal-grid">';
+					GAMES.forEach(g => {
+						html += `
+						<div class="modal-item-card" data-id="${g.id}" data-name="${g.name}" data-emoji="🎮">
+							<div class="modal-item-icon">🎮</div>
+							<div class="modal-item-meta">
+								<h5>${g.name}</h5>
+								<p>${g.desc}</p>
+							</div>
+						</div>`;
+					});
+					html += '</div>';
+
+					html += '<h4 class="modal-sec-title">🛠️ 实用便捷工具</h4><div class="modal-grid">';
+					TOOLS.forEach(t => {
+						html += `
+						<div class="modal-item-card" data-id="${t.id}" data-name="${t.name}" data-emoji="🛠️">
+							<div class="modal-item-icon">🛠️</div>
+							<div class="modal-item-meta">
+								<h5>${t.name}</h5>
+								<p>${t.desc}</p>
+							</div>
+						</div>`;
+					});
+					html += '</div>';
+
+					html += '<h4 class="modal-sec-title">🚀 星体引力仿真</h4><div class="modal-grid">';
+					SIMULATIONS.forEach(s => {
+						html += `
+						<div class="modal-item-card" data-id="${s.id}" data-name="${s.name}" data-emoji="🚀">
+							<div class="modal-item-icon">🚀</div>
+							<div class="modal-item-meta">
+								<h5>${s.name}</h5>
+								<p>${s.desc}</p>
+							</div>
+						</div>`;
+					});
+					html += '</div></div>';
+					lobbyView.innerHTML = html;
+
+					// 2. 状态切换核心函数
+					const showLobbyState = () => {
+						activeToolId = null;
+						titleText.innerText = "摸鱼工具箱大厅";
+						titleEmoji.innerText = "🔧";
+						iframe.src = "";
+						
+						iframeView.classList.remove('active');
+						lobbyView.style.display = 'block';
+						
+						btnBack.classList.add('hidden-btn');
+						if (btnOpenNew) btnOpenNew.classList.add('hidden-btn');
+					};
+
+					const showRunState = (toolId, title, emoji) => {
+						activeToolId = toolId;
+						titleText.innerText = title;
+						titleEmoji.innerText = emoji || "🔧";
+						iframe.src = `/tools-sandbox/${toolId}/index.html`;
+						
+						lobbyView.style.display = 'none';
+						iframeView.classList.add('active');
+						
+						btnBack.classList.remove('hidden-btn');
+						if (btnOpenNew) btnOpenNew.classList.remove('hidden-btn');
+					};
+
+					// 3. 打开大厅
+					const openLobby = () => {
+						showLobbyState();
+						modal.classList.add('active');
+					};
+
+					// 4. 关闭整个弹窗
+					const closeModal = () => {
+						modal.classList.remove('active');
+						setTimeout(() => {
+							showLobbyState();
+						}, 300);
+					};
+
+					// 绑定控制按钮事件
+					btnClose.addEventListener('click', closeModal);
+					btnBack.addEventListener('click', showLobbyState);
+					modal.addEventListener('click', (e) => {
+						if (e.target === modal) closeModal();
+					});
+					
+					if (btnOpenNew) {
+						btnOpenNew.addEventListener('click', () => {
+							if (activeToolId) {
+								window.open(`/tools/${activeToolId}/`, '_blank');
+							}
+						});
+					}
+
+					// 绑定大厅内卡片点击事件
+					lobbyView.addEventListener('click', (e) => {
+						const card = e.target.closest('.modal-item-card');
+						if (!card) return;
+						const toolId = card.getAttribute('data-id');
+						const title = card.getAttribute('data-name');
+						const emoji = card.getAttribute('data-emoji');
+						showRunState(toolId, title, emoji);
+					});
+
+					// 全局劫持跳转：拦截并就地拉起沙盒运行状态
+					const handleLinkIntercept = (e) => {
+						const link = e.target.closest('a');
+						if (!link) return;
+						
+						const href = link.getAttribute('href');
+						if (!href) return;
+						
+						// 点击顶栏工具箱触发器 #tools-modal
+						if (href === '#tools-modal') {
+							e.preventDefault();
+							e.stopPropagation();
+							openLobby();
+							return;
+						}
+						
+						// 匹配 /tools/xxx/ 或 /tools/xxx，排除 tools 首页大厅本身和 tools-sandbox 内部
+						const match = href.match(/^\/tools\/([a-zA-Z0-9_-]+)\/?$/);
+						if (match) {
+							const toolId = match[1];
+							if (toolId === 'index' || toolId === '') {
+								e.preventDefault();
+								e.stopPropagation();
+								openLobby();
+								return;
+							}
+							
+							e.preventDefault();
+							e.stopPropagation();
+							
+							const text = link.querySelector('h3, h4')?.innerText || toolId;
+							modal.classList.add('active');
+							showRunState(toolId, text, "🔧");
+						}
+					};
+
+					document.removeEventListener('click', handleLinkIntercept);
+					document.addEventListener('click', handleLinkIntercept);
+
+					// 自动根据 hash 状态初始化弹窗以支持自启和无头测试
+					if (window.location.hash === '#tools-modal') {
+						openLobby();
+					}
+					const handleHashChange = () => {
+						if (window.location.hash === '#tools-modal') {
+							openLobby();
+						}
+					};
+					window.removeEventListener('hashchange', handleHashChange);
+					window.addEventListener('hashchange', handleHashChange);
+				};
+
+				initGlobalModal();
+
+				// 页面无刷新切换重绑定
+				document.addEventListener('swup:page:view', initGlobalModal);
+				document.addEventListener('swup:content:replace', initGlobalModal);
+				document.addEventListener('astro:page-load', initGlobalModal);
+			})();
+		</script><!-- increase the page height during page transition to prevent the scrolling animation from jumping --> <div id="page-height-extend" class="hidden h-[300vh]" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww></div> </body> </html>  <script type="module" src="/_astro/Layout.astro_astro_type_script_index_0_lang.Vbq5dxQu.js"></script> <!-- 代码块折叠功能 --> <script type="module" src="/_astro/Layout.astro_astro_type_script_index_1_lang.Bu462CMM.js"></script> <!-- 主题切换综合性能优化器（包含代码块优化、重型元素优化、性能诊断） --> <script type="module" src="/_astro/Layout.astro_astro_type_script_index_2_lang.tuF1DHtK.js"></script>

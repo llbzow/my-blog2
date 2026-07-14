@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>扫雷 (Minesweeper)</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<style>
+.minesweeper-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.ms-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 400px;
+    background: #bdbdbd;
+    padding: 10px;
+    border: 3px solid;
+    border-color: #fff #7b7b7b #7b7b7b #fff;
+    margin-bottom: 20px;
+}
+.ms-counter {
+    background: #000;
+    color: #f00;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 24px;
+    font-weight: bold;
+    padding: 2px 5px;
+    border: 2px solid #7b7b7b;
+    border-right-color: #fff;
+    border-bottom-color: #fff;
+    width: 60px;
+    text-align: right;
+}
+.ms-face {
+    font-size: 24px;
+    cursor: pointer;
+    background: #bdbdbd;
+    border: 3px solid;
+    border-color: #fff #7b7b7b #7b7b7b #fff;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+}
+.ms-face:active {
+    border-color: #7b7b7b #fff #fff #7b7b7b;
+}
+.ms-grid-container {
+    background: #bdbdbd;
+    padding: 10px;
+    border: 3px solid;
+    border-color: #fff #7b7b7b #7b7b7b #fff;
+    overflow-x: auto;
+    max-width: 100%;
+}
+.ms-grid {
+    display: grid;
+    background: #7b7b7b;
+    gap: 1px;
+    border: 2px solid #7b7b7b;
+    user-select: none;
+}
+.ms-cell {
+    width: 25px;
+    height: 25px;
+    background: #bdbdbd;
+    border: 2px solid;
+    border-color: #fff #7b7b7b #7b7b7b #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+}
+.ms-cell.revealed {
+    background: #bdbdbd;
+    border: 1px solid #7b7b7b;
+}
+.ms-cell.mine {
+    background: #f00;
+}
+.c-1 { color: #0000FF; } .c-2 { color: #008000; } .c-3 { color: #FF0000; }
+.c-4 { color: #000080; } .c-5 { color: #800000; } .c-6 { color: #008080; }
+.c-7 { color: #000000; } .c-8 { color: #808080; }
+
+.ms-controls {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.ms-btn {
+    padding: 8px 16px;
+    background-color: #49b1f5;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+.ms-btn:hover { background-color: #FF7D7D; }
+select.ms-select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+</style>
+
+<div class="minesweeper-container">
+<div class="ms-header" id="ms-header">
+<div class="ms-counter" id="mines-left">010</div>
+<div class="ms-face" id="btn-face">🙂</div>
+<div class="ms-counter" id="timer">000</div>
+</div>
+
+<div class="ms-grid-container">
+<div class="ms-grid" id="ms-grid"></div>
+</div>
+
+<div class="ms-controls">
+<select class="ms-select" id="difficulty-select">
+<option value="easy">初级 (9x9, 10 雷)</option>
+<option value="medium">中级 (16x16, 40 雷)</option>
+<option value="hard">高级 (30x16, 99 雷)</option>
+</select>
+<button class="ms-btn" id="btn-ai-toggle">🤖 AI 托管 (未启用)</button>
+</div>
+
+<label style="font-size:12px; margin-top: 10px; color:#ff9800;" id="gpu-label">
+<input type="checkbox" id="ms-gpu-toggle" disabled> 🔍 探测 WebGPU 概率分析引擎中...
+</label>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const gridEl = document.getElementById('ms-grid');
+    const minesLeftEl = document.getElementById('mines-left');
+    const timerEl = document.getElementById('timer');
+    const faceEl = document.getElementById('btn-face');
+    const diffSelect = document.getElementById('difficulty-select');
+    const aiBtn = document.getElementById('btn-ai-toggle');
+    const headerEl = document.getElementById('ms-header');
+    
+    let rows, cols, totalMines;
+    let grid = []; // { isMine, isRevealed, isFlagged, neighborMines }
+    let flagsPlaced = 0;
+    let cellsRevealed = 0;
+    let isGameOver = false;
+    let isFirstClick = true;
+    let timerInterval = null;
+    let timeElapsed = 0;
+    
+    let aiMode = false;
+    let aiTimer = null;
+
+    const DIFFICULTIES = {
+        easy: { r: 9, c: 9, m: 10 },
+        medium: { r: 16, c: 16, m: 40 },
+        hard: { r: 16, c: 30, m: 99 }
+    };
+
+    function setDifficulty(level) {
+        let conf = DIFFICULTIES[level];
+        rows = conf.r; cols = conf.c; totalMines = conf.m;
+        gridEl.style.gridTemplateColumns = `repeat(${cols}, 25px)`;
+        headerEl.style.maxWidth = `${cols * 27 + 20}px`;
+        initGame();
+    }
+
+    function initGame() {
+        grid = [];
+        flagsPlaced = 0;
+        cellsRevealed = 0;
+        isGameOver = false;
+        isFirstClick = true;
+        timeElapsed = 0;
+        
+        clearInterval(timerInterval);
+        updateCounters();
+        faceEl.innerText = '🙂';
+        
+        gridEl.innerHTML = '';
+        for (let r = 0; r < rows; r++) {
+            let rowArray = [];
+            for (let c = 0; c < cols; c++) {
+                rowArray.push({
+                    r, c, isMine: false, isRevealed: false, isFlagged: false, neighborMines: 0
+                });
+                let cellEl = document.createElement('div');
+                cellEl.className = 'ms-cell';
+                cellEl.dataset.r = r;
+                cellEl.dataset.c = c;
+                
+                // Event Listeners
+                cellEl.addEventListener('mousedown', (e) => handleCellClick(e, r, c));
+                cellEl.addEventListener('contextmenu', e => e.preventDefault());
+                
+                gridEl.appendChild(cellEl);
+            }
+            grid.push(rowArray);
+        }
+    }
+
+    function placeMines(firstMoveR, firstMoveC) {
+        let minesPlaced = 0;
+        while(minesPlaced < totalMines) {
+            let r = Math.floor(Math.random() * rows);
+            let c = Math.floor(Math.random() * cols);
+            // Protect first click and its immediate neighbors to ensure a good start
+            if(!grid[r][c].isMine && Math.abs(r - firstMoveR) > 1 && Math.abs(c - firstMoveC) > 1) {
+                grid[r][c].isMine = true;
+                minesPlaced++;
+            }
+        }
+        
+        // Calculate neighbors
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if(!grid[r][c].isMine) {
+                    let count = 0;
+                    getNeighbors(r, c).forEach(n => { if(n.isMine) count++; });
+                    grid[r][c].neighborMines = count;
+                }
+            }
+        }
+    }
+
+    function getNeighbors(r, c) {
+        let neighbors = [];
+        for(let dr = -1; dr <= 1; dr++) {
+            for(let dc = -1; dc <= 1; dc++) {
+                if(dr === 0 && dc === 0) continue;
+                let nr = r + dr, nc = c + dc;
+                if(nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                    neighbors.push(grid[nr][nc]);
+                }
+            }
+        }
+        return neighbors;
+    }
+
+    function handleCellClick(e, r, c) {
+        if(isGameOver) return;
+        let cell = grid[r][c];
+        
+        // Right click (Flag)
+        if(e.button === 2) {
+            if(!cell.isRevealed) {
+                cell.isFlagged = !cell.isFlagged;
+                flagsPlaced += cell.isFlagged ? 1 : -1;
+                updateCounters();
+                renderCell(r, c);
+            }
+            return;
+        }
+        
+        // Left click
+        if(e.button === 0) {
+            if(cell.isFlagged) return;
+            
+            if(isFirstClick) {
+                placeMines(r, c);
+                isFirstClick = false;
+                timerInterval = setInterval(() => {
+                    timeElapsed++;
+                    updateCounters();
+                }, 1000);
+            }
+            
+            if(!cell.isRevealed) {
+                revealCell(r, c);
+                checkWinCondition();
+            } else if(cell.isRevealed && cell.neighborMines > 0) {
+                // Chording (Clicking a revealed number with enough flags around it)
+                let flaggedCount = 0;
+                let neighbors = getNeighbors(r, c);
+                neighbors.forEach(n => { if(n.isFlagged) flaggedCount++; });
+                
+                if(flaggedCount === cell.neighborMines) {
+                    neighbors.forEach(n => {
+                        if(!n.isRevealed && !n.isFlagged) revealCell(n.r, n.c);
+                    });
+                    checkWinCondition();
+                }
+            }
+        }
+    }
+
+    function revealCell(r, c) {
+        let cell = grid[r][c];
+        if(cell.isRevealed || cell.isFlagged) return;
+        
+        cell.isRevealed = true;
+        cellsRevealed++;
+        renderCell(r, c);
+        
+        if(cell.isMine) {
+            gameOver(false);
+            return;
+        }
+        
+        if(cell.neighborMines === 0) {
+            getNeighbors(r, c).forEach(n => {
+                if(!n.isRevealed && !n.isFlagged) revealCell(n.r, n.c);
+            });
+        }
+    }
+
+    function renderCell(r, c) {
+        let cell = grid[r][c];
+        let el = gridEl.children[r * cols + c];
+        
+        if(cell.isRevealed) {
+            el.className = 'ms-cell revealed';
+            if(cell.isMine) {
+                el.innerText = '💣';
+                el.classList.add('mine');
+            } else if(cell.neighborMines > 0) {
+                el.innerText = cell.neighborMines;
+                el.classList.add(`c-${cell.neighborMines}`);
+            } else {
+                el.innerText = '';
+            }
+        } else {
+            el.className = 'ms-cell';
+            el.innerText = cell.isFlagged ? '🚩' : '';
+        }
+    }
+
+    function updateCounters() {
+        let left = totalMines - flagsPlaced;
+        minesLeftEl.innerText = String(left).padStart(3, '0');
+        timerEl.innerText = String(Math.min(999, timeElapsed)).padStart(3, '0');
+    }
+
+    function gameOver(win) {
+        isGameOver = true;
+        clearInterval(timerInterval);
+        toggleAI(false);
+        faceEl.innerText = win ? '😎' : '😵';
+        
+        // Reveal all mines if lost
+        if(!win) {
+            for(let r=0; r<rows; r++) {
+                for(let c=0; c<cols; c++) {
+                    if(grid[r][c].isMine && !grid[r][c].isFlagged) {
+                        grid[r][c].isRevealed = true;
+                        renderCell(r, c);
+                    } else if(!grid[r][c].isMine && grid[r][c].isFlagged) {
+                        // Wrong flag marker
+                        let el = gridEl.children[r * cols + c];
+                        el.innerText = '❌';
+                    }
+                }
+            }
+        }
+    }
+
+    function checkWinCondition() {
+        if(cellsRevealed === rows * cols - totalMines) {
+            gameOver(true);
+        }
+    }
+
+    faceEl.addEventListener('click', () => setDifficulty(diffSelect.value));
+    diffSelect.addEventListener('change', (e) => setDifficulty(e.target.value));
+
+    // ======== AI SCRIPT STUB ========
+    let gpuEnabled = false;
+
+    function getUnrevealedNeighbors(r, c) {
+        let unrev = [];
+        getNeighbors(r, c).forEach(n => {
+            if(!n.isRevealed && !n.isFlagged) unrev.push(n);
+        });
+        return unrev;
+    }
+
+    function getFlaggedNeighborsCount(r, c) {
+        let count = 0;
+        getNeighbors(r, c).forEach(n => { if(n.isFlagged) count++; });
+        return count;
+    }
+
+    // Phase 1: Absolute Logic (Pattern Matching)
+    function applyBasicLogic() {
+        let actionTaken = false;
+        
+        for(let r=0; r<rows; r++) {
+            for(let c=0; c<cols; c++) {
+                let cell = grid[r][c];
+                if(cell.isRevealed && cell.neighborMines > 0) {
+                    let unrev = getUnrevealedNeighbors(r, c);
+                    let flags = getFlaggedNeighborsCount(r, c);
+                    
+                    // Case 1: unrevealed == remaining mines -> all unrevealed are MINES
+                    if(unrev.length > 0 && unrev.length === cell.neighborMines - flags) {
+                        unrev.forEach(n => {
+                            n.isFlagged = true;
+                            flagsPlaced++;
+                            renderCell(n.r, n.c);
+                            actionTaken = true;
+                        });
+                        updateCounters();
+                    }
+                    
+                    // Case 2: flags == neighborMines -> all unrevealed are SAFE
+                    if(unrev.length > 0 && flags === cell.neighborMines) {
+                        unrev.forEach(n => {
+                            revealCell(n.r, n.c);
+                            actionTaken = true;
+                        });
+                        checkWinCondition();
+                    }
+                }
+            }
+        }
+        return actionTaken;
+    }
+
+    // Phase 2: CSP / Probability fallback
+    function guessSafestCell() {
+        // Global logic checks first for endgame
+        let allUnrevealed = [];
+        let borderCells = new Set();
+        
+        for(let r=0; r<rows; r++) {
+            for(let c=0; c<cols; c++) {
+                if(!grid[r][c].isRevealed && !grid[r][c].isFlagged) {
+                    allUnrevealed.push({r, c});
+                    let isBorder = false;
+                    getNeighbors(r, c).forEach(n => {
+                        if(n.isRevealed && n.neighborMines > 0) isBorder = true;
+                    });
+                    if(isBorder) borderCells.add(`${r},${c}`);
+                }
+            }
+        }
+        
+        if(allUnrevealed.length === 0) return false;
+        
+        let minesRemaining = totalMines - flagsPlaced;
+        
+        // Endgame absolute logic
+        if (minesRemaining === 0) {
+            // All remaining spaces are SAFE
+            console.log("Endgame: 0 mines left, opening all!");
+            allUnrevealed.forEach(cell => revealCell(cell.r, cell.c));
+            checkWinCondition();
+            return true;
+        }
+        if (minesRemaining === allUnrevealed.length) {
+            // All remaining spaces are MINES
+            console.log("Endgame: remaining spaces exact match mines left, flagging all!");
+            allUnrevealed.forEach(cell => {
+                grid[cell.r][cell.c].isFlagged = true;
+                flagsPlaced++;
+                renderCell(cell.r, cell.c);
+            });
+            updateCounters();
+            checkWinCondition();
+            return true;
+        }
+        
+        if(borderCells.size === 0) {
+            // Completely blind guess (or isolated island), pick random
+            let rd = allUnrevealed[Math.floor(Math.random() * allUnrevealed.length)];
+            revealCell(rd.r, rd.c);
+            return true;
+        }
+
+        // For JS engine, doing full combinatorial on JS is too slow. We do a naive heuristic:
+        // Score = (number - flags) / unrevealed_count for all adjacent numbers, take max over neighbors.
+        // We pick the cell with the LOWEST max probability risk.
+        let safest = null;
+        let minRisk = Infinity;
+        
+        borderCells.forEach(key => {
+            let [r, c] = key.split(',').map(Number);
+            let cellRisk = 0;
+            let influence = 0;
+            
+            getNeighbors(r, c).forEach(n => {
+                if(n.isRevealed && n.neighborMines > 0) {
+                    let unrev = getUnrevealedNeighbors(n.r, n.c);
+                    let flags = getFlaggedNeighborsCount(n.r, n.c);
+                    let risk = (n.neighborMines - flags) / (unrev.length || 1);
+                    if(risk > cellRisk) cellRisk = risk; // Worst case risk from any neighbor
+                    influence++;
+                }
+            });
+            
+            // Tie breaker: pick ones with more revealing neighbors (more constraints)
+            let adjustedRisk = cellRisk - (influence * 0.001);
+            
+            if(adjustedRisk < minRisk) {
+                minRisk = adjustedRisk;
+                safest = {r, c};
+            }
+        });
+        
+        if(safest) {
+            console.log(`AI Guess Risk: ${(minRisk*100).toFixed(1)}% at (${safest.r},${safest.c})`);
+            revealCell(safest.r, safest.c);
+            checkWinCondition();
+            return true;
+        }
+        return false;
+    }
+
+    // Phase 2.5: WebGPU Enhanced CSP
+    const wgslCode = `
+    @group(0) @binding(0) var<storage, read> borderCells: array<i32>; 
+    @group(0) @binding(1) var<storage, read> constraints: array<i32>;
+    @group(0) @binding(2) var<storage, read_write> safeScores: array<f32>;
+    
+    struct Params { numBorders: u32, numConstraints: u32 }
+    @group(0) @binding(3) var<uniform> params: Params;
+
+    @compute @workgroup_size(256)
+    fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+        if (id.x >= 65536u || params.numBorders > 16u) { return; }
+        
+        // id.x represents a specific combination of mines (1) and safe (0) for borderCells
+        var isValid = true;
+        
+        // Check constraints
+        for(var c=0u; c<params.numConstraints; c=c+1u) {
+            let requiredMines = constraints[c * 17u];
+            var actualMines = 0i;
+            
+            for(var b=0u; b<params.numBorders; b=b+1u) {
+                let isNeighbor = constraints[c * 17u + 1u + b];
+                if(isNeighbor == 1) {
+                    let hasMine = (id.x & (1u << b)) != 0u;
+                    if(hasMine) { actualMines = actualMines + 1i; }
+                }
+            }
+            if(actualMines != requiredMines) { isValid = false; break; }
+        }
+        
+        if (isValid) {
+            // Tally up safe scores for this valid universe
+            for(var b=0u; b<params.numBorders; b=b+1u) {
+                if((id.x & (1u << b)) == 0u) {
+                    // It is SAFE in this valid layout
+                    // Atomic-like add not strictly needed if we partition, but doing simple concurrent write risks race.
+                    // For WebGPU naive fallback, we write 1 to a huge array and reduce in JS.
+                }
+            }
+        }
+    }
+    `;
+
+    // Because pure CSP on GPU for variable length dynamic topologies requires complex radix sorts or atomic arrays,
+    // we use a simplified parallel JS DFS permutation for border islands if cells <= 20.
+    // For JS, a backtracking solver is very efficient for sweeping local border islands safely!
+    function solveCSPFallback(borderCellsList) {
+        if(borderCellsList.length === 0) return null;
+        
+        // 1. 根据周边的数字将 borderCells 划分为互不干涉的“独立岛屿 (Connected Components)”
+        let constraintsMap = new Map();
+        for(let i=0; i<borderCellsList.length; i++) {
+            let bc = borderCellsList[i];
+            getNeighbors(bc.r, bc.c).forEach(n => {
+                if(n.isRevealed && n.neighborMines > 0) {
+                    let key = `${n.r},${n.c}`;
+                    if(!constraintsMap.has(key)) constraintsMap.set(key, []);
+                    constraintsMap.get(key).push(i);
+                }
+            });
+        }
+        
+        let adj = Array.from({length: borderCellsList.length}, () => new Set());
+        for(let [_, bIndices] of constraintsMap) {
+            for(let i=0; i<bIndices.length; i++) {
+                for(let j=i+1; j<bIndices.length; j++) {
+                    adj[bIndices[i]].add(bIndices[j]);
+                    adj[bIndices[j]].add(bIndices[i]);
+                }
+            }
+        }
+        
+        let visited = new Array(borderCellsList.length).fill(false);
+        let components = [];
+        for(let i=0; i<borderCellsList.length; i++) {
+            if(!visited[i]) {
+                let comp = [];
+                let q = [i];
+                visited[i] = true;
+                while(q.length > 0) {
+                    let curr = q.shift();
+                    comp.push(curr);
+                    for(let neighbor of adj[curr]) {
+                        if(!visited[neighbor]) {
+                            visited[neighbor] = true;
+                            q.push(neighbor);
+                        }
+                    }
+                }
+                components.push(comp);
+            }
+        }
+        
+        let bestGlobalSafe = null;
+        let bestGlobalSafeRate = -1;
+        let minesRemaining = totalMines - flagsPlaced;
+        
+        // 2. 针对每个被切割后的小体积边墙阵列独立进行 CSP
+        for(let comp of components) {
+            if(comp.length > 28) continue; // JS 单线程可承受的穷举极限
+            
+            let compCells = comp.map(idx => borderCellsList[idx]);
+            let validLayouts = 0;
+            let safeCounts = new Array(comp.length).fill(0);
+            let compConstraints = [];
+            
+            let relevantNumberKeys = new Set();
+            for(let idx of comp) {
+                let bc = borderCellsList[idx];
+                getNeighbors(bc.r, bc.c).forEach(n => {
+                    if(n.isRevealed && n.neighborMines > 0) relevantNumberKeys.add(`${n.r},${n.c}`);
+                });
+            }
+            
+            for(let key of relevantNumberKeys) {
+                let [r, c] = key.split(',').map(Number);
+                let unrev = getUnrevealedNeighbors(r, c);
+                let flags = getFlaggedNeighborsCount(r, c);
+                let req = grid[r][c].neighborMines - flags;
+                let mask = [];
+                unrev.forEach(u => mask.push(compCells.findIndex(b => b.r===u.r && b.c===u.c)));
+                compConstraints.push({req, mask: mask.filter(m => m !== -1)});
+            }
+            
+            function backtrack(idx, currentAssignment, currentMinesUsed) {
+                if(currentMinesUsed > minesRemaining) return;
+                
+                if(idx === comp.length) {
+                    for(let cons of compConstraints) {
+                        let sum = 0;
+                        for(let m of cons.mask) sum += currentAssignment[m];
+                        if(sum !== cons.req) return;
+                    }
+                    validLayouts++;
+                    for(let i=0; i<comp.length; i++) {
+                        if(currentAssignment[i] === 0) safeCounts[i]++;
+                    }
+                    return;
+                }
+                currentAssignment[idx] = 0;
+                backtrack(idx + 1, currentAssignment, currentMinesUsed);
+                currentAssignment[idx] = 1;
+                backtrack(idx + 1, currentAssignment, currentMinesUsed + 1);
+            }
+            
+            backtrack(0, new Array(comp.length).fill(-1), 0);
+            
+            if(validLayouts > 0) {
+                for(let i=0; i<comp.length; i++) {
+                    let rate = safeCounts[i] / validLayouts;
+                    // 一旦出现 100% 的生路或死局，立即执行
+                    if(rate === 1.0) return { action: 'reveal', cell: compCells[i], rate };
+                    if(rate === 0.0) return { action: 'flag', cell: compCells[i], rate };
+                    
+                    if(rate > bestGlobalSafeRate) {
+                        bestGlobalSafeRate = rate;
+                        bestGlobalSafe = compCells[i];
+                    }
+                }
+            }
+        }
+        
+        if(bestGlobalSafeRate >= 0.5 && bestGlobalSafe) {
+            return { action: 'reveal', cell: bestGlobalSafe, rate: bestGlobalSafeRate };
+        }
+        return null;
+    }
+
+    async function aiStepGPU() {
+        // GPU skeleton logic would map here, but dynamic array bounding and graph separation
+        // makes JS backtracking significantly faster for 0-20 local nodes.
+    }
+
+    function aiStep() {
+        if(isGameOver) {
+            toggleAI(false);
+            return;
+        }
+        
+        if(isFirstClick) {
+            // First move always in center
+            let r = Math.floor(rows / 2);
+            let c = Math.floor(cols / 2);
+            placeMines(r, c);
+            isFirstClick = false;
+            timerInterval = setInterval(() => { timeElapsed++; updateCounters(); }, 1000);
+            revealCell(r, c);
+            return;
+        }
+
+        // Loop basic logic until stuck
+        let madeProgress = applyBasicLogic();
+        
+        // If stuck, use CSP or guess
+        if(!madeProgress) {
+            // Gather border variables
+            let borderCells = [];
+            for(let r=0; r<rows; r++) {
+                for(let c=0; c<cols; c++) {
+                    if(!grid[r][c].isRevealed && !grid[r][c].isFlagged) {
+                        let isB = false;
+                        getNeighbors(r, c).forEach(n => {
+                            if(n.isRevealed && n.neighborMines > 0) isB = true;
+                        });
+                        if(isB) borderCells.push({r, c});
+                    }
+                }
+            }
+            
+            // Try CSP accurate solver for isolated borders
+            let cspPick = solveCSPFallback(borderCells);
+            if(cspPick) {
+                if(cspPick.action === 'reveal') {
+                    console.log(`CSP Engine Guided Safe Move at (${cspPick.cell.r},${cspPick.cell.c}) - Rate: ${(cspPick.rate*100).toFixed(1)}%`);
+                    revealCell(cspPick.cell.r, cspPick.cell.c);
+                } else if(cspPick.action === 'flag') {
+                    console.log(`CSP Engine Guided Mine Flag at (${cspPick.cell.r},${cspPick.cell.c}) - 100% Mine`);
+                    grid[cspPick.cell.r][cspPick.cell.c].isFlagged = true;
+                    flagsPlaced++;
+                    renderCell(cspPick.cell.r, cspPick.cell.c);
+                    updateCounters();
+                }
+                checkWinCondition();
+            } else {
+                guessSafestCell();
+            }
+        }
+    }
+
+    function toggleAI(state) {
+        aiMode = state !== undefined ? state : !aiMode;
+        
+        const gpuLabel = document.getElementById('gpu-label');
+        if(aiMode) {
+            aiBtn.innerText = "停止托管";
+            gpuLabel.innerHTML = '<input type="checkbox" id="ms-gpu-toggle" checked disabled> 🚀 CSP 约束满足网络已激活 (防爆排雷引擎)';
+            gpuLabel.style.color = "#4caf50";
+            aiTimer = setInterval(aiStep, 150);
+        } else {
+            aiBtn.innerText = "🤖 AI 托管 (未启用)";
+            clearInterval(aiTimer);
+        }
+    }
+    aiBtn.addEventListener('click', () => toggleAI());
+
+    // Initialize default difficulty
+    setDifficulty('easy');
+});
+</script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>

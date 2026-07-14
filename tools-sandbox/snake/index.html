@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>贪吃蛇 (Snake)</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<style>
+.snake-container {
+display: flex;
+flex-direction: column;
+align-items: center;
+margin-top: 20px;
+}
+#snake-canvas {
+background-color: #000;
+box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+border-radius: 4px;
+max-width: 100%;
+}
+.snake-info {
+margin: 15px 0;
+font-size: 1.2rem;
+font-weight: bold;
+color: var(--text-color, #333);
+}
+.snake-btn {
+padding: 8px 20px;
+background-color: var(--btn-bg, #49b1f5);
+color: var(--btn-color, #fff);
+border: none;
+border-radius: 4px;
+cursor: pointer;
+font-size: 1rem;
+transition: all 0.3s;
+margin: 0 10px;
+}
+.snake-btn:hover {
+background-color: var(--btn-hover-color, #FF7D7D);
+}
+.snake-controls {
+margin-top: 20px;
+display: grid;
+grid-template-columns: 50px 50px 50px;
+grid-gap: 10px;
+justify-content: center;
+}
+.snake-ctrl-btn {
+height: 50px;
+background: #eee;
+border: 1px solid #ccc;
+border-radius: 8px;
+font-size: 20px;
+cursor: pointer;
+user-select: none;
+}
+.snake-ctrl-btn:active {
+background: #ddd;
+}
+.m-up { grid-column: 2; grid-row: 1; }
+.m-left { grid-column: 1; grid-row: 2; }
+.m-down { grid-column: 2; grid-row: 2; }
+.m-right { grid-column: 3; grid-row: 2; }
+</style>
+
+<div class="snake-container">
+<div class="snake-info" id="s-info">分数: 0</div>
+<label style="font-size:12px; margin-bottom: 10px; color:#ff9800;" id="gpu-label">
+<input type="checkbox" id="s-gpu-toggle" disabled> 🔍 探测 WebGPU 并发算力中...
+</label>
+<canvas id="snake-canvas" width="400" height="400"></canvas>
+<div style="margin-top:20px; display:flex; gap:10px;">
+<button class="snake-btn" id="s-ai">🤖 AI 托管</button>
+<button class="snake-btn" id="s-restart">重新开始</button>
+</div>
+
+<div class="snake-controls">
+<button class="snake-ctrl-btn m-up" id="btn-up">⬆️</button>
+<button class="snake-ctrl-btn m-left" id="btn-left">⬅️</button>
+<button class="snake-ctrl-btn m-down" id="btn-down">⬇️</button>
+<button class="snake-ctrl-btn m-right" id="btn-right">➡️</button>
+</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+const canvas = document.getElementById('snake-canvas');
+if (!canvas) return;
+const ctx = canvas.getContext('2d');
+const info = document.getElementById('s-info');
+const restartBtn = document.getElementById('s-restart');
+
+const gridSize = 20;
+const tileCount = canvas.width / gridSize;
+
+let snake = [];
+let food = {x: 10, y: 10};
+let dx = 0;
+let dy = 0;
+let score = 0;
+let gameLoop;
+let isGameOver = false;
+
+function resetGame() {
+snake = [
+{x: 10, y: 10},
+];
+dx = 0;
+dy = 0;
+score = 0;
+isGameOver = false;
+placeFood();
+info.innerText = `分数: ${score}`;
+if(gameLoop) clearInterval(gameLoop);
+gameLoop = setInterval(update, 100);
+}
+
+function placeFood() {
+food.x = Math.floor(Math.random() * tileCount);
+food.y = Math.floor(Math.random() * tileCount);
+// Ensure food is not on snake
+for (let segment of snake) {
+if (segment.x === food.x && segment.y === food.y) {
+placeFood();
+break;
+}
+}
+}
+
+function update() {
+if (isGameOver) return;
+
+// Move snake
+const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+
+// Wall collision
+if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+gameOver();
+return;
+}
+
+// Self collision (only if moving)
+if (dx !== 0 || dy !== 0) {
+for (let i = 0; i < snake.length; i++) {
+if (head.x === snake[i].x && head.y === snake[i].y) {
+gameOver();
+return;
+}
+}
+}
+
+snake.unshift(head);
+
+// Check food
+if (head.x === food.x && head.y === food.y) {
+score += 10;
+info.innerText = `分数: ${score}`;
+placeFood();
+} else {
+if (dx !== 0 || dy !== 0) {
+snake.pop();
+} else {
+snake.pop();
+snake.unshift(head); // Keep it steady when not moving
+}
+}
+
+draw();
+if (aiMode && (dx !== 0 || dy !== 0)) {
+setTimeout(aiStepAsync, 0); // 让 AI 决定立刻的下一步，但不阻断渲染
+}
+}
+
+let aiMode = false;
+const aiBtn = document.getElementById('s-ai');
+
+// ====== WEBGPU IMPLEMENTATION ======
+let device = null;
+let computePipeline = null;
+let gpuEnabled = false;
+let gpuBufferScore, gpuBufferMap, gpuBufferParams;
+
+const wgslCode = `
+@group(0) @binding(0) var<storage, read> distMap: array<i32>;
+@group(0) @binding(1) var<storage, read_write> scores: array<f32>;
+
+struct Params { hx: i32, hy: i32, fx: i32, fy: i32, len: i32 }
+@group(0) @binding(2) var<uniform> params: Params;
+
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let index = id.x + id.y * 20u;
+    if (id.x >= 20u || id.y >= 20u) { return; }
+
+    var score: f32 = -1000.0;
+    let dToFood = distMap[index];
+    
+    if (dToFood != 9999) {
+        score = 200.0 - f32(dToFood) * 5.0;
+    } else {
+        score = -500.0;
+    }
+    scores[index] = score;
+}
+`;
+
+async function initWebGPU() {
+    const gpuLabel = document.getElementById('gpu-label');
+    if (!navigator.gpu) {
+        gpuLabel.innerHTML = '❌ WebGPU 不可用 (平滑回退至 JS 串行寻路引擎)';
+        return;
+    }
+    try {
+        const adapter = await navigator.gpu.requestAdapter();
+        device = await adapter.requestDevice();
+        const shaderModule = device.createShaderModule({ code: wgslCode });
+        computePipeline = device.createComputePipeline({
+            layout: 'auto',
+            compute: { module: shaderModule, entryPoint: 'main' },
+        });
+
+        gpuBufferScore = device.createBuffer({ size: 400*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+        gpuBufferMap = device.createBuffer({ size: 400*4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+        gpuBufferParams = device.createBuffer({ size: 20, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+
+        gpuEnabled = true;
+        gpuLabel.style.color = "#4caf50";
+        gpuLabel.innerHTML = '<input type="checkbox" id="s-gpu-toggle" checked> 🚀 已激活 WebGPU 高并发计算加速引擎 (400 渲染算核)';
+        document.getElementById('s-gpu-toggle').addEventListener('change', (e) => gpuEnabled = e.target.checked);
+    } catch(e) {
+        gpuLabel.innerHTML = '❌ 初始化 WebGPU 失败';
+    }
+}
+
+async function findPathGPU() {
+    if(!gpuEnabled || dx===0 && dy===0) return null;
+    
+    let isBody = new Int32Array(400).fill(0);
+    for(let i=0; i<snake.length-1; i++) isBody[snake[i].y*20 + snake[i].x] = 1;
+    
+    let distMap = new Int32Array(400).fill(9999);
+    let queue = [{x: food.x, y: food.y, d:0}];
+    distMap[food.y*20 + food.x] = 0;
+    let headIdx = 0;
+    const searchDirs = [{dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0}];
+    
+    while(headIdx < queue.length) {
+        let curr = queue[headIdx++];
+        for(let d of searchDirs) {
+            let nx = curr.x+d.dx, ny = curr.y+d.dy;
+            if(nx>=0 && nx<20 && ny>=0 && ny<20 && isBody[ny*20+nx] === 0 && distMap[ny*20+nx] > curr.d+1) {
+                distMap[ny*20+nx] = curr.d+1;
+                queue.push({x:nx, y:ny, d:curr.d+1});
+            }
+        }
+    }
+    
+    device.queue.writeBuffer(gpuBufferMap, 0, distMap);
+    device.queue.writeBuffer(gpuBufferParams, 0, new Int32Array([snake[0].x, snake[0].y, food.x, food.y, snake.length]));
+
+    const bindGroup = device.createBindGroup({
+        layout: computePipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: gpuBufferMap } },
+            { binding: 1, resource: { buffer: gpuBufferScore } },
+            { binding: 2, resource: { buffer: gpuBufferParams } }
+        ]
+    });
+
+    const commandEncoder = device.createCommandEncoder();
+    const passEncoder = commandEncoder.beginComputePass();
+    passEncoder.setPipeline(computePipeline);
+    passEncoder.setBindGroup(0, bindGroup);
+    passEncoder.dispatchWorkgroups(2, 2); // 20/16 CEIL -> 2x2
+    passEncoder.end();
+
+    const outputBuffer = device.createBuffer({ size: 400*4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+    commandEncoder.copyBufferToBuffer(gpuBufferScore, 0, outputBuffer, 0, 400*4);
+    device.queue.submit([commandEncoder.finish()]);
+
+    await outputBuffer.mapAsync(GPUMapMode.READ);
+    const scores = new Float32Array(outputBuffer.getMappedRange());
+    
+    // Pick immediate valid neighborhood step with max score
+    const dirs = [{dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0}];
+    let bestScore = -Infinity;
+    let bestDir = null;
+
+    for(let d of dirs) {
+        if(dx === -d.dx && dy === -d.dy) continue; // no quick reverse
+        let nx = snake[0].x + d.dx, ny = snake[0].y + d.dy;
+        if(nx>=0 && nx<20 && ny>=0 && ny<20 && isBody[ny*20+nx] !== 1) {
+            let sc = scores[ny*20 + nx];
+            if (sc > bestScore) { bestScore = sc; bestDir = d; }
+        }
+    }
+    outputBuffer.unmap();
+    return bestDir;
+}
+
+function findPathJS() {
+if (dx===0 && dy===0) return null;
+let head = snake[0];
+let queue = [{x: head.x, y: head.y, path: []}];
+let visited = Array.from({length: tileCount}, () => Array(tileCount).fill(false));
+visited[head.y][head.x] = true;
+
+for(let i=1; i<snake.length-1; i++) {
+visited[snake[i].y][snake[i].x] = true;
+}
+
+while(queue.length > 0) {
+let curr = queue.shift();
+if (curr.x === food.x && curr.y === food.y) {
+return curr.path[0];
+}
+const dirs = [{dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0}];
+for(let d of dirs) {
+let nx = curr.x + d.dx, ny = curr.y + d.dy;
+if(nx>=0 && nx<tileCount && ny>=0 && ny<tileCount && !visited[ny][nx]) {
+visited[ny][nx] = true;
+queue.push({x: nx, y: ny, path: [...curr.path, d]});
+}
+}
+}
+return null;
+}
+
+async function aiStepAsync() {
+if(isGameOver || !aiMode) return;
+let nextMove;
+if (gpuEnabled) {
+nextMove = await findPathGPU();
+if(!nextMove) nextMove = findPathJS(); // fallback routing
+} else {
+nextMove = findPathJS();
+}
+
+if (nextMove) {
+changeDirection(nextMove.dx, nextMove.dy);
+} else {
+const dirs = [{dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0}];
+for(let d of dirs) {
+if(dx === -d.dx && dy === -d.dy) continue;
+let nx = snake[0].x + d.dx, ny = snake[0].y + d.dy;
+if(nx>=0 && nx<tileCount && ny>=0 && ny<tileCount) {
+let bodyHit = false;
+for(let i=1; i<snake.length-1; i++) {
+if(snake[i].x === nx && snake[i].y === ny) bodyHit = true;
+}
+if(!bodyHit) {
+changeDirection(d.dx, d.dy);
+break;
+}
+}
+}
+}
+}
+
+aiBtn.addEventListener('click', () => {
+aiMode = !aiMode;
+aiBtn.innerText = aiMode ? "停止托管" : "🤖 AI 托管";
+if(aiMode && dx === 0 && dy === 0) changeDirection(1, 0);
+if(aiMode) aiStepAsync();
+});
+
+function draw() {
+// Clear background
+ctx.fillStyle = '#111';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+// Draw food
+ctx.fillStyle = '#FF4136';
+ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 1, gridSize - 1);
+
+// Draw snake
+snake.forEach((segment, index) => {
+ctx.fillStyle = index === 0 ? '#2ECC40' : '#27AE60';
+ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 1, gridSize - 1);
+});
+}
+
+function gameOver() {
+isGameOver = true;
+info.innerText = `游戏结束! 最终分数: ${score}`;
+clearInterval(gameLoop);
+}
+
+function changeDirection(newDx, newDy) {
+if (isGameOver) return;
+if (dy === 0 && newDx !== 0) return; // Prevent reversing X
+if (dx === 0 && newDy !== 0) return; // Prevent reversing Y
+dx = newDx;
+dy = newDy;
+}
+
+document.addEventListener('keydown', (e) => {
+// Prevent default scrolling for arrow keys
+if([37, 38, 39, 40].indexOf(e.keyCode) > -1) {
+e.preventDefault();
+}
+
+switch (e.key) {
+case 'ArrowUp':
+case 'w':
+case 'W':
+changeDirection(0, -1);
+break;
+case 'ArrowDown':
+case 's':
+case 'S':
+changeDirection(0, 1);
+break;
+case 'ArrowLeft':
+case 'a':
+case 'A':
+changeDirection(-1, 0);
+break;
+case 'ArrowRight':
+case 'd':
+case 'D':
+changeDirection(1, 0);
+break;
+}
+});
+
+// Mobile controls
+document.getElementById('btn-up').addEventListener('click', () => changeDirection(0, -1));
+document.getElementById('btn-down').addEventListener('click', () => changeDirection(0, 1));
+document.getElementById('btn-left').addEventListener('click', () => changeDirection(-1, 0));
+document.getElementById('btn-right').addEventListener('click', () => changeDirection(1, 0));
+
+restartBtn.addEventListener('click', resetGame);
+initWebGPU();
+resetGame();
+});
+</script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>
