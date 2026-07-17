@@ -564,6 +564,7 @@ function pacmanAiStepJS() {
 
     restartBtn.addEventListener('click', initGame);
     initWebGPU();
+    generateMap(); // 首帧绘制前必须先生成地图数据，否则 map 为空数组导致越界报错
     drawMap(); // Initial map draw
 });
 </script>

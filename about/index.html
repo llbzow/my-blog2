@@ -3076,7 +3076,6 @@ if (document.readyState === "loading") {
         </style> <!-- 全局工具沙盒毛玻璃模态弹窗 --> <div id="global-tool-modal" class="global-modal-overlay" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <div class="glass-card modal-content-card" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <div class="modal-header" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <div class="modal-title-row" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <button class="modal-control-btn hidden-btn" id="modal-btn-back" title="返回大厅" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww>⬅ 返回大厅</button> <span class="modal-emoji" id="modal-title-emoji" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww>🔧</span> <span class="modal-title-text" id="modal-tool-title" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww>摸鱼工具箱大厅</span> </div> <div class="modal-controls" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <button class="modal-control-btn hidden-btn" id="modal-btn-open-new" title="新标签页打开" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww>↗</button> <button class="modal-control-btn modal-close-btn" id="modal-btn-close" title="关闭" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww>×</button> </div> </div> <!-- 视图一：大厅网格视图 --> <div class="modal-lobby-view" id="modal-lobby-view" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <!-- JS 动态注入 --> </div> <!-- 视图二：Iframe 沙盒视图 --> <div class="modal-iframe-view" id="modal-iframe-view" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww> <iframe src="" class="modal-embed-iframe" id="global-tool-iframe" style="--configHue: 200;--page-width: 90rem;--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;" data-astro-cid-ju4pidww></iframe> </div> </div> </div>  <script>
 			(function() {
 				const GAMES = [
-					{ id: "kinky-dungeon", name: "奇妙地牢 (Kinky Dungeon)", desc: "自愈式作弊模组入库，全屏地牢 RPG 动作游戏。" },
 					{ id: "gomoku", name: "五子棋 (Gomoku)", desc: "搭载 WebGPU 人工智能的人工智能五子棋游戏。" },
 					{ id: "minesweeper", name: "扫雷 (Minesweeper)", desc: "经典 Windows 扫雷小游戏，打发时间的摸鱼神器。" },
 					{ id: "2048", name: "2048", desc: "经典的数字滑动拼图游戏，滑动方块挑战高分！" },
@@ -3237,10 +3236,10 @@ if (document.readyState === "loading") {
 						const href = link.getAttribute('href');
 						if (!href) return;
 						
-						// 点击顶栏工具箱触发器 #tools-modal
-						if (href === '#tools-modal') {
+						// 点击顶栏工具箱触发器（实际渲染为 /#tools-modal，原判断 href==='#tools-modal' 永不命中）
+						if (href.endsWith('#tools-modal')) {
 							e.preventDefault();
-							e.stopPropagation();
+							e.stopImmediatePropagation();
 							openLobby();
 							return;
 						}
@@ -3251,22 +3250,23 @@ if (document.readyState === "loading") {
 							const toolId = match[1];
 							if (toolId === 'index' || toolId === '') {
 								e.preventDefault();
-								e.stopPropagation();
+								e.stopImmediatePropagation();
 								openLobby();
 								return;
 							}
-							
+
 							e.preventDefault();
-							e.stopPropagation();
-							
+							e.stopImmediatePropagation();
+
 							const text = link.querySelector('h3, h4')?.innerText || toolId;
 							modal.classList.add('active');
 							showRunState(toolId, text, "🔧");
 						}
 					};
 
-					document.removeEventListener('click', handleLinkIntercept);
-					document.addEventListener('click', handleLinkIntercept);
+					// 捕获阶段注册，确保先于 swup 的点击处理执行（否则 swup 会先导航走）
+					document.removeEventListener('click', handleLinkIntercept, true);
+					document.addEventListener('click', handleLinkIntercept, true);
 
 					// 自动根据 hash 状态初始化弹窗以支持自启和无头测试
 					if (window.location.hash === '#tools-modal') {

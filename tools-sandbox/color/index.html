@@ -128,11 +128,11 @@ function updateAllFromHex(hex) {
         
         const rgb = hexToRgb(hex);
         if(rgb && document.activeElement !== rgbInput) {
-            rgbInput.value = \`rgb(\${rgb.r}, \${rgb.g}, \${rgb.b})\`;
+            rgbInput.value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
             
             const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
             if(document.activeElement !== hslInput) {
-                hslInput.value = \`hsl(\${hsl.h}, \${hsl.s}%, \${hsl.l}%)\`;
+                hslInput.value = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
             }
         }
         
@@ -169,7 +169,7 @@ function updateAllFromHsl(hslStr) {
 
 function applyUIColors(hex) {
     preview.style.backgroundColor = hex;
-    preview.style.boxShadow = \`0 8px 30px \${hex}66\`;
+    preview.style.boxShadow = `0 8px 30px ${hex}66`;
 }
 
 // Math conversions
