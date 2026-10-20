@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>图片与 Base64 互转</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<link rel="stylesheet" href="/css/tools.css">
+
+
+<div class="tool-container" id="tool-base64-container">
+
+    <!-- Image to Base64 -->
+    <div class="tool-section">
+        <div class="tool-title">🖼️ 图片转 Base64</div>
+        <div class="upload-box" id="drop-zone">
+            <p>点击选择图片 或 拖拽图片到这里</p>
+            <input type="file" id="file-input" accept="image/*" style="display: none;">
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <label>Base64 结果:</label>
+            <textarea id="output-base64" placeholder="结果将显示在这里..." readonly style="width: 100%; height: 150px; margin-top: 5px;"></textarea>
+            <div style="margin-top: 10px; display: flex; gap: 10px;">
+                <button class="btn" id="btn-copy">复制全部代码</button>
+                <button class="btn" id="btn-clear" style="background: #666;">清空</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Base64 to Image -->
+    <div class="tool-section">
+        <div class="tool-title">🔢 Base64 转图片</div>
+        <textarea id="input-base64" placeholder="粘贴 Base64 代码到这里 (包含 data:image/png;base64, 前缀)" style="width: 100%; height: 100px;"></textarea>
+        <button class="btn" id="btn-preview" style="margin-top: 10px;">生成预览</button>
+        
+        <div id="image-preview" style="margin-top: 15px; text-align: center; border: 1px solid #eee; padding: 10px; min-height: 50px; display: flex; align-items: center; justify-content: center; background: repeating-linear-gradient(45deg, #f0f0f0, #f0f0f0 10px, #fff 10px, #fff 20px);">
+            <span style="color: #999;">预览区域</span>
+        </div>
+    </div>
+
+</div>
+
+
+<script src="/js/tools/base64-img.js"></script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>

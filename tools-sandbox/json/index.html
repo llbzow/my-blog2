@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>JSON 格式化与校验</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.05;
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+
+		.tool-container {
+			max-width: 900px;
+			margin: 0 auto;
+			padding: 24px;
+			background: rgba(255, 255, 255, 0.7);
+			border-radius: 16px;
+			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+			backdrop-filter: blur(10px);
+			-webkit-backdrop-filter: blur(10px);
+			border: 1px solid rgba(255, 255, 255, 0.5);
+			box-sizing: border-box;
+		}
+		[data-theme='dark'] .tool-container {
+			background: rgba(30, 32, 40, 0.7);
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+		}
+
+		.tool-header h2 {
+			margin-top: 0;
+			color: #49b1f5;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.tool-header p {
+			margin: 4px 0 18px 0;
+			color: #666;
+			font-size: 14px;
+		}
+		[data-theme='dark'] .tool-header p {
+			color: #aaa;
+		}
+
+		.action-bar {
+			display: flex;
+			gap: 10px;
+			margin-bottom: 16px;
+			flex-wrap: wrap;
+		}
+		.action-btn {
+			padding: 9px 16px;
+			font-size: 13.5px;
+			font-weight: 600;
+			border-radius: 8px;
+			background: #49b1f5;
+			color: white;
+			border: none;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+		.action-btn:hover {
+			background: #3b9fe0;
+			transform: translateY(-1px);
+			box-shadow: 0 4px 12px rgba(73, 177, 245, 0.3);
+		}
+		.action-btn.danger {
+			background: #ef4444;
+		}
+		.action-btn.danger:hover {
+			background: #dc2626;
+			box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+		}
+
+		.editor-area {
+			position: relative;
+			border-radius: 10px;
+			overflow: hidden;
+			border: 1px solid rgba(0, 0, 0, 0.12);
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+		}
+		[data-theme='dark'] .editor-area {
+			border-color: rgba(255, 255, 255, 0.1);
+		}
+
+		.status-bar {
+			padding: 8px 16px;
+			font-size: 13px;
+			font-weight: 600;
+			background: rgba(247, 249, 254, 0.9);
+			color: #4b5563;
+			border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+			display: flex;
+			align-items: center;
+			gap: 6px;
+		}
+		.status-bar.success {
+			background: #ecfdf5;
+			color: #059669;
+		}
+		.status-bar.error {
+			background: #fef2f2;
+			color: #dc2626;
+		}
+		[data-theme="dark"] .status-bar {
+			background: #252830;
+			color: #d1d5db;
+			border-bottom-color: rgba(255, 255, 255, 0.08);
+		}
+		[data-theme="dark"] .status-bar.success {
+			background: #064e3b;
+			color: #6ee7b7;
+		}
+		[data-theme="dark"] .status-bar.error {
+			background: #7f1d1d;
+			color: #fca5a5;
+		}
+
+		#jsonInput {
+			width: 100%;
+			height: 460px;
+			padding: 16px;
+			border: none;
+			outline: none;
+			background: rgba(255, 255, 255, 0.85);
+			color: inherit;
+			font-size: 13.5px;
+			font-family: 'Consolas', 'Courier New', monospace;
+			resize: vertical;
+			white-space: pre;
+			overflow-x: auto;
+			box-sizing: border-box;
+			line-height: 1.5;
+		}
+		[data-theme="dark"] #jsonInput {
+			background: rgba(18, 20, 26, 0.9);
+			color: #f3f4f6;
+		}
+
+		.copy-btn {
+			position: absolute;
+			bottom: 18px;
+			right: 18px;
+			padding: 8px 18px;
+			background: #49b1f5;
+			color: white;
+			border: none;
+			border-radius: 20px;
+			font-weight: 600;
+			font-size: 13px;
+			cursor: pointer;
+			box-shadow: 0 4px 12px rgba(73, 177, 245, 0.4);
+			transition: all 0.2s;
+			opacity: 0.85;
+		}
+		.copy-btn:hover {
+			opacity: 1;
+			transform: scale(1.05);
+			background: #3b9fe0;
+		}
+
+		/* Toast */
+		.tools-toast {
+			position: fixed;
+			bottom: 30px;
+			left: 50%;
+			transform: translateX(-50%) translateY(20px);
+			background: rgba(20, 24, 33, 0.9);
+			color: #fff;
+			padding: 10px 22px;
+			border-radius: 24px;
+			font-size: 14px;
+			font-weight: 500;
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+			backdrop-filter: blur(8px);
+			opacity: 0;
+			pointer-events: none;
+			transition: all 0.25s ease-out;
+			z-index: 9999;
+		}
+		.tools-toast.show {
+			opacity: 1;
+			transform: translateX(-50%) translateY(0);
+		}
+	</style>
+</head>
+<body>
+
+<div class="tool-container">
+	<div class="tool-header">
+		<h2>{} JSON 格式化与校验</h2>
+		<p>提供 JSON 字符串的语法校验、美化排版、单行压缩及转义处理，纯前端离线解析，隐私零外泄。</p>
+	</div>
+
+	<div class="action-bar">
+		<button class="action-btn" onclick="formatJson()">✨ 格式化 (美化)</button>
+		<button class="action-btn" onclick="compressJson()">🗜 单行压缩</button>
+		<button class="action-btn" onclick="escapeJson()">🔄 转义字符</button>
+		<button class="action-btn" onclick="unescapeJson()">🔙 去除转义</button>
+		<button class="action-btn danger" onclick="clearAll()">🗑 清空</button>
+	</div>
+
+	<div class="editor-area">
+		<div class="status-bar" id="statusBar">准备就绪</div>
+		<textarea id="jsonInput" placeholder="在此粘贴您的 JSON 字符串..." spellcheck="false"></textarea>
+		<button class="copy-btn" onclick="copyResult()">📋 复制结果</button>
+	</div>
+</div>
+
+<div id="toast" class="tools-toast"></div>
+
+<script>
+const input = document.getElementById('jsonInput');
+const statusBar = document.getElementById('statusBar');
+let toastTimer = null;
+
+function showToast(msg) {
+	const toast = document.getElementById('toast');
+	toast.textContent = msg;
+	toast.classList.add('show');
+	clearTimeout(toastTimer);
+	toastTimer = setTimeout(() => {
+		toast.classList.remove('show');
+	}, 1800);
+}
+
+function setStatus(msg, type = 'normal') {
+	statusBar.textContent = msg;
+	statusBar.className = 'status-bar ' + (type !== 'normal' ? type : '');
+}
+
+function getJsonStr() {
+	return input.value.trim();
+}
+
+function formatJson() {
+	const str = getJsonStr();
+	if (!str) return;
+	try {
+		const obj = JSON.parse(str);
+		input.value = JSON.stringify(obj, null, 2);
+		setStatus('✅ JSON 格式化成功，语法正确', 'success');
+		showToast('✓ 格式化成功');
+	} catch (e) {
+		setStatus('❌ 解析失败: ' + e.message, 'error');
+		showToast('❌ JSON 语法错误');
+	}
+}
+
+function compressJson() {
+	const str = getJsonStr();
+	if (!str) return;
+	try {
+		const obj = JSON.parse(str);
+		input.value = JSON.stringify(obj);
+		setStatus('✅ JSON 压缩成功', 'success');
+		showToast('✓ 压缩成功');
+	} catch (e) {
+		setStatus('❌ 解析失败: ' + e.message, 'error');
+	}
+}
+
+function escapeJson() {
+	const str = getJsonStr();
+	if (!str) return;
+	try {
+		const obj = JSON.parse(str);
+		const compressed = JSON.stringify(obj);
+		const escaped = compressed.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+		input.value = escaped;
+		setStatus('✅ JSON 字符串转义成功', 'success');
+		showToast('✓ 已转义');
+	} catch (e) {
+		const escaped = str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+		input.value = escaped;
+		setStatus('⚠️ 已进行普通文本转义', 'normal');
+	}
+}
+
+function unescapeJson() {
+	let str = getJsonStr();
+	if (!str) return;
+	if (str.startsWith('"') && str.endsWith('"')) {
+		try {
+			str = JSON.parse(str);
+		} catch (e) {}
+	} else {
+		str = str.replace(/\\"/g, '"').replace(/\\\\/g, '\\').replace(/\\n/g, '\n').replace(/\\r/g, '\r');
+	}
+	
+	input.value = str;
+	try {
+		const obj = JSON.parse(str);
+		input.value = JSON.stringify(obj, null, 2);
+		setStatus('✅ 去除转义并格式化成功', 'success');
+		showToast('✓ 去除转义成功');
+	} catch (e) {
+		setStatus('⚠️ 已去除转义', 'normal');
+	}
+}
+
+function clearAll() {
+	input.value = '';
+	setStatus('准备就绪', 'normal');
+	input.focus();
+}
+
+function copyResult() {
+	const str = input.value;
+	if (!str) return;
+	if (navigator.clipboard && navigator.clipboard.writeText) {
+		navigator.clipboard.writeText(str).then(() => {
+			showToast('✓ 结果已复制到剪贴板');
+		});
+	} else {
+		input.select();
+		document.execCommand('copy');
+		showToast('✓ 结果已复制到剪贴板');
+	}
+}
+
+let timeoutId;
+input.addEventListener('input', () => {
+	clearTimeout(timeoutId);
+	setStatus('正在分析输入...', 'normal');
+	timeoutId = setTimeout(() => {
+		const str = getJsonStr();
+		if (!str) {
+			setStatus('准备就绪', 'normal');
+			return;
+		}
+		try {
+			JSON.parse(str);
+			setStatus('✅ 语法正确 (有效 JSON)', 'success');
+		} catch (e) {
+			if (str.includes('\\\"')) {
+				setStatus('ℹ️ 检测到转义字符，可点击“去除转义”', 'normal');
+			} else {
+				setStatus('❌ 语法错误: ' + e.message, 'error');
+			}
+		}
+	}, 500);
+});
+
+// 主题同步
+function syncTheme() {
+	try {
+		const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+		               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+		if (isDark) {
+			document.documentElement.setAttribute('data-theme', 'dark');
+			document.body.classList.add('dark');
+		} else {
+			document.documentElement.removeAttribute('data-theme');
+			document.body.classList.remove('dark');
+		}
+	} catch (e) {}
+}
+window.addEventListener('DOMContentLoaded', syncTheme);
+const observer = new MutationObserver(syncTheme);
+try {
+	observer.observe(window.parent.document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+} catch (e) {}
+</script>
+</body>
+</html>

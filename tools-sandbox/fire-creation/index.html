@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>🔥 火之创造 — 元素沙盒 (硬核升级版)</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<style>
+.fire-wrapper {
+    position: relative;
+    width: 100%;
+    background: #0a0a0f;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    user-select: none;
+}
+
+#fireCanvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    image-rendering: pixelated;
+    cursor: crosshair;
+}
+
+#fire-ui {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(10,10,20,0.95);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.elem-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    color: #ddd;
+    background: rgba(255,255,255,0.06);
+    transition: all 0.15s;
+}
+.elem-btn:hover { background: rgba(255,255,255,0.14); }
+.elem-btn.active { border-color: #fff; color: #fff; background: rgba(255,255,255,0.18); }
+
+.elem-dot {
+    width: 12px; height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.brush-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    color: #aaa;
+    font-size: 12px;
+}
+.brush-row input[type=range] { width: 80px; }
+
+.tune-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #aaa;
+    font-size: 12px;
+}
+
+.tune-row input[type=range] { width: 72px; }
+
+.ctrl-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.07);
+    color: #ccc;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+}
+.ctrl-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+#fire-stats {
+    display: flex;
+    align-items: center;
+    color: rgba(255,255,255,0.7);
+    font-family: monospace;
+    font-size: 12px;
+    background: rgba(0,0,0,0.55);
+    padding: 4px 8px;
+    border-radius: 5px;
+    margin-left: 8px;
+}
+
+#gpu-error-fire { color: #ff4d4f; font-weight: bold; padding: 20px; }
+</style>
+
+<div class="fire-wrapper">
+    <div id="fire-ui">
+        <button class="elem-btn active" data-elem="1"><span class="elem-dot" style="background:#d4b86a"></span>沙子</button>
+        <button class="elem-btn" data-elem="9"><span class="elem-dot" style="background:#6b5428"></span>泥土</button>
+        <button class="elem-btn" data-elem="3"><span class="elem-dot" style="background:#7a7a7a"></span>石头</button>
+        <button class="elem-btn" data-elem="14"><span class="elem-dot" style="background:#88929e"></span>金属</button>
+        <button class="elem-btn" data-elem="15"><span class="elem-dot" style="background:#a8d3e6;opacity:0.8"></span>玻璃</button>
+        <button class="elem-btn" data-elem="5"><span class="elem-dot" style="background:#7a4a1e"></span>木头</button>
+        <button class="elem-btn" data-elem="10"><span class="elem-dot" style="background:#3a8c2f"></span>植物</button>
+        <button class="elem-btn" data-elem="2"><span class="elem-dot" style="background:#3a7bd5"></span>水</button>
+        <button class="elem-btn" data-elem="12"><span class="elem-dot" style="background:#80ff00"></span>酸液</button>
+        <button class="elem-btn" data-elem="11"><span class="elem-dot" style="background:#333333"></span>油</button>
+        <button class="elem-btn" data-elem="8"><span class="elem-dot" style="background:#cc3300"></span>岩浆</button>
+        <button class="elem-btn" data-elem="13"><span class="elem-dot" style="background:#b3e6ff"></span>冰</button>
+        <button class="elem-btn" data-elem="4"><span class="elem-dot" style="background:#ff6a00"></span>火焰</button>
+        <button class="elem-btn" data-elem="7"><span class="elem-dot" style="background:#99c0d8"></span>蒸汽</button>
+        <button class="elem-btn" data-elem="18"><span class="elem-dot" style="background:#d4d4aa"></span>燃气</button>
+        <button class="elem-btn" data-elem="6"><span class="elem-dot" style="background:#4a4030"></span>火药</button>
+        <button class="elem-btn" data-elem="16"><span class="elem-dot" style="background:#8b2626"></span>C4</button>
+        <button class="elem-btn" data-elem="17"><span class="elem-dot" style="background:#8f4033"></span>铝热剂</button>
+        <button class="elem-btn" data-elem="0"><span class="elem-dot" style="background:#111;border:1px solid #444"></span>橡皮</button>
+        <div class="brush-row"><span>笔刷:</span><input type="range" id="brushSize" min="1" max="50" value="10"><span id="brushSizeLabel">10</span></div>
+        <button class="ctrl-btn" id="btnPause">⏸ 暂停</button>
+        <button class="ctrl-btn" id="btnClear">🗑 清空</button>
+        <div class="tune-row"><span>气体扩散</span><input type="range" id="gasDrift" min="1" max="100" value="55"><span id="gasDriftLabel">55</span></div>
+        <div class="tune-row"><span>液体扩散</span><input type="range" id="liqSpread" min="1" max="100" value="60"><span id="liqSpreadLabel">60</span></div>
+        <div class="tune-row"><span>爆炸强度</span><input type="range" id="blastPower" min="1" max="100" value="65"><span id="blastPowerLabel">65</span></div>
+        <div id="fire-stats">FPS: --</div>
+    </div>
+    <canvas id="fireCanvas"></canvas>
+    <div id="gpu-error-fire" style="display:none"></div>
+</div>
+
+<script type="module">
+// ==========================================
+// 火之创造 — WebGPU 元素沙盒模拟器 (720p 硬核物理版)
+// ==========================================
+
+const GRID_W = 1280;
+const GRID_H = 720;
+const CELL_PX = 1;
+const SIM_STEPS = 2; // 每帧运算次数，极大加速流体找平和整体物理
+
+const AIR = 0, SAND = 1, WATER = 2, STONE = 3,
+      FIRE = 4, WOOD = 5, GUN = 6, STEAM = 7, LAVA = 8,
+      DIRT = 9, PLANT = 10, OIL = 11, ACID = 12, ICE = 13,
+      METAL = 14, GLASS = 15, C4 = 16, THERMITE = 17, GAS = 18;
+
+let paused = false;
+let brushElem = 1;
+let brushRadius = 10;
+let isDrawing = false;
+let mouseGX = -1, mouseGY = -1;
+let frameIdx = 0;
+let lastFpsTime = performance.now();
+let fpsFrames = 0;
+let gasDrift = 55;
+let liquidSpread = 60;
+let blastPower = 65;
+
+// ==========================================
+// Compute Shader：进阶元素物理规则
+// ==========================================
+const computeShader = `
+const GW: u32 = ${GRID_W}u;
+const GH: u32 = ${GRID_H}u;
+
+const AIR:   u32 = 0u;
+const SAND:  u32 = 1u;
+const WATER: u32 = 2u;
+const STONE: u32 = 3u;
+const FIRE:  u32 = 4u;
+const WOOD:  u32 = 5u;
+const GUN:   u32 = 6u;
+const STEAM: u32 = 7u;
+const LAVA:  u32 = 8u;
+const DIRT:  u32 = 9u;
+const PLANT: u32 = 10u;
+const OIL:   u32 = 11u;
+const ACID:  u32 = 12u;
+const ICE:   u32 = 13u;
+const METAL: u32 = 14u;
+const GLASS: u32 = 15u;
+const C4:    u32 = 16u;
+const THERMITE: u32 = 17u;
+const GAS:   u32 = 18u;
+
+@group(0) @binding(0) var<storage, read>       rGrid: array<u32>;
+@group(0) @binding(1) var<storage, read_write> wGrid: array<u32>;
+
+struct Params {
+  frame:       u32,
+  brushX:      i32,
+  brushY:      i32,
+  brushRadius: i32,
+  brushElem:   u32,
+  drawing:     u32,
+  clearing:    u32,
+  _pad:        u32,
+  gasDrift:    u32,
+  liquidSpread:u32,
+  blastPower:  u32,
+  _pad2:       u32,
+};
+@group(0) @binding(2) var<uniform> p: Params;
+
+fn cidx(x: u32, y: u32) -> u32 { return y * GW + x; }
+fn ctype(c: u32) -> u32  { return c >> 16u; }
+fn clife(c: u32) -> u32  { return c & 0xFFFFu; }
+fn mkc(t: u32, l: u32) -> u32 { return (t << 16u) | (l & 0xFFFFu); }
+
+// 分类系统
+fn isRigid(t: u32) -> bool  { return t == STONE || t == WOOD || t == METAL || t == GLASS || t == C4 || t == ICE; }
+fn isPowder(t: u32) -> bool { return t == SAND || t == DIRT || t == GUN || t == THERMITE; }
+fn isLiquid(t: u32) -> bool { return t == WATER || t == OIL || t == ACID || t == LAVA; }
+fn isGas(t: u32) -> bool    { return t == AIR || t == STEAM || t == FIRE || t == GAS; }
+fn isCorrodible(t: u32) -> bool { return t == STONE || t == WOOD || t == DIRT || t == SAND || t == PLANT || t == METAL; }
+
+fn hash(v: u32) -> u32 {
+  var x = v ^ (v >> 16u);
+  x = x * 0x45d9f3bu;
+  x = x ^ (x >> 16u);
+  return x;
+}
+fn rng(x: u32, y: u32, f: u32, salt: u32) -> u32 {
+  return hash(x * 1664525u + y * 1013904223u + f * 2246822519u + salt);
+}
+
+fn readAt(x: u32, y: u32) -> u32 {
+  if (x >= GW || y >= GH) { return mkc(STONE, 0u); }
+  return rGrid[cidx(x, y)];
+}
+fn typeAt(x: u32, y: u32) -> u32 { return ctype(readAt(x, y)); }
+
+// 爆炸破坏判定
+fn applyExplosion(idx: u32, t: u32, nl: u32, c4: bool, th: bool, rnd: u32, intensity: u32) {
+    if (t == AIR) {
+        if (intensity > 30u && rnd % 3u == 0u) { wGrid[idx] = mkc(FIRE, select(60u, nl - 20u, nl > 20u)); }
+        return;
+    }
+
+    if (c4) {
+        if (t == C4) { wGrid[idx] = mkc(FIRE, 950u); return; }
+        if (t == GLASS) {
+            if (intensity > 55u || rnd % 2u == 0u) { wGrid[idx] = select(mkc(AIR, 0u), mkc(SAND, 0u), rnd % 3u == 0u); }
+            return;
+        }
+        if (t == STONE) {
+            if (intensity > 60u) { wGrid[idx] = select(mkc(DIRT, 0u), mkc(SAND, 0u), rnd % 2u == 0u); }
+            else if (rnd % 4u == 0u) { wGrid[idx] = mkc(DIRT, 0u); }
+            return;
+        }
+        if (t == METAL) {
+            if (intensity > 75u && rnd % 3u == 0u) { wGrid[idx] = mkc(LAVA, 420u); }
+            else if (rnd % 6u == 0u) { wGrid[idx] = mkc(FIRE, 180u); }
+            return;
+        }
+        if (t == WOOD || t == PLANT || t == DIRT || t == SAND || t == GUN || t == THERMITE || t == OIL || t == ACID || t == WATER || t == ICE) {
+            wGrid[idx] = select(mkc(FIRE, select(80u, nl - 15u, nl > 15u)), mkc(AIR, 0u), rnd % 5u == 0u);
+            return;
+        }
+    }
+
+    if (th) {
+        if (t == METAL || t == STONE) { wGrid[idx] = mkc(LAVA, 520u); return; }
+        if (t == GLASS) { wGrid[idx] = mkc(AIR, 0u); return; }
+    }
+
+    if (t != METAL && t != STONE && t != C4) {
+        wGrid[idx] = mkc(FIRE, select(40u, nl - 10u, nl > 10u));
+    }
+}
+
+@compute @workgroup_size(8, 8)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let x = gid.x;
+  let y = gid.y;
+  if (x >= GW || y >= GH) { return; }
+
+  let tidx = cidx(x, y);
+
+  if (p.clearing == 1u) {
+    wGrid[tidx] = mkc(AIR, 0u);
+    return;
+  }
+
+  if (p.drawing == 1u) {
+    let dx = i32(x) - p.brushX;
+    let dy = i32(y) - p.brushY;
+    if (dx*dx + dy*dy <= p.brushRadius * p.brushRadius) {
+      var life: u32 = 0u;
+      if (p.brushElem == FIRE) { life = 80u + (rng(x,y,p.frame,1u) % 40u); }
+      if (p.brushElem == STEAM){ life = 100u + (rng(x,y,p.frame,2u) % 60u); }
+      if (p.brushElem == LAVA) { life = 500u; }
+      if (p.brushElem == GAS)  { life = 200u + (rng(x,y,p.frame,3u) % 100u); }
+      wGrid[tidx] = mkc(p.brushElem, life);
+      return;
+    }
+  }
+
+  let me    = rGrid[tidx];
+  let myT   = ctype(me);
+  let myL   = clife(me);
+  let r     = rng(x, y, p.frame, 0u);
+
+  let hasU  = y > 0u;
+  let hasD  = y + 1u < GH;
+  let hasL  = x > 0u;
+  let hasR  = x + 1u < GW;
+  
+  let tU  = select(STONE, typeAt(x,     y-1u), hasU);
+  let tD  = select(STONE, typeAt(x,     y+1u), hasD);
+  let tL  = select(STONE, typeAt(x-1u,  y  ), hasL);
+  let tR  = select(STONE, typeAt(x+1u,  y  ), hasR);
+
+  // 性能保护：大面积静态区域早期剔除 (Early Out)
+  if (myT == AIR) {
+      let tU_act = !isRigid(tU) && tU != AIR && tU != PLANT;
+      let tD_act = (isGas(tD) && tD != AIR) || tD == LAVA;
+      let tL_act = isLiquid(tL) || isGas(tL) || isPowder(tL);
+      let tR_act = isLiquid(tR) || isGas(tR) || isPowder(tR);
+      
+      if (!tU_act && !tD_act && !tL_act && !tR_act) {
+          let hasUL = hasU && hasL; let hasUR = hasU && hasR;
+          let tUL = select(STONE, typeAt(x-1u, y-1u), hasUL);
+          let tUR = select(STONE, typeAt(x+1u, y-1u), hasUR);
+          let tUL_act = !isRigid(tUL) && tUL != AIR && tUL != PLANT;
+          let tUR_act = !isRigid(tUR) && tUR != AIR && tUR != PLANT;
+          if (!tUL_act && !tUR_act) { wGrid[tidx] = mkc(AIR, 0u); return; }
+      }
+  } else if (isRigid(myT)) {
+      let nearAcid = (tU==ACID||tD==ACID||tL==ACID||tR==ACID);
+      let nearFire = (tU==FIRE||tD==FIRE||tL==FIRE||tR==FIRE||tU==LAVA||tD==LAVA||tL==LAVA||tR==LAVA||tU==THERMITE||tD==THERMITE||tL==THERMITE||tR==THERMITE);
+      if (!nearAcid && !nearFire) { wGrid[tidx] = me; return; }
+  }
+
+  let hasDL = hasD && hasL;
+  let hasDR = hasD && hasR;
+  let hasUL = hasU && hasL;
+  let hasUR = hasU && hasR;
+
+  let tDL = select(STONE, typeAt(x-1u, y+1u), hasDL);
+  let tDR = select(STONE, typeAt(x+1u, y+1u), hasDR);
+  let tUL = select(STONE, typeAt(x-1u, y-1u), hasUL);
+  let tUR = select(STONE, typeAt(x+1u, y-1u), hasUR);
+
+  var newCell: u32 = me;
+  let frameParity = p.frame % 2u;
+
+  switch myT {
+    case AIR: {
+      // 粉体/液体优先填充
+      if (hasU && isPowder(tU)) { newCell = readAt(x, y-1u); }
+      else if (hasUR && isPowder(tUR) && typeAt(x+1u, y) != AIR) { newCell = readAt(x+1u, y-1u); }
+      else if (hasUL && isPowder(tUL) && typeAt(x-1u, y) != AIR) { newCell = readAt(x-1u, y-1u); }
+      else if (hasU && isLiquid(tU)) { newCell = readAt(x, y-1u); }
+      else if (hasUR && isLiquid(tUR) && typeAt(x+1u, y) != AIR) { newCell = readAt(x+1u, y-1u); }
+      else if (hasUL && isLiquid(tUL) && typeAt(x-1u, y) != AIR) { newCell = readAt(x-1u, y-1u); }
+
+      // 液体横向找平（允许更积极的压强扩散）
+      else if (hasR && isLiquid(tR) && typeAt(x, y+1u) != AIR && (r % 100u) < p.liquidSpread) { newCell = readAt(x+1u, y); }
+      else if (x+2u < GW && isLiquid(typeAt(x+2u, y)) && tR == AIR && typeAt(x, y+1u) != AIR && (r % 100u) < p.liquidSpread) { newCell = readAt(x+2u, y); }
+      else if (x+3u < GW && isLiquid(typeAt(x+3u, y)) && tR == AIR && typeAt(x+2u, y) == AIR && typeAt(x, y+1u) != AIR && (r % 100u) < p.liquidSpread) { newCell = readAt(x+3u, y); }
+      else if (hasL && isLiquid(tL) && typeAt(x, y+1u) != AIR && (r % 100u) < p.liquidSpread) { newCell = readAt(x-1u, y); }
+      else if (x > 1u && isLiquid(typeAt(x-2u, y)) && tL == AIR && typeAt(x, y+1u) != AIR && (r % 100u) < p.liquidSpread) { newCell = readAt(x-2u, y); }
+      else if (x > 2u && isLiquid(typeAt(x-3u, y)) && tL == AIR && typeAt(x-2u, y) == AIR && typeAt(x, y+1u) != AIR && (r % 100u) < p.liquidSpread) { newCell = readAt(x-3u, y); }
+
+      // 气体上浮与扩散（下方、斜下、侧向抽吸）
+      else if (hasD && (tD == GAS || tD == STEAM) && (r % 100u) < p.gasDrift) {
+          let gc = readAt(x, y+1u);
+          let gl = clife(gc);
+          let gt = ctype(gc);
+          if (gt == STEAM) { newCell = select(mkc(STEAM, 1u), mkc(STEAM, gl - 1u), gl > 1u); }
+          else { newCell = gc; }
+      }
+      else if (hasDL && (tDL == GAS || tDL == STEAM) && tD != AIR && (r % 100u) < p.gasDrift) {
+          let gc = readAt(x-1u, y+1u);
+          let gl = clife(gc);
+          let gt = ctype(gc);
+          if (gt == STEAM) { newCell = select(mkc(STEAM, 1u), mkc(STEAM, gl - 1u), gl > 1u); }
+          else { newCell = gc; }
+      }
+      else if (hasDR && (tDR == GAS || tDR == STEAM) && tD != AIR && (r % 100u) < p.gasDrift) {
+          let gc = readAt(x+1u, y+1u);
+          let gl = clife(gc);
+          let gt = ctype(gc);
+          if (gt == STEAM) { newCell = select(mkc(STEAM, 1u), mkc(STEAM, gl - 1u), gl > 1u); }
+          else { newCell = gc; }
+      }
+      else if (hasL && (tL == GAS || tL == STEAM) && (r % 100u) < (p.gasDrift / 2u + 10u)) {
+          let gc = readAt(x-1u, y);
+          let gl = clife(gc);
+          let gt = ctype(gc);
+          if (gt == STEAM) { newCell = select(mkc(STEAM, 1u), mkc(STEAM, gl - 1u), gl > 1u); }
+          else { newCell = gc; }
+      }
+      else if (hasR && (tR == GAS || tR == STEAM) && (r % 100u) < (p.gasDrift / 2u + 10u)) {
+          let gc = readAt(x+1u, y);
+          let gl = clife(gc);
+          let gt = ctype(gc);
+          if (gt == STEAM) { newCell = select(mkc(STEAM, 1u), mkc(STEAM, gl - 1u), gl > 1u); }
+          else { newCell = gc; }
+      }
+      else if (hasD && tD == FIRE && (p.frame % 3u != 0u)) {
+          let sl = clife(readAt(x, y+1u));
+          if (sl > 1u && sl < 500u) { newCell = mkc(FIRE, sl - 1u); }
+      }
+      else { newCell = mkc(AIR, 0u); }
+    }
+
+    case SAND, GUN, DIRT, THERMITE: {
+      let nearAcid = (tU==ACID||tD==ACID||tL==ACID||tR==ACID);
+      if (nearAcid && (r%15u==0u)) {
+        newCell = select(mkc(AIR,0u), mkc(STEAM,50u), r%2u==0u);
+      } else if (hasD && tD == AIR) {
+        newCell = mkc(AIR, 0u);
+      } else if (hasD && isLiquid(tD)) {
+        newCell = readAt(x, y+1u);
+      } else if (hasDL && tDL == AIR && frameParity == 0u) {
+        if (myT == DIRT && (p.frame%4u!=0u)) { newCell = me; } else { newCell = mkc(AIR, 0u); }
+      } else if (hasDR && tDR == AIR && frameParity == 1u) {
+        if (myT == DIRT && (p.frame%4u!=1u)) { newCell = me; } else { newCell = mkc(AIR, 0u); }
+      } else {
+        newCell = me;
+      }
+
+      if (myT == GUN) {
+        let nearFire = (tU==FIRE||tD==FIRE||tL==FIRE||tR==FIRE||tU==LAVA||tD==LAVA||tL==LAVA||tR==LAVA);
+        if (nearFire) {
+          newCell = mkc(FIRE, 600u); 
+          if(hasU) { wGrid[cidx(x,y-1u)] = mkc(FIRE, 580u); }
+          if(hasD) { wGrid[cidx(x,y+1u)] = mkc(FIRE, 580u); }
+          if(hasL) { wGrid[cidx(x-1u,y)] = mkc(FIRE, 580u); }
+          if(hasR) { wGrid[cidx(x+1u,y)] = mkc(FIRE, 580u); }
+        }
+      }
+      else if (myT == THERMITE) {
+        let nearFire = (tU==FIRE||tD==FIRE||tL==FIRE||tR==FIRE||tU==LAVA||tD==LAVA||tL==LAVA||tR==LAVA);
+        if (nearFire) {
+          newCell = mkc(FIRE, 800u); // 极高温度触发融化
+        }
+      }
+    }
+
+    case WATER, OIL, ACID, LAVA: {
+      var baseFlow: u32 = me;
+      if (myT == LAVA) {
+          let nearWater = (tU==WATER||tD==WATER||tL==WATER||tR==WATER||tUL==WATER||tUR==WATER);
+          let nearIce = (tU==ICE||tD==ICE||tL==ICE||tR==ICE||tUL==ICE||tUR==ICE);
+          if ((nearWater || nearIce) && (r%4u==0u)) { wGrid[tidx] = mkc(STONE, 0u); return; } 
+      }
+      else if (myT == ACID && (isCorrodible(tU)||isCorrodible(tD)||isCorrodible(tL)||isCorrodible(tR)) && (r%15u==0u)) {
+         baseFlow = mkc(AIR, 0u);
+      }
+      
+      if (baseFlow == me) {
+          if (hasU && isPowder(tU)) {
+            baseFlow = readAt(x, y-1u);
+          } else if (myT == WATER && hasD && tD == OIL) {
+            // 水更重，下沉穿过油层
+            baseFlow = readAt(x, y+1u);
+          } else if (myT == OIL && hasU && tU == WATER) {
+            // 油更轻，上浮穿过水层
+            baseFlow = readAt(x, y-1u);
+          } else if (hasD && tD == AIR) {
+            baseFlow = mkc(AIR, 0u);
+          } else if (hasDL && tDL == AIR && frameParity == 0u) {
+            baseFlow = mkc(AIR, 0u);
+          } else if (hasDR && tDR == AIR && frameParity == 1u) {
+            baseFlow = mkc(AIR, 0u);
+          } else {
+            // 流体找平：放宽触发概率，避免积液僵死
+            let lateral = p.liquidSpread;
+            let goL1 = hasL && tL == AIR && typeAt(x-1u, y+1u) != AIR && (r % 100u) < lateral;
+            let goL2 = x > 1u && tL == AIR && typeAt(x-2u, y) == AIR && typeAt(x-2u, y+1u) != AIR && (r % 100u) < lateral;
+            let goL3 = x > 2u && tL == AIR && typeAt(x-2u, y) == AIR && typeAt(x-3u, y) == AIR && typeAt(x-3u, y+1u) != AIR && (r % 100u) < lateral;
+
+            let goR1 = hasR && tR == AIR && typeAt(x+1u, y+1u) != AIR && (r % 100u) < lateral;
+            let goR2 = x+2u < GW && tR == AIR && typeAt(x+2u, y) == AIR && typeAt(x+2u, y+1u) != AIR && (r % 100u) < lateral;
+            let goR3 = x+3u < GW && tR == AIR && typeAt(x+2u, y) == AIR && typeAt(x+3u, y) == AIR && typeAt(x+3u, y+1u) != AIR && (r % 100u) < lateral;
+
+            if (goL1 || goL2 || goL3 || goR1 || goR2 || goR3) { baseFlow = mkc(AIR, 0u); }
+          }
+      }
+
+      newCell = baseFlow;
+
+      if (newCell == me) {
+        if (myT == WATER) {
+          let nearFire = (tU==FIRE||tD==FIRE||tL==FIRE||tR==FIRE||tU==LAVA||tD==LAVA||tL==LAVA||tR==LAVA);
+          if (nearFire && (r % 6u == 0u)) {
+            newCell = mkc(STEAM, 120u + (r % 60u));
+          } else {
+            let nearIce = (tU==ICE||tD==ICE||tL==ICE||tR==ICE);
+            if (nearIce && (r % 20u == 0u)) { newCell = mkc(ICE, 0u); }
+          }
+        }
+        else if (myT == OIL) {
+          let nearFire = (tU==FIRE||tD==FIRE||tL==FIRE||tR==FIRE||tU==LAVA||tD==LAVA||tL==LAVA||tR==LAVA);
+          if (nearFire) {
+            newCell = mkc(FIRE, 150u + (r % 50u));
+            if(hasU) { wGrid[cidx(x,y-1u)] = mkc(FIRE,150u); }
+            if(hasL) { wGrid[cidx(x-1u,y)] = mkc(FIRE,150u); }
+            if(hasR) { wGrid[cidx(x+1u,y)] = mkc(FIRE,150u); }
+          }
+        }
+      }
+    }
+
+    case STONE, WOOD, PLANT, ICE, METAL, GLASS, C4: {
+      let nearAcid = (tU==ACID||tD==ACID||tL==ACID||tR==ACID);
+      let nearFire = (tU==FIRE||tD==FIRE||tL==FIRE||tR==FIRE||tU==LAVA||tD==LAVA||tL==LAVA||tR==LAVA);
+      
+      if (myT == C4) {
+          if (nearFire) { newCell = mkc(FIRE, 1000u); } // C4 起爆
+          else { newCell = me; }
+      }
+      else if (myT == METAL || myT == GLASS) {
+          newCell = me;
+      }
+      else if (myT != ICE && nearAcid && (r%15u==0u)) {
+         newCell = select(mkc(AIR,0u), mkc(STEAM,50u), r%2u==0u);
+      }
+      else if (myT == WOOD) {
+        if (nearFire && (r % 12u == 0u)) { newCell = mkc(FIRE, 80u + (r % 60u)); }
+        else { newCell = me; }
+      }
+      else if (myT == PLANT) {
+        if (nearFire && (r % 6u == 0u)) { newCell = mkc(FIRE, 120u + (r % 50u)); }
+        else {
+            let nearWater = (tU==WATER||tD==WATER||tL==WATER||tR==WATER||tUL==WATER||tUR==WATER||tDL==WATER||tDR==WATER);
+            let nearDirt = (tU==DIRT||tD==DIRT||tL==DIRT||tR==DIRT||tUL==DIRT||tUR==DIRT||tDL==DIRT||tDR==DIRT);
+            
+            var growChance = 0u;
+            if (nearWater) { growChance = 60u; }
+            if (nearWater && nearDirt) { growChance = 20u; }
+            
+            if (growChance > 0u && (r % growChance == 0u)) {
+                newCell = me;
+                let dir = (r/10u) % 4u;
+                if (dir == 0u && hasU && tU == AIR) { wGrid[cidx(x,y-1u)] = mkc(PLANT, 0u); }
+                else if (dir == 1u && hasL && tL == AIR) { wGrid[cidx(x-1u,y)] = mkc(PLANT, 0u); }
+                else if (dir == 2u && hasR && tR == AIR) { wGrid[cidx(x+1u,y)] = mkc(PLANT, 0u); }
+                else if (dir == 3u && hasD && tD == AIR) { wGrid[cidx(x,y+1u)] = mkc(PLANT, 0u); }
+                
+                if (r % 5u == 0u) {
+                    if (tU == WATER) { wGrid[cidx(x,y-1u)] = mkc(AIR, 0u); }
+                    else if (tD == WATER) { wGrid[cidx(x,y+1u)] = mkc(AIR, 0u); }
+                    else if (tL == WATER) { wGrid[cidx(x-1u,y)] = mkc(AIR, 0u); }
+                    else if (tR == WATER) { wGrid[cidx(x+1u,y)] = mkc(AIR, 0u); }
+                }
+            } else {
+                newCell = me;
+            }
+        }
+      }
+      else if (myT == ICE) {
+        if (nearFire && (r%8u == 0u)) { newCell = mkc(WATER, 0u); }
+        else { newCell = me; }
+      }
+      else {
+        newCell = me; // STONE
+      }
+    }
+
+    case FIRE: {
+      if (myL == 0u) { newCell = mkc(AIR, 0u); }
+      else if (myL > 500u) { 
+          // 爆炸或高温状态扩散 (C4 / 铝热剂)
+          let decay = 5u + (r % 10u);
+          let nl = select(0u, myL - decay, myL > decay);
+          newCell = mkc(FIRE, nl);
+          
+          if (nl > 520u) {
+              let c4 = myL > 900u;
+              let th = myL > 700u && myL <= 900u;
+              let pwr = p.blastPower;
+              if (hasU) { applyExplosion(cidx(x,y-1u), tU, nl, c4, th, r, pwr); }
+              if (hasD) { applyExplosion(cidx(x,y+1u), tD, nl, c4, th, r+1u, pwr); }
+              if (hasL) { applyExplosion(cidx(x-1u,y), tL, nl, c4, th, r+2u, pwr); }
+              if (hasR) { applyExplosion(cidx(x+1u,y), tR, nl, c4, th, r+3u, pwr); }
+              
+              let pwrOuter = select(0u, pwr - 8u, pwr > 8u);
+              if (hasUL) { applyExplosion(cidx(x-1u,y-1u), tUL, nl-5u, c4, th, r+4u, pwrOuter); }
+              if (hasUR) { applyExplosion(cidx(x+1u,y-1u), tUR, nl-5u, c4, th, r+5u, pwrOuter); }
+              if (hasDL) { applyExplosion(cidx(x-1u,y+1u), tDL, nl-5u, c4, th, r+6u, pwrOuter); }
+              if (hasDR) { applyExplosion(cidx(x+1u,y+1u), tDR, nl-5u, c4, th, r+7u, pwrOuter); }
+
+              // 第二圈冲击波（强化 C4 对固体破坏）
+              if (c4 && pwr > 45u) {
+                  let pwrFar = select(0u, pwr - 15u, pwr > 15u);
+                  if (y > 1u) { applyExplosion(cidx(x, y-2u), typeAt(x, y-2u), nl-12u, true, false, r+8u, pwrFar); }
+                  if (y + 2u < GH) { applyExplosion(cidx(x, y+2u), typeAt(x, y+2u), nl-12u, true, false, r+9u, pwrFar); }
+                  if (x > 1u) { applyExplosion(cidx(x-2u, y), typeAt(x-2u, y), nl-12u, true, false, r+10u, pwrFar); }
+                  if (x + 2u < GW) { applyExplosion(cidx(x+2u, y), typeAt(x+2u, y), nl-12u, true, false, r+11u, pwrFar); }
+              }
+          } else if (nl > 0u && nl <= 520u && r % 3u == 0u) {
+              newCell = mkc(STEAM, 150u + (r%50u)); // 爆炸转烟雾
+          }
+      }
+      else {
+        let decay = 1u + (r % 2u);
+        let nl = select(0u, myL - decay, myL >= decay);
+        if (hasU && (tU == AIR || tU == STEAM) && (p.frame % 3u != 0u)) { newCell = mkc(AIR, 0u); }
+        else { newCell = mkc(FIRE, nl); }
+      }
+    }
+
+    case STEAM, GAS: {
+      if (myL == 0u && myT == STEAM) { newCell = mkc(AIR, 0u); }
+      else if (myT == GAS && (tU == FIRE || tD == FIRE || tL == FIRE || tR == FIRE || tU == LAVA || tD == LAVA || tL == LAVA || tR == LAVA || tU == THERMITE || tD == THERMITE || tL == THERMITE || tR == THERMITE)) {
+          newCell = mkc(FIRE, 600u); // 燃气爆炸
+      }
+      else {
+        let decay = select(1u, 2u, (r % 100u) < (100u - p.gasDrift));
+        let nl = select(0u, myL - decay, myL > decay);
+        let is_steam = myT == STEAM;
+        let nearIce = (tU==ICE||tD==ICE||tL==ICE||tR==ICE);
+        if (is_steam && (y <= 2u || nearIce)) {
+            if (r % 10u == 0u || nearIce) { newCell = mkc(WATER, 0u); } else { newCell = mkc(STEAM, nl); }
+        } else {
+            if (hasU && tU == AIR && (r % 100u) < p.gasDrift) { newCell = mkc(AIR, 0u); }
+            else if (hasUL && tUL == AIR && tU != AIR && (r % 100u) < (p.gasDrift / 2u)) { newCell = mkc(AIR, 0u); }
+            else if (hasUR && tUR == AIR && tU != AIR && (r % 100u) < (p.gasDrift / 2u)) { newCell = mkc(AIR, 0u); }
+            else if (hasL && tL == AIR && r%3u==0u) { newCell = mkc(AIR, 0u); }
+            else if (hasR && tR == AIR && r%3u==1u) { newCell = mkc(AIR, 0u); }
+            else { newCell = mkc(myT, select(myL, nl, is_steam)); }
+        }
+      }
+    }
+
+    default: { newCell = me; }
+  }
+
+    wGrid[tidx] = newCell;
+  }
+  `
+
+  // ==========================================
+// Render Shader：元素 → 像素颜色
+// ==========================================
+const renderShader = `
+const GW: u32 = ${GRID_W}u;
+const CELL: u32 = ${CELL_PX}u;
+
+const AIR:   u32 = 0u;
+const SAND:  u32 = 1u;
+const WATER: u32 = 2u;
+const STONE: u32 = 3u;
+const FIRE:  u32 = 4u;
+const WOOD:  u32 = 5u;
+const GUN:   u32 = 6u;
+const STEAM: u32 = 7u;
+const LAVA:  u32 = 8u;
+const DIRT:  u32 = 9u;
+const PLANT: u32 = 10u;
+const OIL:   u32 = 11u;
+const ACID:  u32 = 12u;
+const ICE:   u32 = 13u;
+const METAL: u32 = 14u;
+const GLASS: u32 = 15u;
+const C4:    u32 = 16u;
+const THERMITE: u32 = 17u;
+const GAS:   u32 = 18u;
+
+@group(0) @binding(0) var<storage, read> grid: array<u32>;
+@group(0) @binding(1) var<uniform> frame: u32;
+
+fn hash(v: u32) -> u32 {
+  var x = v ^ (v >> 16u);
+  x = x * 0x45d9f3bu;
+  x = x ^ (x >> 16u);
+  return x;
+}
+
+struct VOut {
+  @builtin(position) pos: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+};
+
+@vertex
+fn vs_main(@builtin(vertex_index) vi: u32) -> VOut {
+  var pos = array<vec2<f32>, 6>(
+    vec2(-1.0,-1.0), vec2(1.0,-1.0), vec2(-1.0,1.0),
+    vec2(-1.0, 1.0), vec2(1.0,-1.0), vec2( 1.0,1.0)
+  );
+  var uv = array<vec2<f32>, 6>(
+    vec2(0.0,1.0), vec2(1.0,1.0), vec2(0.0,0.0),
+    vec2(0.0,0.0), vec2(1.0,1.0), vec2(1.0,0.0)
+  );
+  var out: VOut;
+  out.pos = vec4<f32>(pos[vi], 0.0, 1.0);
+  out.uv  = uv[vi];
+  return out;
+}
+
+@fragment
+fn fs_main(in: VOut) -> @location(0) vec4<f32> {
+  let px = u32(in.uv.x * f32(GW * CELL));
+  let py = u32(in.uv.y * f32(${GRID_H}u * CELL));
+  let gx = px / CELL;
+  let gy = py / CELL;
+  if (gx >= GW || gy >= ${GRID_H}u) { return vec4<f32>(0.0,0.0,0.0,1.0); }
+
+  let c  = grid[gy * GW + gx];
+  let t  = c >> 16u;
+  let l  = c & 0xFFFFu;
+  let r  = hash(gx * 374761u + gy * 8191u + frame * 2654435u);
+  let rn = f32(r % 100u) / 100.0;
+  let lf = f32(l) / 200.0;
+
+  var col: vec3<f32>;
+
+  switch t {
+    case AIR: { col = vec3<f32>(0.04, 0.04, 0.07); }
+    case SAND: {
+      let shade = 0.75 + rn * 0.25;
+      col = vec3<f32>(0.84 * shade, 0.72 * shade, 0.38 * shade);
+    }
+    case WATER: {
+      let wave = sin(f32(gx) * 0.3 + f32(frame) * 0.12) * 0.05;
+      col = vec3<f32>(0.12, 0.45 + wave, 0.85);
+    }
+    case STONE: {
+      let shade = 0.4 + rn * 0.2;
+      col = vec3<f32>(shade, shade, shade + 0.02);
+    }
+    case FIRE: {
+      let t0 = clamp(lf, 0.0, 1.0);
+      let flicker = rn * 0.15;
+      if (l > 500u) {
+          col = vec3<f32>(1.0, 0.9 + flicker, 0.7 + flicker); // 爆炸高光
+      } else {
+          let r1 = min(1.0, 0.9 + flicker);
+          let g1 = clamp(t0 * 0.7 + flicker * 0.5, 0.0, 1.0);
+          let b1 = clamp((t0 - 0.5) * 0.6, 0.0, 0.4);
+          col = vec3<f32>(r1, g1, b1);
+      }
+    }
+    case WOOD: {
+      let shade = 0.55 + rn * 0.1;
+      col = vec3<f32>(0.5 * shade, 0.28 * shade, 0.10 * shade);
+    }
+    case GUN: {
+      let shade = 0.6 + rn * 0.15;
+      col = vec3<f32>(0.28 * shade, 0.24 * shade, 0.18 * shade);
+    }
+    case STEAM: {
+      let alpha = clamp(f32(l) / 150.0, 0.0, 1.0);
+      let base = vec3<f32>(0.6 + rn*0.2, 0.65 + rn*0.15, 0.7 + rn*0.1);
+      col = mix(vec3<f32>(0.04,0.04,0.07), base, vec3<f32>(alpha));
+    }
+    case LAVA: {
+      let pulse = sin(f32(frame) * 0.08 + f32(gx + gy) * 0.3) * 0.1 + 0.9;
+      col = vec3<f32>(pulse, 0.15 + rn*0.1, 0.0);
+    }
+    case DIRT: {
+      let shade = 0.6 + rn * 0.2;
+      col = vec3<f32>(0.42 * shade, 0.33 * shade, 0.16 * shade);
+    }
+    case PLANT: {
+      let shade = 0.7 + rn * 0.3;
+      col = vec3<f32>(0.23 * shade, 0.55 * shade, 0.18 * shade);
+    }
+    case OIL: {
+      let shade = 0.8 + rn * 0.2;
+      col = vec3<f32>(0.2 * shade, 0.2 * shade, 0.2 * shade);
+    }
+    case ACID: {
+      let pulse = sin(f32(frame) * 0.1 + f32(gx) * 0.5) * 0.1 + 0.9;
+      col = vec3<f32>(0.5 * pulse, 1.0 * pulse, 0.0);
+    }
+    case ICE: {
+      let shade = 0.85 + rn * 0.15;
+      col = vec3<f32>(0.7 * shade, 0.9 * shade, 1.0 * shade);
+    }
+    case METAL: {
+      let shade = 0.5 + rn * 0.2;
+      col = vec3<f32>(0.53 * shade, 0.57 * shade, 0.62 * shade);
+    }
+    case GLASS: {
+      let alpha = 0.4 + rn * 0.1;
+      let highlight = select(0.0, 0.3, (gx - gy + frame/10u) % 30u < 2u);
+      let base = vec3<f32>(0.66, 0.82, 0.90) + vec3<f32>(highlight);
+      col = mix(vec3<f32>(0.04, 0.04, 0.07), base, vec3<f32>(alpha));
+    }
+    case C4: {
+      let shade = 0.8 + rn * 0.1;
+      col = vec3<f32>(0.54 * shade, 0.15 * shade, 0.15 * shade);
+    }
+    case THERMITE: {
+      let shade = 0.8 + rn * 0.2;
+      col = vec3<f32>(0.56 * shade, 0.25 * shade, 0.20 * shade);
+    }
+    case GAS: {
+      let alpha = 0.5 + rn * 0.2;
+      let base = vec3<f32>(0.83, 0.83, 0.66);
+      col = mix(vec3<f32>(0.04,0.04,0.07), base, vec3<f32>(alpha));
+    }
+    default: { col = vec3<f32>(1.0, 0.0, 1.0); }
+    }
+
+    return vec4<f32>(col, 1.0);
+    }
+    `
+
+    function showErr(msg) {
+    console.error(msg);
+    const el = document.getElementById('gpu-error-fire');
+    if (el) {
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+    const canvas = document.getElementById('fireCanvas');
+    if (canvas) canvas.style.display = 'none';
+}
+
+let isInitialized = false;
+
+async function init() {
+    if (isInitialized) return;
+    isInitialized = true;
+
+    if (!navigator.gpu) { showErr('浏览器不支持 WebGPU，请使用最新版 Chrome/Edge 并开启硬件加速。'); return; }
+
+    const canvas = document.getElementById('fireCanvas');
+    if (!canvas) { showErr('Canvas not found.'); return; }
+    canvas.width  = GRID_W * CELL_PX;
+    canvas.height = GRID_H * CELL_PX;
+
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) { showErr('无法获取 WebGPU Adapter，请检查显卡驱动。'); return; }
+
+    const device  = await adapter.requestDevice();
+    const ctx     = canvas.getContext('webgpu');
+    const fmt     = navigator.gpu.getPreferredCanvasFormat();
+    ctx.configure({ device, format: fmt, alphaMode: 'opaque' });
+
+    const gridBytes = GRID_W * GRID_H * 4;
+    const initData = new Uint32Array(GRID_W * GRID_H);
+    initData.fill(0);
+
+    const gridA = device.createBuffer({
+        size: gridBytes,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        mappedAtCreation: true,
+    });
+    new Uint32Array(gridA.getMappedRange()).set(initData);
+    gridA.unmap();
+
+    const gridB = device.createBuffer({
+        size: gridBytes,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+
+    const paramsBuffer = device.createBuffer({ size: 64, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const frameBuffer  = device.createBuffer({ size: 4,  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+
+    const computeModule = device.createShaderModule({ code: computeShader });
+    const renderModule  = device.createShaderModule({ code: renderShader  });
+
+    const computePipeline = device.createComputePipeline({
+        layout: 'auto',
+        compute: { module: computeModule, entryPoint: 'main' },
+    });
+
+    function makeComputeBG(read, write) {
+        return device.createBindGroup({
+            layout: computePipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: read  } },
+                { binding: 1, resource: { buffer: write } },
+                { binding: 2, resource: { buffer: paramsBuffer } },
+            ],
+        });
+    }
+    const bgCompute_AtoB = makeComputeBG(gridA, gridB);
+    const bgCompute_BtoA = makeComputeBG(gridB, gridA);
+
+    const renderPipeline = device.createRenderPipeline({
+        layout: 'auto',
+        vertex:   { module: renderModule, entryPoint: 'vs_main' },
+        fragment: { module: renderModule, entryPoint: 'fs_main',
+                    targets: [{ format: fmt }] },
+        primitive: { topology: 'triangle-list' },
+    });
+
+    function makeRenderBG(grid) {
+        return device.createBindGroup({
+            layout: renderPipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: grid } },
+                { binding: 1, resource: { buffer: frameBuffer } },
+            ],
+        });
+    }
+    const bgRender_A = makeRenderBG(gridA);
+    const bgRender_B = makeRenderBG(gridB);
+
+    const rect = () => canvas.getBoundingClientRect();
+
+    function clientToGrid(cx, cy) {
+        const r = rect();
+        const scaleX = GRID_W / r.width;
+        const scaleY = GRID_H / r.height;
+        return [
+            Math.floor((cx - r.left) * scaleX),
+            Math.floor((cy - r.top)  * scaleY),
+        ];
+    }
+
+    canvas.addEventListener('mousedown', e => {
+        isDrawing = true;
+        [mouseGX, mouseGY] = clientToGrid(e.clientX, e.clientY);
+        e.preventDefault();
+    });
+    canvas.addEventListener('mousemove', e => {
+        if (isDrawing) [mouseGX, mouseGY] = clientToGrid(e.clientX, e.clientY);
+    });
+    canvas.addEventListener('mouseup',    () => { isDrawing = false; });
+    canvas.addEventListener('mouseleave', () => { isDrawing = false; });
+
+    canvas.addEventListener('touchstart', e => {
+        isDrawing = true;
+        const t = e.touches[0];
+        [mouseGX, mouseGY] = clientToGrid(t.clientX, t.clientY);
+        e.preventDefault();
+    }, { passive: false });
+    canvas.addEventListener('touchmove', e => {
+        const t = e.touches[0];
+        [mouseGX, mouseGY] = clientToGrid(t.clientX, t.clientY);
+        e.preventDefault();
+    }, { passive: false });
+    canvas.addEventListener('touchend', () => { isDrawing = false; });
+
+    let needClear = false;
+
+    document.querySelectorAll('.elem-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.elem-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            brushElem = parseInt(btn.dataset.elem);
+        });
+    });
+
+    const brushSlider = document.getElementById('brushSize');
+    const brushLabel  = document.getElementById('brushSizeLabel');
+    brushSlider.addEventListener('input', () => {
+        brushRadius = parseInt(brushSlider.value);
+        brushLabel.textContent = brushRadius;
+    });
+
+    document.getElementById('btnPause').addEventListener('click', function() {
+        paused = !paused;
+        this.textContent = paused ? '▶ 继续' : '⏸ 暂停';
+    });
+
+    document.getElementById('btnClear').addEventListener('click', () => { needClear = true; });
+
+    const gasDriftSlider = document.getElementById('gasDrift');
+    const gasDriftLabel = document.getElementById('gasDriftLabel');
+    gasDriftSlider.addEventListener('input', () => {
+        gasDrift = parseInt(gasDriftSlider.value);
+        gasDriftLabel.textContent = gasDrift;
+    });
+
+    const liqSpreadSlider = document.getElementById('liqSpread');
+    const liqSpreadLabel = document.getElementById('liqSpreadLabel');
+    liqSpreadSlider.addEventListener('input', () => {
+        liquidSpread = parseInt(liqSpreadSlider.value);
+        liqSpreadLabel.textContent = liquidSpread;
+    });
+
+    const blastSlider = document.getElementById('blastPower');
+    const blastLabel = document.getElementById('blastPowerLabel');
+    blastSlider.addEventListener('input', () => {
+        blastPower = parseInt(blastSlider.value);
+        blastLabel.textContent = blastPower;
+    });
+
+    const statsEl = document.getElementById('fire-stats');
+
+    function frame() {
+        let steps = paused ? (isDrawing || needClear ? 1 : 0) : SIM_STEPS;
+
+        for (let i = 0; i < steps; i++) {
+            const enc = device.createCommandEncoder();
+
+            const paramsData = new ArrayBuffer(64);
+            const paramsU32  = new Uint32Array(paramsData);
+            const paramsI32  = new Int32Array(paramsData);
+            paramsU32[0] = frameIdx;
+            paramsI32[1] = isDrawing ? mouseGX : -9999;
+            paramsI32[2] = isDrawing ? mouseGY : -9999;
+            paramsI32[3] = brushRadius;
+            paramsU32[4] = brushElem;
+            paramsU32[5] = isDrawing ? 1 : 0;
+            paramsU32[6] = needClear ? 1 : 0;
+            paramsU32[7] = 0;
+            paramsU32[8] = gasDrift;
+            paramsU32[9] = liquidSpread;
+            paramsU32[10] = blastPower;
+            paramsU32[11] = 0;
+            device.queue.writeBuffer(paramsBuffer, 0, paramsData);
+            needClear = false;
+
+            const bg = (frameIdx % 2 === 0) ? bgCompute_AtoB : bgCompute_BtoA;
+            const cp = enc.beginComputePass();
+            cp.setPipeline(computePipeline);
+            cp.setBindGroup(0, bg);
+            cp.dispatchWorkgroups(Math.ceil(GRID_W / 8), Math.ceil(GRID_H / 8));
+            cp.end();
+
+            device.queue.submit([enc.finish()]);
+            frameIdx++;
+        }
+
+        const encRender = device.createCommandEncoder();
+        device.queue.writeBuffer(frameBuffer, 0, new Uint32Array([Math.floor(frameIdx / SIM_STEPS)]));
+
+        const currentGrid = (frameIdx % 2 === 0) ? bgRender_A : bgRender_B;
+        const rp = encRender.beginRenderPass({
+            colorAttachments: [{
+                view:       ctx.getCurrentTexture().createView(),
+                clearValue: { r: 0.04, g: 0.04, b: 0.07, a: 1.0 },
+                loadOp:  'clear',
+                storeOp: 'store',
+            }],
+        });
+        rp.setPipeline(renderPipeline);
+        rp.setBindGroup(0, currentGrid);
+        rp.draw(6);
+        rp.end();
+
+        device.queue.submit([encRender.finish()]);
+
+        fpsFrames++;
+        const now = performance.now();
+        if (now - lastFpsTime >= 1000) {
+            statsEl.textContent = `FPS: ${fpsFrames}  格子: ${GRID_W}×${GRID_H}`;
+            fpsFrames = 0;
+            lastFpsTime = now;
+        }
+
+        requestAnimationFrame(frame);
+    }
+
+    requestAnimationFrame(frame);
+}
+
+function startWebGPU() {
+    const canvas = document.getElementById('fireCanvas');
+    if (canvas) {
+        init();
+    } else {
+        // Retry a bit later if loaded via pjax
+        setTimeout(() => {
+            if(document.getElementById('fireCanvas')) init();
+        }, 100);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startWebGPU);
+} else {
+    startWebGPU();
+}
+
+// Support for Butterfly theme Pjax
+document.addEventListener('pjax:complete', () => {
+    if (document.getElementById('fireCanvas')) {
+        startWebGPU();
+    }
+});
+</script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>GeoJSON 查询工具</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<link rel="stylesheet" href="/css/tools.css">
+
+
+<div class="tool-container" id="tool-geojson-container">
+    <div class="tool-section">
+        <h2 style="margin-bottom: 10px;">🌍 GeoJSON 可视化查询</h2>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+            <select id="select-prov" style="min-width: 120px;"><option value="">选择省份</option></select>
+            <select id="select-city" style="min-width: 120px;"><option value="">选择城市</option></select>
+            <select id="select-dist" style="min-width: 120px;"><option value="">选择区县</option></select>
+            <button class="btn" id="btn-query-area">查询区域</button>
+        </div>
+        <div id="map" style="height: 500px; width: 100%; border-radius: 8px; z-index: 1;"></div>
+    </div>
+
+    <div class="tool-section">
+        <h3>GeoJSON 数据:</h3>
+        <textarea id="geojson-input" placeholder='{ "type": "FeatureCollection", "features": [ ... ] }' style="width: 100%; height: 150px; resize: vertical;"></textarea>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 10px;">
+            <div>
+                <button class="btn" id="btn-load">加载输入数据</button>
+                <button class="btn" id="btn-download-json" style="background: #e6a23c; margin-left: 10px;">下载 GeoJSON</button>
+            </div>
+            <div id="error-msg" style="color: #ff7242; margin-top: 10px; font-size: 14px; display: none;"></div>
+        </div>
+    </div>
+</div>
+
+
+<script src="/js/tools/geojson.js"></script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>

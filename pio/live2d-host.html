@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+</style>
+</head>
+<body>
+<script src="/pio/l2d-widget.min.js"></script>
+<script>
+  var widgetInstance = null;
+  var activeConfigKey = '';
+  var loadingConfigKey = '';
+  var modelIsLoaded = false;
+  var lastContentHeight = 500;
+  var currentModelIndex = 0;
+  var currentModelCount = 1;
+
+  var menuActions = {
+    home: function() { parent.postMessage({ type: 'l2d-action', action: 'home' }, location.origin); },
+    scrollToTop: function() { parent.postMessage({ type: 'l2d-action', action: 'scrollToTop' }, location.origin); },
+    switchModel: function(w) {
+      currentModelIndex = (currentModelIndex + 1) % currentModelCount;
+      w.switchModel(currentModelIndex);
+    },
+    sleep: function(w) { w.sleep(); },
+  };
+
+  function notifyLoaded() {
+    var maxBottom = 0;
+    document.querySelectorAll('*').forEach(function(el) {
+      if (el.getBoundingClientRect) {
+        var r = el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0 && r.bottom > maxBottom) {
+          maxBottom = r.bottom;
+        }
+      }
+    });
+
+    lastContentHeight = Math.ceil(maxBottom) || lastContentHeight || 500;
+    parent.postMessage({ type: 'l2d-loaded', contentHeight: lastContentHeight }, location.origin);
+  }
+
+  function hideAboutMenu() {
+    if (document.getElementById('l2d-hide-about')) return;
+    var style = document.createElement('style');
+    style.id = 'l2d-hide-about';
+    style.textContent = 'button[title="About"] { display: none !important; }';
+    document.head.appendChild(style);
+  }
+
+  function destroyWidget() {
+    if (!widgetInstance) return;
+    try {
+      widgetInstance.destroy();
+    } catch (err) {
+      console.error('Failed to destroy Live2D widget:', err);
+    }
+    widgetInstance = null;
+    modelIsLoaded = false;
+  }
+
+  window.addEventListener('message', function(e) {
+    if (e.origin !== location.origin) return;
+    if (!e.data || typeof e.data !== 'object') return;
+    if (e.data.type === 'l2d-motion') {
+      try {
+        if (widgetInstance && widgetInstance.l2d) {
+          widgetInstance.l2d.playMotion(e.data.motion);
+        }
+      } catch (err) {
+        console.warn('Failed to play Live2D motion:', err);
+      }
+      return;
+    }
+    if (e.data.type !== 'l2d-init') return;
+    var config = e.data.config;
+    var configKey = JSON.stringify(config);
+    var models = Array.isArray(config.model) ? config.model : [config.model];
+    currentModelCount = Math.max(models.length, 1);
+    currentModelIndex = 0;
+
+    if (widgetInstance && activeConfigKey === configKey) {
+      if (modelIsLoaded) notifyLoaded();
+      return;
+    }
+
+    if (loadingConfigKey === configKey) {
+      return;
+    }
+
+    loadingConfigKey = configKey;
+    if (widgetInstance) {
+      destroyWidget();
+    }
+
+    if (config.menus && config.menus.items) {
+      config.menus.items = config.menus.items.map(function(item) {
+        return {
+          icon: item.icon,
+          label: item.label,
+          onClick: menuActions[item.action] || function() {}
+        };
+      });
+    }
+
+    try {
+      modelIsLoaded = false;
+      widgetInstance = L2D_WIDGET.createWidget(config);
+      activeConfigKey = configKey;
+    } catch (err) {
+      loadingConfigKey = '';
+      activeConfigKey = '';
+      console.error('Failed to initialize Live2D widget:', err);
+      parent.postMessage({ type: 'l2d-error', message: String(err) }, location.origin);
+      return;
+    }
+    loadingConfigKey = '';
+
+    if (config._hideAbout) {
+      hideAboutMenu();
+    }
+
+    var notified = false;
+    function notifyOnce() {
+      if (notified) return;
+      notified = true;
+      modelIsLoaded = true;
+      notifyLoaded();
+    }
+
+    if (widgetInstance.l2d && typeof widgetInstance.l2d.on === 'function') {
+      widgetInstance.l2d.on('loaded', function() {
+        setTimeout(notifyOnce, 100);
+      });
+    }
+
+  });
+</script>
+</body>
+</html>

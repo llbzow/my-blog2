@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>GIF 生成工具</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<!-- gifshot CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.3.2/gifshot.min.js"></script>
+<link rel="stylesheet" href="/css/tools.css">
+
+<style>
+.img-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 20px 0;
+}
+.controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+input[type="number"] {
+    padding: 8px;
+    width: 80px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+.result-img {
+    max-width: 100%;
+    margin-top: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+</style>
+
+
+<div class="tool-container" id="tool-gif-container">
+    <div class="tool-section">
+        <h2 style="text-align: center; margin-bottom: 20px;">🎬 图片合成 GIF</h2>
+        
+        <div class="upload-box" id="upload-box">
+            <p>点击选择多张图片 或 拖拽图片到这里</p>
+            <input type="file" id="file-input" accept="image/*" multiple style="display: none;">
+        </div>
+
+        <div class="img-list" id="img-list">
+            <!-- Preview images -->
+        </div>
+
+        <div class="controls">
+            <div>
+                <label>每帧间隔 (秒):</label>
+                <input type="number" id="interval" value="0.5" step="0.1" min="0.1">
+            </div>
+            <div>
+                <label>GIF 宽度 (px):</label>
+                <input type="number" id="gif-width" value="400">
+            </div>
+            <div>
+                <label>GIF 高度 (px):</label>
+                <input type="number" id="gif-height" value="300">
+            </div>
+        </div>
+
+        <button class="btn" id="btn-create" style="width: 100%;">生成 GIF</button>
+
+        <div style="text-align: center;">
+            <img id="result-gif" class="result-img" style="display: none;">
+            <br>
+            <a id="download-link" class="btn" style="display: none; margin-top: 15px; text-decoration: none; width: auto; display: inline-block;">下载 GIF</a>
+        </div>
+    </div>
+</div>
+
+
+<script src="/js/tools/gif.js"></script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>

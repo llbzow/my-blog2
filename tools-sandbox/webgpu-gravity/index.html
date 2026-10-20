@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>WebGPU 万有引力粒子</title>
+	<link rel="stylesheet" href="/css/tools.css">
+	<style>
+		body {
+			margin: 0;
+			padding: 10px;
+			background: transparent;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			color: #333;
+			zoom: 1.18; /* 整体缩放 1.18 倍以完美适应大弹窗视野 */
+		}
+		[data-theme='dark'] body {
+			color: #f1f5f9;
+		}
+	</style>
+</head>
+<body>
+	<style>
+/* 限制 Canvas 大小，匹配博客正常宽度并在中间渲染 */
+.webgpu-demo-wrapper {
+    position: relative;
+    width: 100%;
+    margin-top: 10px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    background-color: #050505;
+}
+
+#gpuCanvas {
+    width: 100%;
+    height: 600px;
+    display: block;
+    cursor: crosshair;
+}
+
+#overlay-ui {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    color: rgba(255,255,255,0.8);
+    font-family: monospace;
+    pointer-events: none;
+    background: rgba(0,0,0,0.6);
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.15);
+    backdrop-filter: blur(4px);
+    z-index: 10;
+}
+
+.warning { color: #ff4d4f; font-weight: bold; }
+</style>
+
+<div class="webgpu-demo-wrapper">
+    <div id="overlay-ui">
+        <div id="fps-counter">FPS: 0</div>
+        <div id="particle-count">粒子数: 150,000</div>
+        <div style="margin-top: 10px; font-size: 12px; color: #aaa;">
+            🖱️ 移动鼠标产生引力扰动<br>
+            🖱️ 按下鼠标左键变为斥力场
+        </div>
+        <div id="gpu-error" class="warning" style="display: none; margin-top: 10px;"></div>
+    </div>
+    <canvas id="gpuCanvas"></canvas>
+</div>
+
+<script type="module">
+// WebGPU 十万级交互引力场 (Particle Gravity Field)
+// 核心逻辑：利用 Compute Shader 计算粒子受鼠标引力影响的速度/位移
+// 利用 Render Shader 渲染发光点
+
+const numParticles = 150000;
+let isMouseDown = 0.0; // 0=引力, 1.0=斥力
+let mousePos = [0.0, 0.0];
+let frameCount = 0;
+let lastTime = performance.now();
+
+//===============================
+// 1. WGSL Compute Shader
+//===============================
+const computeWGSL = `
+struct Particle {
+  pos : vec2<f32>,
+  vel : vec2<f32>,
+};
+
+@group(0) @binding(0) var<storage, read_write> particles : array<Particle>;
+
+struct SimParams {
+  mousePos : vec2<f32>,
+  isMouseDown : f32, // 0.0 吸引, 1.0 排斥
+  padding : f32,
+};
+@group(0) @binding(1) var<uniform> params : SimParams;
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
+    let index = GlobalInvocationID.x;
+    if (index >= ${numParticles}u) {
+        return;
+    }
+
+    var p = particles[index];
+    
+    // 引力计算
+    let dir = params.mousePos - p.pos;
+    let distSq = dot(dir, dir);
+    let dist = sqrt(distSq);
+    
+    // 避免除以 0 以及中心奇点爆炸
+    let safeDist = max(dist, 0.05); 
+    
+    // 万有引力公式简翻，斥力模式下加负号并改变数值范围
+    let forceMagnitude = 0.0001 / (safeDist * safeDist);
+    var force = normalize(dir) * forceMagnitude;
+    
+    // 如果按下鼠标，则反演表现斥力，且力量更大
+    if (params.isMouseDown > 0.5) {
+        force = -force * 2.0;
+    }
+
+    // 鼠标在一定范围内才有明显作用 (如 0.4 半径内)
+    if (dist < 0.4) {
+        p.vel = p.vel + force;
+    }
+
+    // 增加一点摩擦力衰减，防止粒子失控飞走
+    p.vel = p.vel * 0.985;
+    
+    // 增加一点趋向中心的微弱游荡引力，防止散出屏幕太远
+    let centerDir = vec2<f32>(0.0, 0.0) - p.pos;
+    p.vel = p.vel + (centerDir * 0.0001);
+
+    // 更新位置
+    p.pos = p.pos + p.vel;
+
+    // 边缘简单反弹 (屏幕坐标设为 -1 到 1)
+    if (p.pos.x < -1.0) { p.pos.x = -1.0; p.vel.x = -p.vel.x * 0.5; }
+    if (p.pos.x > 1.0) { p.pos.x = 1.0; p.vel.x = -p.vel.x * 0.5; }
+    if (p.pos.y < -1.0) { p.pos.y = -1.0; p.vel.y = -p.vel.y * 0.5; }
+    if (p.pos.y > 1.0) { p.pos.y = 1.0; p.vel.y = -p.vel.y * 0.5; }
+
+    particles[index] = p;
+}
+`;
+
+//===============================
+// 2. WGSL Render Shader
+//===============================
+const renderWGSL = `
+struct Particle {
+  pos : vec2<f32>,
+  vel : vec2<f32>,
+};
+
+struct VertexOutput {
+  @builtin(position) position : vec4<f32>,
+  @location(0) color : vec4<f32>,
+  @location(1) pointCoord : vec2<f32>, // 用于画圆圈的简单坐标映射
+};
+
+@vertex
+fn vs_main(
+    @location(0) particlePos : vec2<f32>,
+    @location(1) particleVel : vec2<f32>,
+    @builtin(vertex_index) vertexIndex : u32
+) -> VertexOutput {
+    // 画一个由两个三角形构成的方形代替点(Point-list 在一些 WebGPU 实现中不支持大小)
+    // 放大粒子的坐标并转为 4 个顶点
+    var pos = array<vec2<f32>, 6>(
+        vec2<f32>(-1.0, -1.0),
+        vec2<f32>( 1.0, -1.0),
+        vec2<f32>(-1.0,  1.0),
+        vec2<f32>(-1.0,  1.0),
+        vec2<f32>( 1.0, -1.0),
+        vec2<f32>( 1.0,  1.0)
+    );
+    let p = pos[vertexIndex % 6u];
+    
+    var out : VertexOutput;
+    
+    // 粒子大小 (例如 0.003)
+    let size = 0.004;
+    // 这里如果屏幕比例不是1:1，粒子会被拉伸成椭圆，这里做简单的 x轴 修正
+    // 但为保持代码精简我们直接加在 position 上
+    out.position = vec4<f32>(particlePos + p * size, 0.0, 1.0);
+    
+    // 根据速度长度确定颜色，越块越红，越慢越蓝
+    let speed = length(particleVel);
+    let baseColor = vec3<f32>(0.2, 0.5, 1.0); // 原生蓝色
+    let fastColor = vec3<f32>(1.0, 0.1, 0.3); // 冲刺红色
+    let finalColor = mix(baseColor, fastColor, clamp(speed * 30.0, 0.0, 1.0));
+    
+    out.color = vec4<f32>(finalColor, 0.8);
+    out.pointCoord = p; // -1 to 1 范围
+    
+    return out;
+}
+
+@fragment
+fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
+    // 计算点到中心的距离，将其裁剪成圆形，并带有一点边缘柔和
+    let dist = length(in.pointCoord);
+    if (dist > 1.0) {
+        discard;
+    }
+    // 发光效果衰减
+    let alpha = (1.0 - dist) * in.color.a;
+    return vec4<f32>(in.color.rgb, alpha);
+}
+`;
+
+function showError(msg) {
+    const errDiv = document.getElementById('gpu-error');
+    errDiv.style.display = 'block';
+    errDiv.innerHTML = msg;
+    console.error(msg);
+}
+
+async function init() {
+    if (!navigator.gpu) {
+        showError('当前浏览器不支持 WebGPU。\n请使用最新版 Chrome/Edge 并确保硬件加速开启。');
+        return;
+    }
+
+    const canvas = document.getElementById('gpuCanvas');
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) {
+        showError('求取 WebGPU Adapter 失败，可能缺少兼容的显卡驱动。');
+        return;
+    }
+    
+    const device = await adapter.requestDevice();
+    const context = canvas.getContext('webgpu');
+    
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    canvas.width = canvas.clientWidth * devicePixelRatio;
+    canvas.height = canvas.clientHeight * devicePixelRatio;
+    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+    
+    context.configure({
+        device,
+        format: presentationFormat,
+        alphaMode: 'premultiplied',
+    });
+    
+    // 自适应改变画板大小以应对浏览器缩放
+    window.addEventListener('resize', () => {
+        canvas.width = canvas.clientWidth * devicePixelRatio;
+        canvas.height = canvas.clientHeight * devicePixelRatio;
+    });
+
+    //===============================
+    // 数据初始化
+    //===============================
+    // 一个粒子包含位置 (x,y) 和 速度 (x,y)，总共 4 个 f32 = 16 字节
+    const initialParticleData = new Float32Array(numParticles * 4);
+    for (let i = 0; i < numParticles; i++) {
+        initialParticleData[i * 4 + 0] = (Math.random() - 0.5) * 2.0; // pos x [-1, 1]
+        initialParticleData[i * 4 + 1] = (Math.random() - 0.5) * 2.0; // pos y [-1, 1]
+        
+        let angle = Math.random() * Math.PI * 2.0;
+        let r = Math.random() * 0.01;
+        initialParticleData[i * 4 + 2] = Math.cos(angle) * r; // vel x
+        initialParticleData[i * 4 + 3] = Math.sin(angle) * r; // vel y
+    }
+
+    const particleBuffer = device.createBuffer({
+        size: initialParticleData.byteLength,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        mappedAtCreation: true,
+    });
+    new Float32Array(particleBuffer.getMappedRange()).set(initialParticleData);
+    particleBuffer.unmap();
+
+    // 交互参数 Uniform Buffer: mousePos(vec2) + isMouseDown(f32) + padding(f32) = 16 字节
+    const simParamsBuffer = device.createBuffer({
+        size: 16,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    //===============================
+    // Shader Modules
+    //===============================
+    const computeModule = device.createShaderModule({ code: computeWGSL });
+    const renderModule = device.createShaderModule({ code: renderWGSL });
+
+    //===============================
+    // Pipelines
+    //===============================
+    const computePipeline = device.createComputePipeline({
+        layout: 'auto',
+        compute: {
+            module: computeModule,
+            entryPoint: 'main',
+        },
+    });
+
+    const bindGroup = device.createBindGroup({
+        layout: computePipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: { buffer: particleBuffer } },
+            { binding: 1, resource: { buffer: simParamsBuffer } }
+        ],
+    });
+
+    const renderPipeline = device.createRenderPipeline({
+        layout: 'auto',
+        vertex: {
+            module: renderModule,
+            entryPoint: 'vs_main',
+            buffers: [{
+                arrayStride: 16, // pos(8) + vel(8)
+                stepMode: 'instance', // 每个粒子作为一个实例进行处理
+                attributes: [
+                    { shaderLocation: 0, offset: 0, format: 'float32x2' }, // pos
+                    { shaderLocation: 1, offset: 8, format: 'float32x2' }, // vel
+                ],
+            }],
+        },
+        fragment: {
+            module: renderModule,
+            entryPoint: 'fs_main',
+            targets: [{
+                format: presentationFormat,
+                blend: {
+                    color: { srcFactor: 'src-alpha', dstFactor: 'one', operation: 'add' },
+                    alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+                }
+            }],
+        },
+        primitive: {
+            topology: 'triangle-list', // 我们用画6个顶点的方式画方形，代替无法改大小的 GPU 点拓扑
+        },
+    });
+
+    //===============================
+    // 鼠标交互监听
+    //===============================
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        // 映射到 Shader 的 [-1, 1] 坐标系，注意 Y 轴反转
+        mousePos[0] = ((e.clientX - rect.left) / rect.width) * 2.0 - 1.0;
+        mousePos[1] = -(((e.clientY - rect.top) / rect.height) * 2.0 - 1.0);
+    });
+    canvas.addEventListener('mousedown', () => isMouseDown = 1.0);
+    canvas.addEventListener('mouseup', () => isMouseDown = 0.0);
+    canvas.addEventListener('mouseleave', () => {
+        // 移出时把鼠标设到虚无空间，防止粒子堆积在屏幕边缘
+        mousePos[0] = 999.0; 
+        mousePos[1] = 999.0;
+        isMouseDown = 0.0;
+    });
+
+    const fpsEl = document.getElementById('fps-counter');
+
+    //===============================
+    // 主循环
+    //===============================
+    function frame() {
+        // 更新参数
+        device.queue.writeBuffer(simParamsBuffer, 0, new Float32Array([mousePos[0], mousePos[1], isMouseDown, 0.0]));
+
+        const commandEncoder = device.createCommandEncoder();
+
+        // 1. Compute Pass 计算粒子物理状态
+        const computePass = commandEncoder.beginComputePass();
+        computePass.setPipeline(computePipeline);
+        computePass.setBindGroup(0, bindGroup);
+        // 按每组 64 线程调度
+        computePass.dispatchWorkgroups(Math.ceil(numParticles / 64)); 
+        computePass.end();
+
+        // 2. Render Pass 按计算好的顶点绘制
+        const renderPass = commandEncoder.beginRenderPass({
+            colorAttachments: [{
+                view: context.getCurrentTexture().createView(),
+                clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+                loadOp: 'clear',
+                storeOp: 'store',
+            }],
+        });
+        renderPass.setPipeline(renderPipeline);
+        renderPass.setVertexBuffer(0, particleBuffer);
+        // 画 6 个顶点（两个三角形组成平面），渲染 instances 为粒子数
+        renderPass.draw(6, numParticles, 0, 0); 
+        renderPass.end();
+
+        device.queue.submit([commandEncoder.finish()]);
+
+        // FPS 计算
+        frameCount++;
+        let currentTime = performance.now();
+        if (currentTime - lastTime >= 1000) {
+            fpsEl.textContent = `FPS: ${frameCount}`;
+            frameCount = 0;
+            lastTime = currentTime;
+        }
+
+        requestAnimationFrame(frame);
+    }
+
+    requestAnimationFrame(frame);
+}
+
+// 启动
+window.addEventListener('load', init);
+</script>
+	<script>
+		const syncTheme = () => {
+			try {
+				const isDark = window.parent.document.documentElement.classList.contains('dark') || 
+				               window.parent.document.documentElement.getAttribute('data-theme') === 'dark';
+				if (isDark) {
+					document.documentElement.setAttribute('data-theme', 'dark');
+				} else {
+					document.documentElement.removeAttribute('data-theme');
+				}
+			} catch(e) {}
+		};
+		syncTheme();
+		window.addEventListener('message', (e) => {
+			if (e.data === 'theme-change') syncTheme();
+		});
+	</script>
+</body>
+</html>
